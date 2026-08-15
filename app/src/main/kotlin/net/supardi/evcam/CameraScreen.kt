@@ -635,65 +635,50 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             )
             
             if (showWatermark && cameraMode == CameraMode.PHOTO) {
-                Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                    // Snap to 4 orientations so watermark corners shift correctly
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val normalizedRotation = ((deviceRotation ?: 0f) % 360f + 360f) % 360f
-                    val snapRotation = when {
-                        normalizedRotation < 45f || normalizedRotation >= 315f -> 0
-                        normalizedRotation < 135f -> 90
-                        normalizedRotation < 225f -> 180
-                        else -> 270
+                    val snapAngle = when {
+                        normalizedRotation < 45f || normalizedRotation >= 315f -> 0f
+                        normalizedRotation < 135f -> 90f
+                        normalizedRotation < 225f -> 180f
+                        else -> 270f
                     }
+                    val isLandscape = snapAngle == 90f || snapAngle == 270f
+                    val boxW = if (isLandscape) maxHeight else maxWidth
+                    val boxH = if (isLandscape) maxWidth else maxHeight
 
-                    WatermarkQuadrant.values().forEach { quadrant ->
-                        val elementsInQuadrant = watermarkElements.filter { it.quadrant == quadrant }
-                        if (elementsInQuadrant.isNotEmpty()) {
-                            // Remap alignment based on device rotation
-                            val alignment = when (snapRotation) {
-                                90 -> when (quadrant) {
-                                    WatermarkQuadrant.TOP_LEFT -> Alignment.BottomStart
-                                    WatermarkQuadrant.TOP_RIGHT -> Alignment.TopStart
-                                    WatermarkQuadrant.BOTTOM_LEFT -> Alignment.BottomEnd
-                                    WatermarkQuadrant.BOTTOM_RIGHT -> Alignment.TopEnd
-                                }
-                                180 -> when (quadrant) {
-                                    WatermarkQuadrant.TOP_LEFT -> Alignment.BottomEnd
-                                    WatermarkQuadrant.TOP_RIGHT -> Alignment.BottomStart
-                                    WatermarkQuadrant.BOTTOM_LEFT -> Alignment.TopEnd
-                                    WatermarkQuadrant.BOTTOM_RIGHT -> Alignment.TopStart
-                                }
-                                270 -> when (quadrant) {
-                                    WatermarkQuadrant.TOP_LEFT -> Alignment.TopEnd
-                                    WatermarkQuadrant.TOP_RIGHT -> Alignment.BottomEnd
-                                    WatermarkQuadrant.BOTTOM_LEFT -> Alignment.TopStart
-                                    WatermarkQuadrant.BOTTOM_RIGHT -> Alignment.BottomStart
-                                }
-                                else -> when (quadrant) {
+                    Box(
+                        modifier = Modifier
+                            .size(boxW, boxH)
+                            .align(Alignment.Center)
+                            .graphicsLayer { rotationZ = snapAngle }
+                            .padding(16.dp)
+                    ) {
+                        WatermarkQuadrant.values().forEach { quadrant ->
+                            val elementsInQuadrant = watermarkElements.filter { it.quadrant == quadrant }
+                            if (elementsInQuadrant.isNotEmpty()) {
+                                val alignment = when (quadrant) {
                                     WatermarkQuadrant.TOP_LEFT -> Alignment.TopStart
                                     WatermarkQuadrant.TOP_RIGHT -> Alignment.TopEnd
                                     WatermarkQuadrant.BOTTOM_LEFT -> Alignment.BottomStart
                                     WatermarkQuadrant.BOTTOM_RIGHT -> Alignment.BottomEnd
                                 }
-                            }
-                            Column(modifier = Modifier
-                                .align(alignment)
-                                .graphicsLayer { rotationZ = -snapRotation.toFloat() }
-                                .fillMaxWidth(0.45f)
-                            ) {
-                                elementsInQuadrant.forEach { element ->
-                                    val text = when (element.type) {
-                                        WatermarkElementType.TEXT -> element.content
-                                        WatermarkElementType.LOCATION -> formatLocationElement(element.content, liveLocation, liveAddress)
-                                        WatermarkElementType.DATE -> formatDateElement(element.content)
+                                Column(modifier = Modifier.align(alignment).fillMaxWidth()) {
+                                    elementsInQuadrant.forEach { element ->
+                                        val text = when (element.type) {
+                                            WatermarkElementType.TEXT -> element.content
+                                            WatermarkElementType.LOCATION -> formatLocationElement(element.content, liveLocation, liveAddress)
+                                            WatermarkElementType.DATE -> formatDateElement(element.content)
+                                        }
+                                        Text(
+                                            text = text,
+                                            color = Color.White,
+                                            fontSize = element.size.sp,
+                                            textAlign = if (quadrant == WatermarkQuadrant.TOP_RIGHT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT) androidx.compose.ui.text.style.TextAlign.End else androidx.compose.ui.text.style.TextAlign.Start,
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                                            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black, blurRadius = 4f))
+                                        )
                                     }
-                                    Text(
-                                        text = text,
-                                        color = Color.White,
-                                        fontSize = element.size.sp,
-                                        textAlign = if (quadrant == WatermarkQuadrant.TOP_RIGHT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT) androidx.compose.ui.text.style.TextAlign.End else androidx.compose.ui.text.style.TextAlign.Start,
-                                        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                                        style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black, blurRadius = 4f))
-                                    )
                                 }
                             }
                         }
