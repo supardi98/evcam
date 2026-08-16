@@ -124,7 +124,7 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
     }
 }
 
-private fun fetchRecentMediaList(context: Context, limit: Int = 30): List<MediaItem> {
+private fun fetchRecentMediaList(context: Context, limit: Int = 500): List<MediaItem> {
     val list = mutableListOf<MediaItem>()
     val contentResolver = context.contentResolver
 
@@ -169,7 +169,7 @@ fun MediaPreviewDialog(
     }
 
     val mediaList = remember(lastCapturedUri, lastCapturedBitmap) {
-        val fetched = fetchRecentMediaList(context, limit = 30).toMutableList()
+        val fetched = fetchRecentMediaList(context, limit = 500).toMutableList()
         if (lastCapturedUri != null && fetched.none { it.uri == lastCapturedUri }) {
             fetched.add(0, MediaItem(uri = lastCapturedUri, isVideo = (cameraMode == CameraMode.VIDEO)))
         }
