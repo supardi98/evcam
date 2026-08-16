@@ -123,8 +123,8 @@ fun CameraBottomBar(
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(if (isRecording) Color.Red else Color.White)
-                // Tap & long-press handler — works for both modes
-                .pointerInput(cameraMode, isRecording) {
+                .pointerInput(cameraMode) {
+
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         down.consume()
