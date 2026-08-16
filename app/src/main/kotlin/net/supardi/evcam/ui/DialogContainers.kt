@@ -89,7 +89,7 @@ fun DialogContainers(
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color.DarkGray)
+                    .background(Color(0xFF1E1E1E))
                     .clickable(enabled = false) {}
                     .padding(24.dp)
             ) {
@@ -147,5 +147,9 @@ fun DialogContainers(
             onFilterSelect = { uiState.selectedFilter = it },
             onDismissRequest = { uiState.showFilterDialog = false }
         )
+    }
+
+    if (uiState.showCameraInfoDialog) {
+        CameraInfoDialog(onDismiss = { uiState.showCameraInfoDialog = false })
     }
 }

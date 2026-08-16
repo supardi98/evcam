@@ -45,6 +45,7 @@ fun SettingsPanel(
     onEnableGeotaggingChange: (Boolean) -> Unit,
     onOpenWatermarkSettings: () -> Unit,
     onOpenPluginManager: () -> Unit,
+    onOpenCameraInfo: () -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -197,6 +198,14 @@ fun SettingsPanel(
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
             ) {
                 Text("Open Plugin Manager", color = Color.White, fontSize = 12.sp)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Button(
+                onClick = onOpenCameraInfo,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+            ) {
+                Text("Hardware Camera Info", color = Color.White, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.height(4.dp))
         }

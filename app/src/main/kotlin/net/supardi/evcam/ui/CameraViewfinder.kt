@@ -43,31 +43,18 @@ fun CameraViewfinder(
 ) {
     var evScrollAnchorY by remember { mutableFloatStateOf(0f) }
 
-    // Fallback tint overlay for Android < 12 only
-    val fallbackTint: Color? = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-        when (uiState.selectedFilter) {
-            ColorFilterMode.NORMAL  -> null
-            ColorFilterMode.MONO    -> Color(0x80808080)
-            ColorFilterMode.WARM    -> Color(0x33FF8800)
-            ColorFilterMode.COLD    -> Color(0x330088FF)
-            ColorFilterMode.VINTAGE -> Color(0x40C8860A)
-        }
-    } else null
-
     Box(modifier = modifier) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             update = { view ->
-                // Apply ColorMatrix directly to PreviewView via RenderEffect (Android 12+)
-                // This makes the live preview pixel-perfect with the captured image filter
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     val filter = uiState.selectedFilter
                     if (filter == ColorFilterMode.NORMAL) {
                         view.setRenderEffect(null)
                     } else {
-                        val cm = ColorMatrix(filter.matrixValues)
+                        val cm = android.graphics.ColorMatrix(filter.matrixValues)
                         val renderEffect = android.graphics.RenderEffect.createColorFilterEffect(
-                            ColorMatrixColorFilter(cm)
+                            android.graphics.ColorMatrixColorFilter(cm)
                         )
                         view.setRenderEffect(renderEffect)
                     }
@@ -166,9 +153,6 @@ fun CameraViewfinder(
                                         uiState.exposureIndex = newIdx
                                         uiState.cameraControl?.setExposureCompensationIndex(newIdx)
                                         uiState.showBrightnessSlider = true
-                                        if (newIdx != 0) {
-                                            uiState.isProMode = true
-                                        }
                                     }
                                     evScrollAnchorY = event.y
                                 }
@@ -181,14 +165,6 @@ fun CameraViewfinder(
             }
         )
 
-        // Fallback tint overlay for Android < 12 (approximation only)
-        if (fallbackTint != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color = fallbackTint)
-            )
-        }
 
         AnimatedVisibility(
             visible = uiState.isTransitioningRatio,

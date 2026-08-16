@@ -130,6 +130,7 @@ fun SettingsPopupPanels(
                     onEnableGeotaggingChange = { uiState.enableGeotagging = it },
                     onOpenWatermarkSettings = onOpenWatermarkSettings,
                     onOpenPluginManager = onOpenPluginManager,
+                    onOpenCameraInfo = { uiState.showCameraInfoDialog = true },
                     onClose = { uiState.showSettings = false }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -258,55 +259,56 @@ fun ModeSwitchAndProControls(
         Spacer(modifier = Modifier.width(16.dp))
         
         // PRO Mode Button
-        val hasManualPro = !uiState.isIsoAuto || !uiState.isShutterAuto || !uiState.isFocusAuto || uiState.whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO || uiState.exposureIndex != 0
+        if (uiState.hasManualSensorSupport) {
+            val hasManualPro = !uiState.isIsoAuto || !uiState.isShutterAuto || !uiState.isFocusAuto || uiState.whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO || uiState.exposureIndex != 0
 
-        Box(
-            modifier = Modifier
-                .height(40.dp)
-                .clip(CircleShape)
-                .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
-                .clickable { 
-                    uiState.showProPanel = !uiState.showProPanel
-                    if (uiState.showProPanel) {
-                        uiState.showLayerPanel = false
-                        uiState.showSettings = false
-                    }
-                }
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "PRO",
-                color = if (hasManualPro) Color.Yellow else Color.LightGray,
-                fontWeight = if (hasManualPro) FontWeight.Bold else FontWeight.Normal
-            )
-        }
-
-        if (hasManualPro) {
-            Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .height(40.dp)
                     .clip(CircleShape)
-                    .background(Color.DarkGray.copy(alpha = 0.5f))
+                    .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                     .clickable { 
-                        uiState.isIsoAuto = true
-                        uiState.isShutterAuto = true
-                        uiState.isFocusAuto = true
-                        uiState.whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
-                        uiState.exposureIndex = 0
-                        uiState.cameraControl?.setExposureCompensationIndex(0)
-                        uiState.isProMode = false
-                        uiState.showProPanel = false
-                    },
+                        uiState.showProPanel = !uiState.showProPanel
+                        if (uiState.showProPanel) {
+                            uiState.showLayerPanel = false
+                            uiState.showSettings = false
+                        }
+                    }
+                    .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close, 
-                    contentDescription = "Auto all Pro settings", 
-                    tint = Color.Yellow, 
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = "PRO",
+                    color = if (hasManualPro) Color.Yellow else Color.LightGray,
+                    fontWeight = if (hasManualPro) FontWeight.Bold else FontWeight.Normal
                 )
+            }
+
+            if (hasManualPro) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.DarkGray.copy(alpha = 0.5f))
+                        .clickable { 
+                            uiState.isIsoAuto = true
+                            uiState.isShutterAuto = true
+                            uiState.isFocusAuto = true
+                            uiState.whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
+                            uiState.exposureIndex = 0
+                            uiState.cameraControl?.setExposureCompensationIndex(0)
+                            uiState.isProMode = false
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Reset PRO",
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

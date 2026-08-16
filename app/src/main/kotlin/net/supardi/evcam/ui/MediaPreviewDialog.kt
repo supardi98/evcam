@@ -20,6 +20,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -80,7 +81,9 @@ data class MediaInfo(
     val resolution: String = "",
     val duration: String = "",   // video only
     val mimeType: String = "",
-    val aspectRatioStr: String = "" // e.g., "16:9", "4:3"
+    val aspectRatioStr: String = "", // e.g., "16:9", "4:3"
+    val mp: String = "",
+    val fps: String = ""
 )
 
 private fun getGcd(a: Int, b: Int): Int = if (b == 0) a else getGcd(b, a % b)
@@ -116,6 +119,7 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                 
                 // Read rotation to determine if we should swap width and height
                 var rotation = 0
+                var fps = ""
                 try {
                     if (isVideo) {
                         val retriever = android.media.MediaMetadataRetriever()
@@ -123,6 +127,18 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                         val rotStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
                         if (rotStr != null) {
                             rotation = rotStr.toInt()
+                        }
+                        // Android 11+ supports KEY_CAPTURE_FRAMERATE
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            fps = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE) ?: ""
+                        }
+                        if (fps.isEmpty() || fps == "0.000000") {
+                            // Fallback to older framerate if possible
+                            val fpsNum = retriever.extractMetadata(25) // KEY_FRAMERATE is API 31, but 25 is METADATA_KEY_FRAMERATE in older APIs somewhat (not official, 25 is KEY_FRAMERATE in API 30+)
+                            if (fpsNum != null) fps = fpsNum
+                        }
+                        if (fps.isNotEmpty()) {
+                            try { fps = fps.toFloat().toInt().toString() } catch (e: Exception) {}
                         }
                         retriever.release()
                     } else {
@@ -159,15 +175,15 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                 val resStr = if (width > 0 && height > 0) "${width} × ${height}" else ""
                 val mimeShort = mime.substringAfterLast('/').uppercase()
                 
-                var aspect = ""
-                if (width > 0 && height > 0) {
-                    val factor = getGcd(width, height)
-                    if (factor > 0) {
-                        val wRatio = width / factor
-                        val hRatio = height / factor
-                        aspect = "$wRatio:$hRatio"
-                    }
-                }
+                val arStr = if (width > 0 && height > 0) {
+                    val gcd = getGcd(width, height)
+                    if (gcd > 0) "${width/gcd}:${height/gcd}" else ""
+                } else ""
+
+                val mpStr = if (width > 0 && height > 0) {
+                    val mpFloat = (width * height) / 1000000f
+                    if (mpFloat >= 0.1f) "%.1f MP".format(mpFloat) else ""
+                } else ""
 
                 MediaInfo(
                     fileName = name,
@@ -176,7 +192,9 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                     resolution = resStr,
                     duration = duration,
                     mimeType = mimeShort,
-                    aspectRatioStr = aspect
+                    aspectRatioStr = arStr,
+                    mp = mpStr,
+                    fps = if (fps.isNotEmpty()) "${fps} FPS" else ""
                 )
             } else MediaInfo()
         } ?: MediaInfo()
@@ -219,7 +237,7 @@ private fun fetchRecentMediaList(context: Context, limit: Int = 500): List<Media
     return list.sortedByDescending { it.dateAdded }.take(limit)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun MediaPreviewDialog(
     lastCapturedBitmap: Bitmap?,
@@ -292,6 +310,7 @@ fun MediaPreviewDialog(
 
 
     var showGalleryGrid by remember { mutableStateOf(false) }
+    var showExifDialog by remember { mutableStateOf(false) }
 
     // Fetch info for current page
     val currentItem = mediaList.getOrNull(pagerState.currentPage)
@@ -516,6 +535,7 @@ fun MediaPreviewDialog(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color.Black.copy(alpha = 0.65f))
+                                .clickable { showExifDialog = true }
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -525,9 +545,10 @@ fun MediaPreviewDialog(
                             if (currentInfo.dateTime.isNotEmpty()) {
                                 MediaInfoRow(label = "Date", value = currentInfo.dateTime)
                             }
-                            Row(
+                            FlowRow(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 if (currentInfo.resolution.isNotEmpty()) {
                                     MediaInfoPill(label = currentInfo.resolution)
@@ -537,6 +558,12 @@ fun MediaPreviewDialog(
                                 }
                                 if (currentInfo.fileSize.isNotEmpty()) {
                                     MediaInfoPill(label = currentInfo.fileSize)
+                                }
+                                if (currentInfo.mp.isNotEmpty()) {
+                                    MediaInfoPill(label = currentInfo.mp)
+                                }
+                                if (currentInfo.fps.isNotEmpty()) {
+                                    MediaInfoPill(label = currentInfo.fps, highlight = true)
                                 }
 
                                 if (currentInfo.duration.isNotEmpty()) {
@@ -799,15 +826,53 @@ fun MediaPreviewDialog(
                         val visibleCount = layoutInfo.visibleItemsInfo.size.coerceAtLeast(1)
                         val firstIdx = gridState.firstVisibleItemScrollOffset
                         val thumbHeightFraction = (visibleCount.toFloat() / totalItems.toFloat()).coerceIn(0.05f, 1f)
-                        val scrollFraction = if (totalItems > visibleCount)
-                            (gridState.firstVisibleItemIndex.toFloat() / (totalItems - visibleCount).toFloat()).coerceIn(0f, 1f)
-                        else 0f
+                        
+                        var scrollbarDragY by remember { mutableFloatStateOf(-1f) }
+                        
+                        val scrollFraction = if (scrollbarDragY >= 0f) {
+                            scrollbarDragY
+                        } else {
+                            if (totalItems > visibleCount)
+                                (gridState.firstVisibleItemIndex.toFloat() / (totalItems - visibleCount).toFloat()).coerceIn(0f, 1f)
+                            else 0f
+                        }
 
                         Canvas(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .fillMaxHeight()
-                                .width(4.dp)
+                                .width(24.dp)
+                                .pointerInput(totalItems, visibleCount) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = { offset ->
+                                            if (totalItems > visibleCount) {
+                                                val trackH = size.height.toFloat()
+                                                val thumbH = trackH * thumbHeightFraction
+                                                val maxThumbTop = trackH - thumbH
+                                                var rawFraction = (offset.y - thumbH/2) / maxThumbTop
+                                                rawFraction = rawFraction.coerceIn(0f, 1f)
+                                                scrollbarDragY = rawFraction
+                                                val targetIdx = (rawFraction * (totalItems - visibleCount)).toInt().coerceIn(0, totalItems - 1)
+                                                scope.launch { gridState.scrollToItem(targetIdx) }
+                                            }
+                                        },
+                                        onDragEnd = { scrollbarDragY = -1f },
+                                        onDragCancel = { scrollbarDragY = -1f },
+                                        onVerticalDrag = { change, _ ->
+                                            change.consume()
+                                            if (totalItems > visibleCount) {
+                                                val trackH = size.height.toFloat()
+                                                val thumbH = trackH * thumbHeightFraction
+                                                val maxThumbTop = trackH - thumbH
+                                                var rawFraction = (change.position.y - thumbH/2) / maxThumbTop
+                                                rawFraction = rawFraction.coerceIn(0f, 1f)
+                                                scrollbarDragY = rawFraction
+                                                val targetIdx = (rawFraction * (totalItems - visibleCount)).toInt().coerceIn(0, totalItems - 1)
+                                                scope.launch { gridState.scrollToItem(targetIdx) }
+                                            }
+                                        }
+                                    )
+                                }
                                 .padding(vertical = 8.dp)
                         ) {
                             val trackH = size.height
@@ -816,14 +881,15 @@ fun MediaPreviewDialog(
                             // Track
                             drawRoundRect(
                                 color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f),
-                                size = size
+                                topLeft = androidx.compose.ui.geometry.Offset(size.width - 4.dp.toPx(), 0f),
+                                size = androidx.compose.ui.geometry.Size(4.dp.toPx(), trackH),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f)
                             )
                             // Thumb
                             drawRoundRect(
-                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.45f),
-                                topLeft = androidx.compose.ui.geometry.Offset(0f, thumbTop),
-                                size = androidx.compose.ui.geometry.Size(size.width, thumbH),
+                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (scrollbarDragY >= 0f) 0.8f else 0.45f),
+                                topLeft = androidx.compose.ui.geometry.Offset(size.width - 4.dp.toPx(), thumbTop),
+                                size = androidx.compose.ui.geometry.Size(4.dp.toPx(), thumbH),
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f)
                             )
                         }
@@ -831,6 +897,10 @@ fun MediaPreviewDialog(
                 }
             }
         }
+    }
+    
+    if (showExifDialog && currentItem != null) {
+        ExifInfoDialog(context, currentItem.uri, currentItem.isVideo) { showExifDialog = false }
     }
 }
 

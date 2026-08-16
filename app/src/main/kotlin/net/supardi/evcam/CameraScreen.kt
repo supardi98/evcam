@@ -217,6 +217,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var videoFps by uiState::videoFps
     var videoAudioEnabled by uiState::videoAudioEnabled
     var isNightModeEnabled by uiState::isNightModeEnabled
+    var isHdrEnabled by uiState::isHdrEnabled
     var selectedFilter by uiState::selectedFilter
 
 
@@ -380,7 +381,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER } }
+    val previewView = remember { PreviewView(context).apply { 
+        scaleType = PreviewView.ScaleType.FIT_CENTER 
+        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+    } }
 
     LaunchedEffect(previewView) {
         androidx.compose.runtime.snapshotFlow { previewView.previewStreamState.value }
@@ -389,7 +393,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
     }
     
-    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality, videoFps, isNightModeEnabled) {
+    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality, videoFps, isNightModeEnabled, isHdrEnabled) {
         val t0 = System.currentTimeMillis()
         android.util.Log.d("EvcamTiming", "[t0 = 0ms] State change trigger -> mode=$cameraMode, ratio=$aspectRatio, fps=${videoFps.fps}")
         isTransitioningRatio = true
@@ -460,9 +464,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             var finalCameraSelector = cameraSelector
             try {
                 val extensionsManager = androidx.camera.extensions.ExtensionsManager.getInstanceAsync(context, cameraProvider).get()
-                if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && 
-                    extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)) {
+                
+                // Extract supported extensions
+                uiState.hasNightExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
+                uiState.hasHdrExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
+                
+                if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && uiState.hasNightExtension) {
                     finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
+                } else if (isHdrEnabled && cameraMode == CameraMode.PHOTO && uiState.hasHdrExtension) {
+                    finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("Evcam", "Failed to initialize ExtensionsManager", e)
@@ -509,6 +519,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
                 
                 val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camera.cameraInfo)
+                
+                // Extract Flash and Manual Sensor capabilities
+                uiState.hasFlashSupport = camera.cameraInfo.hasFlashUnit()
+                val caps = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+                uiState.hasManualSensorSupport = caps?.contains(android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) == true
+                
                 val isoRange = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
                 if (isoRange != null) {
                     minIso = isoRange.lower.toFloat()

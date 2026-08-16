@@ -36,40 +36,42 @@ fun TopCameraBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                if (uiState.isTorchOn) {
-                                    uiState.isTorchOn = false
-                                } else {
-                                    uiState.flashMode = when (uiState.flashMode) {
-                                        FlashMode.AUTO -> FlashMode.ON
-                                        FlashMode.ON -> FlashMode.OFF
-                                        FlashMode.OFF -> FlashMode.AUTO
+            if (uiState.hasFlashSupport) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    if (uiState.isTorchOn) {
+                                        uiState.isTorchOn = false
+                                    } else {
+                                        uiState.flashMode = when (uiState.flashMode) {
+                                            FlashMode.AUTO -> FlashMode.ON
+                                            FlashMode.ON -> FlashMode.OFF
+                                            FlashMode.OFF -> FlashMode.AUTO
+                                        }
                                     }
+                                },
+                                onLongPress = {
+                                    uiState.isTorchOn = !uiState.isTorchOn
                                 }
-                            },
-                            onLongPress = {
-                                uiState.isTorchOn = !uiState.isTorchOn
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                val flashIcon = if (uiState.isTorchOn) {
-                    Icons.Default.FlashOn
-                } else {
-                    when (uiState.flashMode) {
-                        FlashMode.AUTO -> Icons.Default.FlashAuto
-                        FlashMode.ON -> Icons.Default.FlashOn
-                        FlashMode.OFF -> Icons.Default.FlashOff
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    val flashIcon = if (uiState.isTorchOn) {
+                        Icons.Default.FlashOn
+                    } else {
+                        when (uiState.flashMode) {
+                            FlashMode.AUTO -> Icons.Default.FlashAuto
+                            FlashMode.ON -> Icons.Default.FlashOn
+                            FlashMode.OFF -> Icons.Default.FlashOff
+                        }
                     }
+                    val iconTint = if (uiState.isTorchOn) Color.Yellow else Color.White
+                    Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
                 }
-                val iconTint = if (uiState.isTorchOn) Color.Yellow else Color.White
-                Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
             }
             
             if (uiState.cameraMode == CameraMode.VIDEO) {
@@ -91,27 +93,61 @@ fun TopCameraBar(
             }
 
             if (uiState.cameraMode == CameraMode.PHOTO) {
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable { uiState.isNightModeEnabled = !uiState.isNightModeEnabled },
-                    contentAlignment = Alignment.Center
-                ) {
-                    val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
+                if (uiState.hasNightExtension) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { 
+                                uiState.isNightModeEnabled = !uiState.isNightModeEnabled 
+                                if (uiState.isNightModeEnabled) uiState.isHdrEnabled = false
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.DarkMode,
-                            contentDescription = "Night Mode",
-                            tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DarkMode,
+                                contentDescription = "Night Mode",
+                                tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+                
+                if (uiState.hasHdrExtension) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { 
+                                uiState.isHdrEnabled = !uiState.isHdrEnabled
+                                if (uiState.isHdrEnabled) uiState.isNightModeEnabled = false // Mutually exclusive
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val backgroundAlpha = if (uiState.isHdrEnabled) 0.3f else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.HdrOn,
+                                contentDescription = "HDR Mode",
+                                tint = if (uiState.isHdrEnabled) Color.Yellow else Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
                 

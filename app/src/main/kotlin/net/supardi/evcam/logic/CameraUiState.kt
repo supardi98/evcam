@@ -96,6 +96,7 @@ class CameraUiState(
     var volumeShutterEnabled by mutableStateOf(prefs.getBoolean("volumeShutterEnabled", true))
     
     var showPluginManager by mutableStateOf(false)
+    var showCameraInfoDialog by mutableStateOf(false)
     var isHandTrackingInstalled by mutableStateOf(prefs.getBoolean("isHandTrackingInstalled", false))
     var isHandTrackingEnabled by mutableStateOf(prefs.getBoolean("isHandTrackingEnabled", true))
     var isShutterSoundEnabled by mutableStateOf(prefs.getBoolean("isShutterSoundEnabled", true))
@@ -112,7 +113,15 @@ class CameraUiState(
     var videoFps by mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name))
     var videoAudioEnabled by mutableStateOf(prefs.getBoolean("videoAudioEnabled", true))
     var isNightModeEnabled by mutableStateOf(prefs.getBoolean("isNightModeEnabled", false))
+    var isHdrEnabled by mutableStateOf(prefs.getBoolean("isHdrEnabled", false))
     var selectedFilter by mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name))
+
+    // Hardware capabilities for the currently active camera
+    var hasFlashSupport by mutableStateOf(true)
+    var hasHdrExtension by mutableStateOf(true)
+    var hasNightExtension by mutableStateOf(true)
+    var hasManualSensorSupport by mutableStateOf(true)
+    var supportedVideoProfiles by mutableStateOf<List<String>>(emptyList())
     var showFilterDialog by mutableStateOf(false)
     var imageFormat by mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name))
     
