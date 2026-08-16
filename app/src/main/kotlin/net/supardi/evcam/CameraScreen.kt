@@ -1765,20 +1765,38 @@ fun rememberDeviceOrientation(): DeviceOrientationData {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         
+        var filteredRoll = 0f
+        var filteredPitch = 0f
+        val alpha = 0.2f
+        
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
                 val x = event.values[0]
                 val y = event.values[1]
                 val z = event.values[2]
                 
-                val roll = Math.toDegrees(kotlin.math.atan2(x.toDouble(), y.toDouble())).toFloat()
+                val rawRoll = Math.toDegrees(kotlin.math.atan2(x.toDouble(), y.toDouble())).toFloat()
                 val isFlat = kotlin.math.abs(z) > 8.5f
                 val norm = kotlin.math.sqrt((x * x + y * y).toDouble()).toFloat()
-                val pitch = Math.toDegrees(kotlin.math.atan2(-z.toDouble(), norm.coerceAtLeast(0.001f).toDouble())).toFloat()
+                val rawPitch = Math.toDegrees(kotlin.math.atan2(-z.toDouble(), norm.coerceAtLeast(0.001f).toDouble())).toFloat()
+                
+                filteredRoll += alpha * (rawRoll - filteredRoll)
+                filteredPitch += alpha * (rawPitch - filteredPitch)
+                
+                var finalRoll = filteredRoll
+                val rollMod = ((filteredRoll % 90f) + 90f) % 90f
+                if (rollMod < 1.8f || rollMod > 88.2f) {
+                    finalRoll = kotlin.math.round(filteredRoll / 90f) * 90f
+                }
+                
+                var finalPitch = filteredPitch
+                if (kotlin.math.abs(filteredPitch) < 1.8f) {
+                    finalPitch = 0f
+                }
                 
                 data = DeviceOrientationData(
-                    roll = kotlin.math.floor(roll),
-                    pitch = kotlin.math.floor(pitch),
+                    roll = kotlin.math.floor(finalRoll),
+                    pitch = kotlin.math.floor(finalPitch),
                     isFlat = isFlat
                 )
             }
@@ -1786,7 +1804,7 @@ fun rememberDeviceOrientation(): DeviceOrientationData {
         }
         
         sensor?.let {
-            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME)
         }
         
         onDispose {
