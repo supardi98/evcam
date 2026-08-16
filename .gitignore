@@ -60,3 +60,7 @@ captures/
 
 # Windows
 Thumbs.db
+
+# Log files and reports
+logcat.txt
+
