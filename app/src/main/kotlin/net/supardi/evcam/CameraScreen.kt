@@ -308,7 +308,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var isNightModeEnabled by uiState::isNightModeEnabled
     var selectedFilter by uiState::selectedFilter
     var showFilterDialog by uiState::showFilterDialog
-    var imageFormat by uiState::imageFormat
+
     
     var imageCaptureUseCase by uiState::imageCaptureUseCase
     var videoCaptureUseCase by uiState::videoCaptureUseCase
