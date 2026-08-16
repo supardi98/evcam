@@ -252,6 +252,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     var keepScreenOn by remember { mutableStateOf(prefs.getBoolean("keepScreenOn", false)) }
     var maxBrightness by remember { mutableStateOf(prefs.getBoolean("maxBrightness", false)) }
+    var evScrollAnchorY by remember { mutableFloatStateOf(0f) }
+
     
     var minZoomRatio by remember { mutableFloatStateOf(1f) }
     var maxZoomRatio by remember { mutableFloatStateOf(1f) }
@@ -823,10 +825,31 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         setOnTouchListener { _, event ->
                             scaleGestureDetector.onTouchEvent(event)
                             if (!scaleGestureDetector.isInProgress) {
+                                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                                    evScrollAnchorY = event.y
+                                } else if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+                                    val deltaY = evScrollAnchorY - event.y // positive = swipe up
+                                    val scrollStepThreshold = 50f // pixels per EV step
+                                    val steps = (deltaY / scrollStepThreshold).toInt()
+                                    if (steps != 0) {
+                                        val newIdx = (exposureIndex + steps).coerceIn(minExposureIndex, maxExposureIndex)
+                                        if (newIdx != exposureIndex) {
+                                            exposureIndex = newIdx
+                                            cameraControl?.setExposureCompensationIndex(newIdx)
+                                            showBrightnessSlider = true
+                                            if (newIdx != 0) {
+                                                isProMode = true
+                                            }
+                                        }
+                                        // Reset anchor to current y to support continuous scrolling
+                                        evScrollAnchorY = event.y
+                                    }
+                                }
                                 gestureDetector.onTouchEvent(event)
                             }
                             true
                         }
+
                     }
                 }
             )
@@ -1094,8 +1117,24 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 ) {
                     Slider(
                         value = zoomAnim.value,
-                        onValueChange = { coroutineScope.launch { zoomAnim.snapTo(it) } },
+                        onValueChange = { targetVal ->
+
+                            coroutineScope.launch {
+                                val diff = kotlin.math.abs(targetVal - zoomAnim.value)
+                                if (diff > 0.25f) {
+                                    // Smoothly animate large jumps (tap/click on slider track)
+                                    zoomAnim.animateTo(
+                                        targetValue = targetVal,
+                                        animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                    )
+                                } else {
+                                    // Instantly update small adjustments (dragging slider knob)
+                                    zoomAnim.snapTo(targetVal)
+                                }
+                            }
+                        },
                         valueRange = minZoomRatio..maxZoomRatio,
+
                         modifier = Modifier
                             .requiredWidth(250.dp)
                             .graphicsLayer { rotationZ = 270f }
