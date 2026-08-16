@@ -494,12 +494,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
                         android.util.Range(videoFps.fps, videoFps.fps)
                     )
+                    // Enable Video Stabilization (EIS/OIS) for steady video recording
+                    interop.setCaptureRequestOption(
+                        android.hardware.camera2.CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+                        android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON
+                    )
                 } else {
                     setTargetAspectRatio(aspectRatio.value)
                 }
             }.build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
+
             
             @Suppress("DEPRECATION")
             val imageCap = ImageCapture.Builder().apply {
