@@ -11,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -202,39 +203,32 @@ fun MediaPreviewDialog(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.7f))
                 .pointerInput(pageCount) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val down = awaitPointerEvent(PointerEventPass.Initial)
-                            val downChange = down.changes.firstOrNull() ?: continue
-                            if (!downChange.pressed) continue
-                            val startX = downChange.position.x
-                            val startY = downChange.position.y
-                            var totalX = 0f
-                            var totalY = 0f
-                            var swiped = false
-                            // Track until release
-                            inner@ while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val c = event.changes.firstOrNull() ?: break@inner
-                                totalX = c.position.x - startX
-                                totalY = c.position.y - startY
-                                if (!c.pressed) break@inner
-                            }
-                            val isHorizontalSwipe = kotlin.math.abs(totalX) > 40 && kotlin.math.abs(totalX) > kotlin.math.abs(totalY) * 1.5f
-                            if (isHorizontalSwipe && pageCount > 1) {
-                                val next = if (totalX < 0) {
+                    detectTapGestures(
+                        onTap = { onDismiss() }
+                    )
+                }
+                .pointerInput(pageCount) {
+                    var totalDragX = 0f
+                    detectDragGestures(
+                        onDragStart = { totalDragX = 0f },
+                        onDragEnd = {
+                            if (kotlin.math.abs(totalDragX) > 80 && pageCount > 1) {
+                                val next = if (totalDragX < 0) {
                                     (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
                                 } else {
                                     (pagerState.currentPage - 1).coerceAtLeast(0)
                                 }
                                 scope.launch { pagerState.animateScrollToPage(next) }
-                            } else if (kotlin.math.abs(totalX) < 15 && kotlin.math.abs(totalY) < 15) {
-                                // Pure tap on backdrop → dismiss
-                                onDismiss()
                             }
+                        },
+                        onDragCancel = { totalDragX = 0f },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            totalDragX += dragAmount.x
                         }
-                    }
+                    )
                 },
+
             contentAlignment = Alignment.Center
         ) {
             if (pageCount > 0) {
@@ -242,7 +236,12 @@ fun MediaPreviewDialog(
                     modifier = Modifier
                         .fillMaxWidth(0.92f)
                         .wrapContentHeight()
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            // Absorb clicks so they do not propagate to the backdrop's click/tap detector
+                        },
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Top bar — counter & close
