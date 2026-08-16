@@ -119,13 +119,7 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                     if (factor > 0) {
                         val wRatio = width / factor
                         val hRatio = height / factor
-                        // Normalize orientation ratios to standard labels, e.g. 16:9, 4:3, 1:1
-                        val maxR = kotlin.math.max(wRatio, hRatio)
-                        val minR = kotlin.math.min(wRatio, hRatio)
-                        aspect = if (maxR == 16 && minR == 9) "16:9"
-                                 else if (maxR == 4 && minR == 3) "4:3"
-                                 else if (maxR == 1 && minR == 1) "1:1"
-                                 else "$wRatio:$hRatio"
+                        aspect = "$wRatio:$hRatio"
                     }
                 }
 
@@ -144,6 +138,7 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
         MediaInfo()
     }
 }
+
 
 
 private fun fetchRecentMediaList(context: Context, limit: Int = 500): List<MediaItem> {
@@ -324,10 +319,12 @@ fun MediaPreviewDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .heightIn(max = 440.dp)
                                 .aspectRatio(parsedRatio)
                                 .clip(RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
+
 
                             if (page == 0 && lastCapturedBitmap != null) {
                                 Image(
