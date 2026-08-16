@@ -66,7 +66,7 @@ fun CameraBottomBar(
                     if (lastCapturedBitmap != null || lastCapturedUri != null) {
                         onThumbnailClick()
                     } else {
-                        Toast.makeText(context, "Belum ada foto atau video yang diambil", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "No photos or videos captured yet", Toast.LENGTH_SHORT).show()
                     }
                 },
             contentAlignment = Alignment.Center

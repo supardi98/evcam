@@ -202,10 +202,10 @@ fun MediaPreviewDialog(
                                 }
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Tidak ada aplikasi Galeri / Pemutar Video", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "No Gallery or Video Player app found", Toast.LENGTH_SHORT).show()
                             }
                         } else {
-                            Toast.makeText(context, "Media tidak ditemukan", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Media not found", Toast.LENGTH_SHORT).show()
                         }
                     }
 
@@ -231,7 +231,7 @@ fun MediaPreviewDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(14.dp))
-                                            .clickable { openActiveMedia() }
+                                            .clickable { onDismiss() }
                                     )
                                 } else if (item != null) {
                                     AsyncImage(
@@ -242,7 +242,7 @@ fun MediaPreviewDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(14.dp))
-                                            .clickable { openActiveMedia() }
+                                            .clickable { onDismiss() }
                                     )
                                 }
 
@@ -269,11 +269,11 @@ fun MediaPreviewDialog(
                     }
                 }
 
-                // Subtitle hint at bottom
+                // Subtitle hint at bottom (English)
                 val isCurrentVideo = mediaList.getOrNull(pagerState.currentPage)?.isVideo == true || (pagerState.currentPage == 0 && cameraMode == CameraMode.VIDEO)
                 Text(
-                    text = if (isCurrentVideo) "Ketuk tombol Putar / foto untuk memutar video" else "Ketuk foto untuk membuka di Galeri HP",
-                    color = Color.White.copy(alpha = 0.8f),
+                    text = if (isCurrentVideo) "Tap preview to dismiss • Tap play button to watch" else "Tap preview to dismiss • Swipe to view media",
+                    color = Color.White.copy(alpha = 0.85f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier
