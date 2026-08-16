@@ -182,7 +182,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     val triggerVibe = {
         try {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            val vibrator = if (Build.VERSION.SDK_INT >= 31) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            }
             if (vibrator != null && vibrator.hasVibrator()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator.vibrate(android.os.VibrationEffect.createOneShot(55, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
@@ -193,6 +199,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         } catch (e: Exception) {}
     }
+
     
     var lastCapturedUri by remember {
 
