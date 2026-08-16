@@ -31,10 +31,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import net.supardi.evcam.AspectRatioMode
-import net.supardi.evcam.CameraMode
-import net.supardi.evcam.ColorFilterMode
-import net.supardi.evcam.FocusState
 import net.supardi.evcam.logic.*
 import java.util.concurrent.TimeUnit
 

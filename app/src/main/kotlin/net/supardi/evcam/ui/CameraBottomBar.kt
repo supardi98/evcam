@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
-import net.supardi.evcam.CameraMode
+import net.supardi.evcam.logic.*
 
 @Composable
 fun CameraBottomBar(

@@ -21,9 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import net.supardi.evcam.WatermarkElement
-import net.supardi.evcam.WatermarkElementType
-import net.supardi.evcam.WatermarkQuadrant
+import net.supardi.evcam.logic.*
+
 
 @Composable
 fun WatermarkSettingsDialog(
