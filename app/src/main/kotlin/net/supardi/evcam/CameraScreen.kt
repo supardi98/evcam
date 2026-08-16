@@ -1,6 +1,7 @@
 package net.supardi.evcam
 
 import net.supardi.evcam.ui.*
+import androidx.compose.animation.core.animateFloat
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -239,6 +240,20 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var focusOffset by remember { mutableStateOf<Offset?>(null) }
     var showFocusBox by remember { mutableStateOf(false) }
     var focusState by remember { mutableStateOf(FocusState.SEARCHING) }
+    var isAeAfLocked by remember { mutableStateOf(false) }
+    var recordingSeconds by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            recordingSeconds = 0
+            while (isRecording) {
+                kotlinx.coroutines.delay(1000)
+                recordingSeconds++
+            }
+        } else {
+            recordingSeconds = 0
+        }
+    }
     
     var gridType by remember { mutableStateOf(GridType.valueOf(prefs.getString("gridType", GridType.NONE.name) ?: GridType.NONE.name)) }
     var flashMode by remember { mutableStateOf(FlashMode.valueOf(prefs.getString("flashMode", FlashMode.AUTO.name) ?: FlashMode.AUTO.name)) }
@@ -659,6 +674,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         })
                         val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
                             override fun onSingleTapUp(e: MotionEvent): Boolean {
+                                if (isAeAfLocked) {
+                                    isAeAfLocked = false
+                                    cameraControl?.cancelFocusAndMetering()
+                                }
+                                
                                 if (isProMode && !isFocusAuto) {
                                     return true
                                 }
@@ -684,6 +704,35 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                     }
                                 }, ContextCompat.getMainExecutor(ctx))
                                 return true
+                            }
+
+                            override fun onLongPress(e: MotionEvent) {
+                                val factory = previewView.meteringPointFactory
+                                val point = factory.createPoint(e.x, e.y)
+                                val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                                    .disableAutoCancel()
+                                    .build()
+                                cameraControl?.startFocusAndMetering(action)
+                                isAeAfLocked = true
+                                focusOffset = Offset(e.x, e.y)
+                                showFocusBox = true
+                                focusState = FocusState.SUCCESS
+                            }
+
+                            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                                if (e1 == null) return false
+                                val diffX = e2.x - e1.x
+                                val diffY = e2.y - e1.y
+                                if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(velocityX) > 100) {
+                                    if (diffX < 0 && cameraMode == CameraMode.PHOTO) {
+                                        if (!isRecording) cameraMode = CameraMode.VIDEO
+                                        return true
+                                    } else if (diffX > 0 && cameraMode == CameraMode.VIDEO) {
+                                        if (!isRecording) cameraMode = CameraMode.PHOTO
+                                        return true
+                                    }
+                                }
+                                return false
                             }
                         })
                         setOnTouchListener { _, event ->
@@ -1054,6 +1103,67 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
         
+        // Top Center Overlays: Video Duration & AE/AF Lock Badge
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 48.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            if (isRecording) {
+                val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+                val alpha by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 0.2f,
+                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                        animation = androidx.compose.animation.core.tween(500),
+                        repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                    )
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red.copy(alpha = alpha))
+                    )
+                    Text(
+                        text = String.format(Locale.US, "%02d:%02d", recordingSeconds / 60, recordingSeconds % 60),
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else if (isAeAfLocked) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.Yellow)
+                        .clickable { 
+                            isAeAfLocked = false
+                            cameraControl?.cancelFocusAndMetering()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "AE/AF LOCK",
+                        color = Color.Black,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
