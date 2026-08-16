@@ -247,7 +247,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var isAeAfLocked by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableIntStateOf(0) }
     var transitionFreezeBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var lastLiveBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
     LaunchedEffect(isRecording) {
         if (isRecording) {
@@ -430,29 +429,17 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
     } }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(120)
-            try {
-                val bmp = previewView.bitmap
-                if (bmp != null && bmp.width > 0 && bmp.height > 0) {
-                    val w = (bmp.width / 6).coerceAtLeast(1)
-                    val h = (bmp.height / 6).coerceAtLeast(1)
-                    lastLiveBitmap = android.graphics.Bitmap.createScaledBitmap(bmp, w, h, true)
-                }
-            } catch (e: Exception) {
-                // Ignore transient frame capture errors
-            }
+    val triggerTransition: (() -> Unit) -> Unit = { action ->
+        val bmp = try { previewView.bitmap } catch (e: Exception) { null }
+        if (bmp != null && bmp.width > 0 && bmp.height > 0) {
+            val w = (bmp.width / 6).coerceAtLeast(1)
+            val h = (bmp.height / 6).coerceAtLeast(1)
+            transitionFreezeBitmap = android.graphics.Bitmap.createScaledBitmap(bmp, w, h, true)
         }
+        action()
     }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
-        if (lastLiveBitmap != null) {
-            transitionFreezeBitmap = lastLiveBitmap
-            android.util.Log.d("EvcamTransition", "Freeze bitmap active from live backup: ${lastLiveBitmap!!.width}x${lastLiveBitmap!!.height}")
-        } else {
-            android.util.Log.w("EvcamTransition", "lastLiveBitmap is null on state change")
-        }
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
         
@@ -774,16 +761,20 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                 focusState = FocusState.SUCCESS
                             }
 
-                            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                                 if (e1 == null) return false
                                 val diffX = e2.x - e1.x
                                 val diffY = e2.y - e1.y
                                 if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(velocityX) > 100) {
                                     if (diffX < 0 && cameraMode == CameraMode.PHOTO) {
-                                        if (!isRecording) cameraMode = CameraMode.VIDEO
+                                        if (!isRecording) {
+                                            triggerTransition { cameraMode = CameraMode.VIDEO }
+                                        }
                                         return true
                                     } else if (diffX > 0 && cameraMode == CameraMode.VIDEO) {
-                                        if (!isRecording) cameraMode = CameraMode.PHOTO
+                                        if (!isRecording) {
+                                            triggerTransition { cameraMode = CameraMode.PHOTO }
+                                        }
                                         return true
                                     }
                                 }
@@ -1340,12 +1331,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             .clip(CircleShape)
                             .background(Color.Black.copy(alpha = 0.4f))
                             .clickable {
-                                aspectRatio = when (aspectRatio) {
-                                    AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
-                                    AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
-                                    AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
+                                triggerTransition {
+                                    aspectRatio = when (aspectRatio) {
+                                        AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
+                                        AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
+                                        AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
+                                    }
+                                    prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
                                 }
-                                prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
@@ -1546,14 +1539,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val photoSelected = cameraMode == CameraMode.PHOTO
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
+                            .weight(1f)
                             .clip(CircleShape)
                             .background(if (photoSelected) Color.Yellow else Color.Transparent)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { if (!isRecording) cameraMode = CameraMode.PHOTO }
-                            .padding(horizontal = 16.dp),
+                            ) { 
+                                if (!isRecording && cameraMode != CameraMode.PHOTO) {
+                                    triggerTransition { cameraMode = CameraMode.PHOTO }
+                                }
+                            }
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -1567,14 +1564,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val videoSelected = cameraMode == CameraMode.VIDEO
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
+                            .weight(1f)
                             .clip(CircleShape)
                             .background(if (videoSelected) Color.Yellow else Color.Transparent)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { if (!isRecording) cameraMode = CameraMode.VIDEO }
-                            .padding(horizontal = 16.dp),
+                            ) { 
+                                if (!isRecording && cameraMode != CameraMode.VIDEO) {
+                                    triggerTransition { cameraMode = CameraMode.VIDEO }
+                                }
+                            }
+                            .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
