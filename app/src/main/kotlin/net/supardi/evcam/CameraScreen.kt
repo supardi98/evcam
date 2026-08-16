@@ -414,7 +414,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
             val preview = Preview.Builder().apply {
-                if (cameraMode == CameraMode.PHOTO) setTargetAspectRatio(aspectRatio.value)
+                if (cameraMode == CameraMode.VIDEO) {
+                    setTargetAspectRatio(AspectRatio.RATIO_16_9)
+                } else {
+                    setTargetAspectRatio(aspectRatio.value)
+                }
             }.build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
