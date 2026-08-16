@@ -571,7 +571,7 @@ private fun VideoCaptureCard(info: CameraHardwareInfo) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .background(Color.DarkGray, RoundedCornerShape(12.dp))
+            .background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp))
             .padding(16.dp)
     ) {
         Text(

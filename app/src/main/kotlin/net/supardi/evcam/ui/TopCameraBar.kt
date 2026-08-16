@@ -254,10 +254,10 @@ fun TopCameraBar(
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.4f))
                         .clickable {
-                            uiState.videoQuality = when (uiState.videoQuality) {
-                                VideoQualityMode.HD -> VideoQualityMode.FHD
-                                VideoQualityMode.FHD -> VideoQualityMode.UHD
-                                VideoQualityMode.UHD -> VideoQualityMode.HD
+                            if (uiState.supportedVideoQualities.isNotEmpty()) {
+                                val currentIndex = uiState.supportedVideoQualities.indexOf(uiState.videoQuality)
+                                val nextIndex = if (currentIndex != -1) (currentIndex + 1) % uiState.supportedVideoQualities.size else 0
+                                uiState.videoQuality = uiState.supportedVideoQualities[nextIndex]
                             }
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),

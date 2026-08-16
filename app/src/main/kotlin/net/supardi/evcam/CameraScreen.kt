@@ -520,6 +520,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 
                 val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camera.cameraInfo)
                 
+                // Extract Supported Video Qualities
+                val supportedQualities = androidx.camera.video.QualitySelector.getSupportedQualities(camera.cameraInfo)
+                uiState.supportedVideoQualities = VideoQualityMode.values().filter { supportedQualities.contains(it.quality) }
+                if (uiState.supportedVideoQualities.isNotEmpty() && !uiState.supportedVideoQualities.contains(uiState.videoQuality)) {
+                    uiState.videoQuality = uiState.supportedVideoQualities.first()
+                }
+                
                 // Extract Flash and Manual Sensor capabilities
                 uiState.hasFlashSupport = camera.cameraInfo.hasFlashUnit()
                 val caps = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
