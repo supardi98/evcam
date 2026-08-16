@@ -395,7 +395,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(enableGeotagging) { prefs.edit().putBoolean("enableGeotagging", enableGeotagging).apply() }
     LaunchedEffect(aspectRatio) { prefs.edit().putString("aspectRatio", aspectRatio.name).apply() }
     LaunchedEffect(videoQuality) { prefs.edit().putString("videoQuality", videoQuality.name).apply() }
+    LaunchedEffect(videoFps) { prefs.edit().putString("videoFps", videoFps.name).apply() }
     LaunchedEffect(imageFormat) { prefs.edit().putString("imageFormat", imageFormat.name).apply() }
+
     
     val deviceOrientation = rememberDeviceOrientation()
     val deviceRotation = deviceOrientation.roll
@@ -457,9 +459,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
     }
     
-    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
+    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality, videoFps) {
         val t0 = System.currentTimeMillis()
-        android.util.Log.d("EvcamTiming", "[t0 = 0ms] State change trigger -> mode=$cameraMode, ratio=$aspectRatio")
+        android.util.Log.d("EvcamTiming", "[t0 = 0ms] State change trigger -> mode=$cameraMode, ratio=$aspectRatio, fps=${videoFps.fps}")
         isTransitioningRatio = true
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
@@ -471,6 +473,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             val preview = Preview.Builder().apply {
                 if (cameraMode == CameraMode.VIDEO) {
                     setTargetAspectRatio(AspectRatio.RATIO_16_9)
+                    // Set target FPS range to hardware preview via Camera2Interop
+                    val interop = androidx.camera.camera2.interop.Camera2Interop.Extender(this)
+                    interop.setCaptureRequestOption(
+                        android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
+                        android.util.Range(videoFps.fps, videoFps.fps)
+                    )
                 } else {
                     setTargetAspectRatio(aspectRatio.value)
                 }
@@ -489,12 +497,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             val recorder = Recorder.Builder()
                 .setQualitySelector(qualitySelector)
                 .build()
+            
             val videoCap = androidx.camera.video.VideoCapture.withOutput(recorder)
+
             
             imageCaptureUseCase = imageCap
             videoCaptureUseCase = videoCap
             
             val imageAnalysis = androidx.camera.core.ImageAnalysis.Builder()
+
                 .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
             imageAnalysis.setAnalyzer(androidx.core.content.ContextCompat.getMainExecutor(context), proAnalyzer)
