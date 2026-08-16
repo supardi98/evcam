@@ -8,6 +8,11 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.geometry.toRect
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -124,6 +129,46 @@ enum class AspectRatioMode(val value: Int, val label: String) { RATIO_4_3(Aspect
 enum class VideoQualityMode(val quality: Quality, val label: String) { HD(Quality.HD, "720p"), FHD(Quality.FHD, "1080p"), UHD(Quality.UHD, "4K") }
 enum class VideoFpsMode(val fps: Int, val label: String) { FPS_30(30, "30 FPS"), FPS_60(60, "60 FPS") }
 enum class ImageFormatMode(val label: String) { JPEG("JPEG"), RAW("RAW+JPEG") }
+
+enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
+    NORMAL("Normal", floatArrayOf(
+        1f, 0f, 0f, 0f, 0f,
+        0f, 1f, 0f, 0f, 0f,
+        0f, 0f, 1f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )),
+    MONOCHROME("B&W", floatArrayOf(
+        0.33f, 0.59f, 0.11f, 0f, 0f,
+        0.33f, 0.59f, 0.11f, 0f, 0f,
+        0.33f, 0.59f, 0.11f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )),
+    SEPIA("Sepia", floatArrayOf(
+        0.393f, 0.769f, 0.189f, 0f, 0f,
+        0.349f, 0.686f, 0.168f, 0f, 0f,
+        0.272f, 0.534f, 0.131f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )),
+    VINTAGE("Vintage", floatArrayOf(
+        0.9f, 0f, 0f, 0f, 0f,
+        0f, 0.8f, 0f, 0f, 0f,
+        0f, 0f, 0.7f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )),
+    COOL("Cool", floatArrayOf(
+        0.8f, 0f, 0f, 0f, 0f,
+        0f, 0.9f, 0f, 0f, 0f,
+        0f, 0f, 1.2f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )),
+    WARM("Warm", floatArrayOf(
+        1.2f, 0f, 0f, 0f, 0f,
+        0f, 1.0f, 0f, 0f, 0f,
+        0f, 0f, 0.8f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    ))
+}
+
 enum class LocationFormat(val label: String) { CITY("City Only"), CITY_COUNTRY("City, Country"), FULL_ADDRESS("Full Address"), COORDINATES("Lat/Lng") }
 enum class WatermarkElementType { TEXT, LOCATION, DATE }
 enum class WatermarkQuadrant { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
@@ -318,7 +363,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var videoFps by remember { mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name)) }
     var videoAudioEnabled by remember { mutableStateOf(prefs.getBoolean("videoAudioEnabled", true)) }
     var isNightModeEnabled by remember { mutableStateOf(prefs.getBoolean("isNightModeEnabled", false)) }
+    var selectedFilter by remember { mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name)) }
+    var showFilterDialog by remember { mutableStateOf(false) }
     var imageFormat by remember { mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name)) }
+
 
 
     
@@ -412,7 +460,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(videoFps) { prefs.edit().putString("videoFps", videoFps.name).apply() }
     LaunchedEffect(videoAudioEnabled) { prefs.edit().putBoolean("videoAudioEnabled", videoAudioEnabled).apply() }
     LaunchedEffect(isNightModeEnabled) { prefs.edit().putBoolean("isNightModeEnabled", isNightModeEnabled).apply() }
+    LaunchedEffect(selectedFilter) { prefs.edit().putString("selectedFilter", selectedFilter.name).apply() }
     LaunchedEffect(imageFormat) { prefs.edit().putString("imageFormat", imageFormat.name).apply() }
+
 
 
 
@@ -662,8 +712,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, 0, 0)
             }
             imageCaptureUseCase?.let { cap ->
-                takePhoto(cap, context, ContextCompat.getMainExecutor(context), flashMode, showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { bitmap, uri ->
-
+                takePhoto(cap, context, ContextCompat.getMainExecutor(context), flashMode, selectedFilter, showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { bitmap, uri ->
                     lastCapturedBitmap = bitmap
                     lastCapturedUri = uri 
                     prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
@@ -672,6 +721,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
+
         } else {
             triggerVibe() // Vibrate both at the start and end of video recording
             if (isRecording) {
@@ -807,8 +857,27 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .aspectRatio(animatedAspectRatio)
         ) {
             AndroidView(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawWithContent {
+                        if (selectedFilter != ColorFilterMode.NORMAL) {
+                            val paint = androidx.compose.ui.graphics.Paint().apply {
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                                    androidx.compose.ui.graphics.ColorMatrix(selectedFilter.matrixValues)
+                                )
+                            }
+                            drawIntoCanvas { canvas ->
+                                canvas.saveLayer(size.toRect(), paint)
+                                drawContent()
+                                canvas.restore()
+                            }
+                        } else {
+                            drawContent()
+                        }
+                    },
+
                 factory = { ctx -> 
+
                     previewView.apply {
                         val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                             override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -1456,6 +1525,26 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         }
                     }
                     Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { showFilterDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val emoji = "🎨"
+                        val backgroundAlpha = if (selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = emoji, fontSize = 20.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+
 
                     IconButton(onClick = {
                         timerMode = when (timerMode) {
@@ -2067,7 +2156,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             onDismiss = { showWatermarkDialog = false }
         )
     }
+    
+    if (showFilterDialog) {
+        ColorFilterDialog(
+            selectedFilter = selectedFilter,
+            onFilterSelect = { selectedFilter = it },
+            onDismissRequest = { showFilterDialog = false }
+        )
+    }
 }
+
 
 data class DeviceOrientationData(
     val roll: Float = 0f,
@@ -2155,6 +2253,7 @@ private fun takePhoto(
     context: android.content.Context, 
     executor: java.util.concurrent.Executor,
     flashMode: FlashMode,
+    selectedFilter: ColorFilterMode,
     showWatermark: Boolean,
     watermarkElements: List<WatermarkElement>,
     liveLocation: android.location.Location?,
@@ -2164,6 +2263,7 @@ private fun takePhoto(
     aspectRatioMode: AspectRatioMode,
     onPhotoSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit
 ) {
+
 
     if (enableRawCapture) {
         android.widget.Toast.makeText(context, "RAW Capture is enabled (Saving as DNG is experimental)", android.widget.Toast.LENGTH_SHORT).show()
@@ -2184,6 +2284,19 @@ private fun takePhoto(
                 try {
                     var bitmap = image.toBitmap()
                     image.close()
+                    
+                    if (selectedFilter != ColorFilterMode.NORMAL) {
+                        try {
+                            val filteredBitmap = android.graphics.Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: android.graphics.Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(filteredBitmap)
+                            val paint = android.graphics.Paint().apply {
+                                colorFilter = android.graphics.ColorMatrixColorFilter(selectedFilter.matrixValues)
+                            }
+                            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+                            bitmap = filteredBitmap
+                        } catch (e: Exception) {}
+                    }
+
                     
                     if (aspectRatioMode == AspectRatioMode.RATIO_1_1) {
                         val size = Math.min(bitmap.width, bitmap.height)
@@ -2658,3 +2771,81 @@ fun formatDateElement(format: String): String {
         fmt
     }
 }
+
+@Composable
+fun ColorFilterDialog(
+    selectedFilter: ColorFilterMode,
+    onFilterSelect: (ColorFilterMode) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1E1E1E).copy(alpha = 0.95f))
+                .padding(20.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Color Filters 🎨",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Grid filter items
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.height(180.dp)
+                ) {
+                    items(ColorFilterMode.values().size) { idx ->
+                        val filter = ColorFilterMode.values()[idx]
+                        val isSelected = filter == selectedFilter
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) Color.Yellow.copy(alpha = 0.2f) else Color(0xFF2E2E2E))
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) Color.Yellow else Color.Transparent,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable { onFilterSelect(filter) }
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = filter.label,
+                                color = if (isSelected) Color.Yellow else Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                androidx.compose.material3.Button(
+                    onClick = onDismissRequest,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color.Yellow,
+                        contentColor = Color.Black
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Apply Filter", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
