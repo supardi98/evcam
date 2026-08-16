@@ -1050,7 +1050,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 .padding(bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isProMode && showProPanel && !showSettings) {
+            if (showProPanel && !showSettings) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
