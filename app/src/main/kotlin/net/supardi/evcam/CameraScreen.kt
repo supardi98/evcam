@@ -177,7 +177,23 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     var isRecording by remember { mutableStateOf(false) }
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
+    
+    val triggerVibe = {
+        try {
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(55, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(55)
+                }
+            }
+        } catch (e: Exception) {}
+    }
+    
     var lastCapturedUri by remember {
+
         val saved = prefs.getString("lastCapturedUri", null)
         val parsedUri = if (!saved.isNullOrEmpty()) Uri.parse(saved) else null
         mutableStateOf<Uri?>(parsedUri ?: fetchLatestMediaUri(context))
@@ -572,6 +588,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     val executeCapture = {
         if (cameraMode == CameraMode.PHOTO) {
+            triggerVibe()
             coroutineScope.launch {
                 showShutterFlash = true
                 delay(150)
@@ -595,6 +612,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
         } else {
+            triggerVibe() // Vibrate both at the start and end of video recording
             if (isRecording) {
                 activeRecording?.stop()
             } else {
@@ -612,6 +630,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
     }
+
     
     LaunchedEffect(isBursting) {
         if (isBursting) {
