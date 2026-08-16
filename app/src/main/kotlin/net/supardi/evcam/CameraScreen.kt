@@ -1850,6 +1850,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     if (isRecording) initiateCapture()
                 },
                 onDragZoom = { deltaY ->
+                    showZoomSlider = true
                     val zoomStep = (deltaY / 300f) * (maxZoomRatio - minZoomRatio)
                     val newZoom = (zoomAnim.value + zoomStep).coerceIn(minZoomRatio, maxZoomRatio)
                     coroutineScope.launch { zoomAnim.snapTo(newZoom) }
