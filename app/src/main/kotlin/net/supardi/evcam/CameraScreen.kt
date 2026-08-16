@@ -551,14 +551,23 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         isTransitioningRatio = false
     }
 
-    val animatedZoomRatio by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = currentZoom,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 250, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-        label = "SmoothLensZoom"
+    // Preset zoom target (animated) — only used when user taps 1x/2x/5x buttons
+    var presetZoom by remember { mutableFloatStateOf(1f) }
+    val animatedPresetZoom by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = presetZoom,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 280, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "PresetLensZoom",
+        finishedListener = { /* animation done, currentZoom is already up-to-date */ }
     )
 
-    LaunchedEffect(animatedZoomRatio, cameraControl) {
-        cameraControl?.setZoomRatio(animatedZoomRatio)
+    // Sync animated preset value into currentZoom so camera follows smoothly
+    LaunchedEffect(animatedPresetZoom) {
+        currentZoom = animatedPresetZoom
+    }
+
+    // Direct camera zoom — always applied immediately (no animation for gesture zoom)
+    LaunchedEffect(currentZoom, cameraControl) {
+        cameraControl?.setZoomRatio(currentZoom)
     }
     
     val executeCapture = {
@@ -723,7 +732,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                             override fun onScale(detector: ScaleGestureDetector): Boolean {
                                 showZoomSlider = true
-                                currentZoom = (currentZoom * detector.scaleFactor).coerceIn(minZoomRatio, maxZoomRatio)
+                                // Pinch: direct, no animation
+                                val newZoom = (currentZoom * detector.scaleFactor).coerceIn(minZoomRatio, maxZoomRatio)
+                                currentZoom = newZoom
+                                presetZoom = newZoom  // keep preset in sync so next button tap animates from here
                                 return true
                             }
                         })
@@ -1551,13 +1563,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(if (currentZoom == zoomVal) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
-                                .clickable { currentZoom = zoomVal }
+                                .background(if (presetZoom == zoomVal) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
+                                .clickable {
+                                    presetZoom = zoomVal  // animated transition to preset
+                                }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = label, 
-                                color = if (currentZoom == zoomVal) Color.Yellow else Color.White,
+                                color = if (presetZoom == zoomVal) Color.Yellow else Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
@@ -1771,7 +1785,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 },
                 onDragZoom = { deltaY ->
                     val zoomStep = (deltaY / 300f) * (maxZoomRatio - minZoomRatio)
-                    currentZoom = (currentZoom + zoomStep).coerceIn(minZoomRatio, maxZoomRatio)
+                    val newZoom = (currentZoom + zoomStep).coerceIn(minZoomRatio, maxZoomRatio)
+                    currentZoom = newZoom    // drag: direct, no animation
+                    presetZoom = newZoom     // keep preset in sync
                 },
                 onSwitchCamera = {
                     if (!isRecording) {
