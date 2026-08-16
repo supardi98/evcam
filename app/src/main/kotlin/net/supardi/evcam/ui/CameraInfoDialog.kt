@@ -221,9 +221,18 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                 
                 if (supportedStandards.isNotEmpty()) {
                     supportedStandards.joinToString("\n") { size ->
-                        val minDuration = map.getOutputMinFrameDuration(android.media.MediaRecorder::class.java, size)
-                        val fps = if (minDuration > 0) (1_000_000_000.0 / minDuration).toInt() else 30
-                        if (fps > maxFps) maxFps = fps
+                        val durRecorder = map.getOutputMinFrameDuration(android.media.MediaRecorder::class.java, size)
+                        val durCodec = map.getOutputMinFrameDuration(android.media.MediaCodec::class.java, size)
+                        val durSurface = map.getOutputMinFrameDuration(android.graphics.SurfaceTexture::class.java, size)
+                        
+                        val baseFps = if (durRecorder > 0) (1_000_000_000.0 / durRecorder).toInt() else 30
+                        
+                        val minDurList = listOf(durRecorder, durCodec, durSurface).filter { it > 0 }
+                        val absoluteMinDur = if (minDurList.isNotEmpty()) minDurList.minOrNull()!! else 0L
+                        val maxPossibleFps = if (absoluteMinDur > 0) (1_000_000_000.0 / absoluteMinDur).toInt() else baseFps
+                        
+                        if (baseFps > maxFps) maxFps = baseFps
+                        if (maxPossibleFps > maxFps) maxFps = maxPossibleFps
                         
                         val name = when {
                             size.width == 7680 && size.height == 4320 -> "8K"
@@ -238,12 +247,16 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                             map.getHighSpeedVideoFpsRangesFor(size)
                         } catch (e: Exception) { null }
                         
-                        val hsFpsList = highSpeedRanges?.map { it.upper }?.distinct()?.filter { it > fps } ?: emptyList()
+                        val hsFpsList = highSpeedRanges?.map { it.upper }?.distinct()?.filter { it > baseFps }?.toMutableList() ?: mutableListOf()
+                        if (maxPossibleFps > baseFps && !hsFpsList.contains(maxPossibleFps)) {
+                            hsFpsList.add(maxPossibleFps)
+                        }
+                        
                         val fpsStr = if (hsFpsList.isNotEmpty()) {
-                            val hsFpsStr = hsFpsList.joinToString(", ")
-                            "@ $fps, $hsFpsStr fps"
+                            val hsFpsStr = hsFpsList.sorted().joinToString(", ")
+                            "@ $baseFps, $hsFpsStr fps"
                         } else {
-                            "@ $fps fps"
+                            "@ $baseFps fps"
                         }
                         
                         "$name $fpsStr"
