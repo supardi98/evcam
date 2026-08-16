@@ -27,6 +27,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
@@ -403,8 +404,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 setTargetAspectRatio(aspectRatio.value)
             }.build()
             
+            val qualitySelector = QualitySelector.from(
+                videoQuality.quality,
+                FallbackStrategy.lowerQualityOrHigherThan(videoQuality.quality)
+            )
             val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(videoQuality.quality))
+                .setQualitySelector(qualitySelector)
                 .build()
             val videoCap = androidx.camera.video.VideoCapture.withOutput(recorder)
             
@@ -418,13 +423,26 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             val cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
             
+            var boundCamera: androidx.camera.core.Camera? = null
             try {
                 cameraProvider.unbindAll()
-                val camera = if (cameraMode == CameraMode.VIDEO) {
+                boundCamera = if (cameraMode == CameraMode.VIDEO) {
                     cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, videoCap)
                 } else {
                     cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCap, imageAnalysis)
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.util.Log.e("Evcam", "Use case binding failed, falling back to preview", e)
+                try {
+                    cameraProvider.unbindAll()
+                    boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+                } catch (e2: Exception) {
+                    e2.printStackTrace()
+                }
+            }
+            
+            boundCamera?.let { camera ->
                 cameraControl = camera.cameraControl
                 camera2Control = Camera2CameraControl.from(camera.cameraControl)
                 
@@ -443,6 +461,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 if (isoRange != null) {
                     minIso = isoRange.lower.toFloat()
                     maxIso = isoRange.upper.toFloat()
+                    if (iso < minIso || iso > maxIso) {
+                        iso = minIso
+                    }
                 }
 
                 val expState = camera.cameraInfo.exposureState
@@ -451,8 +472,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     maxExposureIndex = expState.exposureCompensationRange.upper
                     exposureStep = expState.exposureCompensationStep.toFloat()
                 }
-            } catch (e: Exception) {
-                Log.e("Evcam", "Use case binding failed", e)
             }
         }, executor)
     }
