@@ -309,7 +309,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var aspectRatio by remember { mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_4_3.name) ?: AspectRatioMode.RATIO_4_3.name)) }
     var videoQuality by remember { mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name)) }
     var videoFps by remember { mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name)) }
+    var videoAudioEnabled by remember { mutableStateOf(prefs.getBoolean("videoAudioEnabled", true)) }
     var imageFormat by remember { mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name)) }
+
     
     val targetRatio = if (cameraMode == CameraMode.VIDEO) {
         9f / 16f
@@ -384,10 +386,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 liveLocation = location
                 try {
                     val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                    @Suppress("DEPRECATION")
                     val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
                     if (addresses != null && addresses.isNotEmpty()) {
                         liveAddress = addresses[0]
                     }
+
+
                 } catch(e: Exception) {}
             }
         }
@@ -396,7 +401,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(aspectRatio) { prefs.edit().putString("aspectRatio", aspectRatio.name).apply() }
     LaunchedEffect(videoQuality) { prefs.edit().putString("videoQuality", videoQuality.name).apply() }
     LaunchedEffect(videoFps) { prefs.edit().putString("videoFps", videoFps.name).apply() }
+    LaunchedEffect(videoAudioEnabled) { prefs.edit().putBoolean("videoAudioEnabled", videoAudioEnabled).apply() }
     LaunchedEffect(imageFormat) { prefs.edit().putString("imageFormat", imageFormat.name).apply() }
+
 
     
     val deviceOrientation = rememberDeviceOrientation()
@@ -470,6 +477,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             val t1 = System.currentTimeMillis() - t0
             android.util.Log.d("EvcamTiming", "[t1 = ${t1}ms] ProcessCameraProvider listener callback fired")
             val cameraProvider = cameraProviderFuture.get()
+            @Suppress("DEPRECATION")
             val preview = Preview.Builder().apply {
                 if (cameraMode == CameraMode.VIDEO) {
                     setTargetAspectRatio(AspectRatio.RATIO_16_9)
@@ -486,9 +494,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
             
+            @Suppress("DEPRECATION")
             val imageCap = ImageCapture.Builder().apply {
                 setTargetAspectRatio(aspectRatio.value)
             }.build()
+
             
             val qualitySelector = QualitySelector.from(
                 videoQuality.quality,
@@ -617,7 +627,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, 0, 0)
             }
             imageCaptureUseCase?.let { cap ->
-                takePhoto(cap, context, ContextCompat.getMainExecutor(context), showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { bitmap, uri ->
+                takePhoto(cap, context, ContextCompat.getMainExecutor(context), flashMode, showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { bitmap, uri ->
+
                     lastCapturedBitmap = bitmap
                     lastCapturedUri = uri 
                     prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
@@ -632,7 +643,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 activeRecording?.stop()
             } else {
                 videoCaptureUseCase?.let { cap ->
-                    activeRecording = startVideoRecord(cap, context) { event ->
+                    activeRecording = startVideoRecord(cap, context, videoAudioEnabled) { event ->
+
                         if (event is VideoRecordEvent.Start) isRecording = true
                         else if (event is VideoRecordEvent.Finalize) {
                             isRecording = false
@@ -940,6 +952,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
             if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO) {
+                @Suppress("UNUSED_VARIABLE")
                 val count = peakingUpdateCount // trigger recomposition
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                     drawImage(
@@ -950,8 +963,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
             
             if (enableHistogram && histogramData != null && cameraMode == CameraMode.PHOTO) {
+                @Suppress("UNUSED_VARIABLE")
                 val count = histogramUpdateCount // trigger recomposition
                 androidx.compose.foundation.Canvas(
+
                     modifier = Modifier
                         .padding(16.dp)
                         .size(100.dp, 60.dp)
@@ -959,7 +974,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .align(Alignment.TopStart)
                 ) {
                     val data = histogramData!!
-                    val maxCount = data.maxOrNull()?.toFloat()?.coerceAtLeast(1f) ?: 1f
+                    val maxCount = (data.maxOrNull()?.toFloat() ?: 1f).coerceAtLeast(1f)
+
                     val barWidth = size.width / data.size
                     
                     val path = androidx.compose.ui.graphics.Path()
@@ -1367,7 +1383,23 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val iconTint = if (isTorchOn) Color.Yellow else Color.White
                     Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
                 }
+                if (cameraMode == CameraMode.VIDEO) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { videoAudioEnabled = !videoAudioEnabled },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val emoji = if (videoAudioEnabled) "🔊" else "🔇"
+                        Text(text = emoji, fontSize = 20.sp)
+                    }
+                }
+
+
                 if (cameraMode == CameraMode.PHOTO) {
+
                     Spacer(modifier = Modifier.width(4.dp))
                     IconButton(onClick = {
                         timerMode = when (timerMode) {
@@ -2066,6 +2098,7 @@ private fun takePhoto(
     imageCapture: ImageCapture, 
     context: android.content.Context, 
     executor: java.util.concurrent.Executor,
+    flashMode: FlashMode,
     showWatermark: Boolean,
     watermarkElements: List<WatermarkElement>,
     liveLocation: android.location.Location?,
@@ -2075,11 +2108,21 @@ private fun takePhoto(
     aspectRatioMode: AspectRatioMode,
     onPhotoSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit
 ) {
+
     if (enableRawCapture) {
         android.widget.Toast.makeText(context, "RAW Capture is enabled (Saving as DNG is experimental)", android.widget.Toast.LENGTH_SHORT).show()
     }
+    // Bind flashMode state to ImageCapture hardware settings
+    val targetFlash = when (flashMode) {
+        FlashMode.ON -> ImageCapture.FLASH_MODE_ON
+        FlashMode.OFF -> ImageCapture.FLASH_MODE_OFF
+        FlashMode.AUTO -> ImageCapture.FLASH_MODE_AUTO
+    }
+    imageCapture.flashMode = targetFlash
+
     imageCapture.takePicture(
         executor,
+
         object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: androidx.camera.core.ImageProxy) {
                 try {
@@ -2224,8 +2267,10 @@ private fun takePhoto(
 private fun startVideoRecord(
     videoCapture: VideoCapture<Recorder>,
     context: android.content.Context,
+    audioEnabled: Boolean,
     onEvent: (VideoRecordEvent) -> Unit
 ): Recording {
+
     val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
     val contentValues = ContentValues().apply {
         put(MediaStore.MediaColumns.DISPLAY_NAME, name)
@@ -2244,9 +2289,10 @@ private fun startVideoRecord(
     val pendingRecording = videoCapture.output
         .prepareRecording(context, mediaStoreOutputOptions)
         
-    if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+    if (audioEnabled && androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
         pendingRecording.withAudioEnabled()
     }
+
 
     return pendingRecording.start(androidx.core.content.ContextCompat.getMainExecutor(context), onEvent)
 }
