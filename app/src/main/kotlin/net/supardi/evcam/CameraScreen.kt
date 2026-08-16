@@ -172,6 +172,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
     var camera2Control by remember { mutableStateOf<Camera2CameraControl?>(null) }
     var iso by remember { mutableFloatStateOf(100f) }
+    var minIso by remember { mutableFloatStateOf(50f) }
+    var maxIso by remember { mutableFloatStateOf(3200f) }
     var shutterSpeed by remember { mutableFloatStateOf(10000000f) } // 10ms
     var focusDistance by remember { mutableFloatStateOf(0f) }
     var whiteBalance by remember { mutableIntStateOf(prefs.getInt("whiteBalance", android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO)) }
@@ -425,6 +427,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     cameraControl?.setZoomRatio(currentZoom)
                 }
                 
+                val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camera.cameraInfo)
+                val isoRange = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                if (isoRange != null) {
+                    minIso = isoRange.lower.toFloat()
+                    maxIso = isoRange.upper.toFloat()
+                }
+
                 val expState = camera.cameraInfo.exposureState
                 if (expState.isExposureCompensationSupported) {
                     minExposureIndex = expState.exposureCompensationRange.lower
@@ -1060,9 +1069,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                         Text("ISO", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
                         Slider(
-                            value = iso, 
+                            value = iso.coerceIn(minIso, maxIso), 
                             onValueChange = { isIsoAuto = false; iso = it; isProMode = true }, 
-                            valueRange = 50f..12800f, 
+                            valueRange = minIso..maxIso, 
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )
                         Text(
