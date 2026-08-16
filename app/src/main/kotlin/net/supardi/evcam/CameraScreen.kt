@@ -112,6 +112,7 @@ enum class FlashMode { AUTO, ON, OFF }
 enum class TimerMode(val seconds: Int) { OFF(0), SEC_3(3), SEC_10(10), SEC_15(15), SEC_20(20), PEACE(3) }
 enum class AspectRatioMode(val value: Int, val label: String) { RATIO_4_3(AspectRatio.RATIO_4_3, "4:3"), RATIO_16_9(AspectRatio.RATIO_16_9, "16:9"), RATIO_1_1(AspectRatio.RATIO_4_3, "1:1") }
 enum class VideoQualityMode(val quality: Quality, val label: String) { HD(Quality.HD, "720p"), FHD(Quality.FHD, "1080p"), UHD(Quality.UHD, "4K") }
+enum class VideoFpsMode(val fps: Int, val label: String) { FPS_30(30, "30 FPS"), FPS_60(60, "60 FPS") }
 enum class ImageFormatMode(val label: String) { JPEG("JPEG"), RAW("RAW+JPEG") }
 enum class LocationFormat(val label: String) { CITY("City Only"), CITY_COUNTRY("City, Country"), FULL_ADDRESS("Full Address"), COORDINATES("Lat/Lng") }
 enum class WatermarkElementType { TEXT, LOCATION, DATE }
@@ -257,6 +258,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     var aspectRatio by remember { mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_4_3.name) ?: AspectRatioMode.RATIO_4_3.name)) }
     var videoQuality by remember { mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name)) }
+    var videoFps by remember { mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name)) }
     var imageFormat by remember { mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name)) }
     
     var imageCaptureUseCase by remember { mutableStateOf<ImageCapture?>(null) }
@@ -1156,6 +1158,30 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     ) {
                         Text(
                             text = videoQuality.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                videoFps = when (videoFps) {
+                                    VideoFpsMode.FPS_30 -> VideoFpsMode.FPS_60
+                                    VideoFpsMode.FPS_60 -> VideoFpsMode.FPS_30
+                                }
+                                prefs.edit().putString("videoFps", videoFps.name).apply()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = videoFps.label,
                             color = Color.Yellow,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
