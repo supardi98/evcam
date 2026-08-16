@@ -285,3 +285,21 @@ fun startVideoRecord(
 
     return pendingRecording.start(ContextCompat.getMainExecutor(context), onEvent)
 }
+
+fun fetchLatestMediaUri(context: android.content.Context): android.net.Uri? {
+    try {
+        val projection = arrayOf(android.provider.MediaStore.Images.Media._ID)
+        val sortOrder = "${android.provider.MediaStore.Images.Media.DATE_ADDED} DESC"
+        val queryUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        context.contentResolver.query(queryUri, projection, null, null, sortOrder)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media._ID))
+                return android.content.ContentUris.withAppendedId(queryUri, id)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return null
+}
+

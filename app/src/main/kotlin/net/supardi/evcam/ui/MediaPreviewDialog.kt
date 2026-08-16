@@ -44,7 +44,8 @@ import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import net.supardi.evcam.CameraMode
-import net.supardi.evcam.fetchLatestMediaUri
+import net.supardi.evcam.logic.fetchLatestMediaUri
+
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
