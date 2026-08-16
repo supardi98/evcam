@@ -829,7 +829,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             if (!scaleGestureDetector.isInProgress) {
                                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                                     evScrollAnchorY = event.y
-                                } else if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+                                } else if (event.actionMasked == MotionEvent.ACTION_MOVE && !isProMode) {
                                     val deltaY = evScrollAnchorY - event.y // positive = swipe up
                                     val scrollStepThreshold = 50f // pixels per EV step
                                     val steps = (deltaY / scrollStepThreshold).toInt()
@@ -851,6 +851,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             }
                             true
                         }
+
 
                     }
                 }
@@ -1154,7 +1155,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        if (showBrightnessSlider && maxExposureIndex > minExposureIndex) {
+        if (showBrightnessSlider && maxExposureIndex > minExposureIndex && !isProMode) {
+
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
