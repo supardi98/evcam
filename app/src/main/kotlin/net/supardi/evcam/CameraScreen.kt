@@ -508,9 +508,17 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             
             @Suppress("DEPRECATION")
-            val imageCap = ImageCapture.Builder().apply {
+            val imageCapBuilder = ImageCapture.Builder().apply {
                 setTargetAspectRatio(aspectRatio.value)
-            }.build()
+            }
+            // Force Optical Image Stabilization (OIS) for photos if supported by device
+            val imageInterop = androidx.camera.camera2.interop.Camera2Interop.Extender(imageCapBuilder)
+            imageInterop.setCaptureRequestOption(
+                android.hardware.camera2.CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
+                android.hardware.camera2.CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON
+            )
+            val imageCap = imageCapBuilder.build()
+
 
             
             val qualitySelector = QualitySelector.from(
