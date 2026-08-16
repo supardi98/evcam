@@ -602,10 +602,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .align(Alignment.Center)
             .aspectRatio(
-                when (aspectRatio) {
-                    AspectRatioMode.RATIO_16_9 -> 9f / 16f
-                    AspectRatioMode.RATIO_4_3 -> 3f / 4f
-                    AspectRatioMode.RATIO_1_1 -> 1f
+                if (cameraMode == CameraMode.VIDEO) {
+                    9f / 16f
+                } else {
+                    when (aspectRatio) {
+                        AspectRatioMode.RATIO_16_9 -> 9f / 16f
+                        AspectRatioMode.RATIO_4_3 -> 3f / 4f
+                        AspectRatioMode.RATIO_1_1 -> 1f
+                    }
                 }
             )
         ) {
@@ -1114,8 +1118,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .clickable {
+                        .background(if (cameraMode == CameraMode.PHOTO) Color.Black.copy(alpha = 0.4f) else Color.DarkGray.copy(alpha = 0.3f))
+                        .clickable(enabled = cameraMode == CameraMode.PHOTO) {
                             aspectRatio = when (aspectRatio) {
                                 AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
                                 AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
@@ -1127,8 +1131,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = aspectRatio.label,
-                        color = Color.Yellow,
+                        text = if (cameraMode == CameraMode.VIDEO) "16:9" else aspectRatio.label,
+                        color = if (cameraMode == CameraMode.PHOTO) Color.Yellow else Color.Gray,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
