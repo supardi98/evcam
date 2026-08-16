@@ -1238,31 +1238,28 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 val hasManualPro = !isIsoAuto || !isShutterAuto || !isFocusAuto || whiteBalance != CaptureRequest.CONTROL_AWB_MODE_AUTO || exposureIndex != 0
                 
                 LaunchedEffect(hasManualPro) {
-                    if (hasManualPro) {
-                        isProMode = true
-                    }
+                    isProMode = hasManualPro
                 }
 
                 Box(
                     modifier = Modifier
                         .height(40.dp)
                         .clip(CircleShape)
-                        .background(if (isProMode || hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
+                        .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
                             showProPanel = !showProPanel 
-                            if (showProPanel) isProMode = true
                         }
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "PRO",
-                        color = if (isProMode || hasManualPro) Color.Yellow else Color.LightGray,
-                        fontWeight = if (isProMode || hasManualPro) FontWeight.Bold else FontWeight.Normal
+                        color = if (hasManualPro) Color.Yellow else Color.LightGray,
+                        fontWeight = if (hasManualPro) FontWeight.Bold else FontWeight.Normal
                     )
                 }
 
-                if (hasManualPro || isProMode) {
+                if (hasManualPro) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
@@ -1270,7 +1267,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             .clip(CircleShape)
                             .background(Color.DarkGray.copy(alpha = 0.5f))
                             .clickable { 
-                                // Auto-kan semua fitur pro (reset to AUTO)
+                                // Reset all pro settings to AUTO
                                 isIsoAuto = true
                                 isShutterAuto = true
                                 isFocusAuto = true
