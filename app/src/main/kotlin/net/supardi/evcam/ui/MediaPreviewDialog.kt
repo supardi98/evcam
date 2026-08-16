@@ -348,11 +348,11 @@ fun MediaPreviewDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 440.dp)
-                                .aspectRatio(parsedRatio)
+                                .height(420.dp)
                                 .clip(RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
+
 
 
                             if (page == 0 && lastCapturedBitmap != null) {
