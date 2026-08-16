@@ -247,6 +247,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var isAeAfLocked by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableIntStateOf(0) }
     var transitionFreezeBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var lastLiveBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
     LaunchedEffect(isRecording) {
         if (isRecording) {
@@ -428,13 +429,29 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         scaleType = PreviewView.ScaleType.FIT_CENTER
         implementationMode = PreviewView.ImplementationMode.COMPATIBLE
     } }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(120)
+            try {
+                val bmp = previewView.bitmap
+                if (bmp != null && bmp.width > 0 && bmp.height > 0) {
+                    val w = (bmp.width / 6).coerceAtLeast(1)
+                    val h = (bmp.height / 6).coerceAtLeast(1)
+                    lastLiveBitmap = android.graphics.Bitmap.createScaledBitmap(bmp, w, h, true)
+                }
+            } catch (e: Exception) {
+                // Ignore transient frame capture errors
+            }
+        }
+    }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
-        val rawBmp = try { previewView.bitmap } catch (e: Exception) { null }
-        if (rawBmp != null) {
-            val w = (rawBmp.width / 6).coerceAtLeast(1)
-            val h = (rawBmp.height / 6).coerceAtLeast(1)
-            transitionFreezeBitmap = android.graphics.Bitmap.createScaledBitmap(rawBmp, w, h, true)
+        if (lastLiveBitmap != null) {
+            transitionFreezeBitmap = lastLiveBitmap
+            android.util.Log.d("EvcamTransition", "Freeze bitmap active from live backup: ${lastLiveBitmap!!.width}x${lastLiveBitmap!!.height}")
+        } else {
+            android.util.Log.w("EvcamTransition", "lastLiveBitmap is null on state change")
         }
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
@@ -528,14 +545,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
         var isReady = false
         val startMs = System.currentTimeMillis()
-        while (!isReady && System.currentTimeMillis() - startMs < 750) {
+        while (!isReady && System.currentTimeMillis() - startMs < 800) {
             if (previewView.previewStreamState.value == PreviewView.StreamState.STREAMING) {
-                kotlinx.coroutines.delay(80)
+                kotlinx.coroutines.delay(100)
                 isReady = true
             } else {
                 kotlinx.coroutines.delay(30)
             }
         }
+        android.util.Log.d("EvcamTransition", "Camera ready, releasing freeze bitmap")
         transitionFreezeBitmap = null
     }
 
