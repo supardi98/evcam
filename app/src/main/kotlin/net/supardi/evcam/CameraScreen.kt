@@ -1163,111 +1163,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 .pointerInput(Unit) { /* consume touches so panel clicks don't fall through to camera preview */ },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showProPanel,
-                enter = androidx.compose.animation.expandVertically(
-                    animationSpec = androidx.compose.animation.core.spring(
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
-                    )
-                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
-                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
-            ) {
-                Column {
-                    ProControlPanel(
-                        iso = iso,
-                        minIso = minIso,
-                        maxIso = maxIso,
-                        isIsoAuto = isIsoAuto,
-                        onIsoChange = { isIsoAuto = false; iso = it; isProMode = true },
-                        onIsoAutoToggle = { isIsoAuto = !isIsoAuto },
-                        shutterSpeed = shutterSpeed,
-                        isShutterAuto = isShutterAuto,
-                        onShutterChange = { isShutterAuto = false; shutterSpeed = it },
-                        onShutterAutoToggle = { isShutterAuto = !isShutterAuto },
-                        focusDistance = focusDistance,
-                        isFocusAuto = isFocusAuto,
-                        onFocusChange = { isFocusAuto = false; focusDistance = it },
-                        onFocusAutoToggle = { isFocusAuto = !isFocusAuto },
-                        whiteBalance = whiteBalance,
-                        onWhiteBalanceChange = { whiteBalance = it },
-                        manualKelvin = manualKelvin,
-                        onManualKelvinChange = { manualKelvin = it },
-                        onClose = { showProPanel = false }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-            
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showLayerPanel,
-                enter = androidx.compose.animation.expandVertically(
-                    animationSpec = androidx.compose.animation.core.spring(
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
-                    )
-                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
-                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
-            ) {
-                Column {
-                    DisplayOverlaysPanel(
-                        gridType = gridType,
-                        onGridTypeChange = {
-                            gridType = it
-                            prefs.edit().putString("gridType", it.name).apply()
-                        },
-                        showVirtualHorizon = showVirtualHorizon,
-                        onVirtualHorizonChange = {
-                            showVirtualHorizon = it
-                            prefs.edit().putBoolean("showVirtualHorizon", it).apply()
-                        },
-                        enableHistogram = enableHistogram,
-                        onHistogramChange = {
-                            enableHistogram = it
-                            prefs.edit().putBoolean("enableHistogram", it).apply()
-                        },
-                        enableFocusPeaking = enableFocusPeaking,
-                        onFocusPeakingChange = {
-                            enableFocusPeaking = it
-                            prefs.edit().putBoolean("enableFocusPeaking", it).apply()
-                        },
-                        onClose = { showLayerPanel = false }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
+            SettingsPopupPanels(
+                uiState = uiState,
+                onOpenWatermarkSettings = { showWatermarkDialog = true },
+                onOpenPluginManager = { showPluginManager = true }
+            )
 
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showSettings,
-                enter = androidx.compose.animation.expandVertically(
-                    animationSpec = androidx.compose.animation.core.spring(
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
-                    )
-                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
-                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
-            ) {
-                Column {
-                    SettingsPanel(
-                        enableRawCapture = enableRawCapture,
-                        onEnableRawCaptureChange = { enableRawCapture = it },
-                        keepScreenOn = keepScreenOn,
-                        onKeepScreenOnChange = { keepScreenOn = it },
-                        maxBrightness = maxBrightness,
-                        onMaxBrightnessChange = { maxBrightness = it },
-                        volumeShutterEnabled = volumeShutterEnabled,
-                        onVolumeShutterEnabledChange = { volumeShutterEnabled = it },
-                        isShutterSoundEnabled = isShutterSoundEnabled,
-                        onIsShutterSoundEnabledChange = { isShutterSoundEnabled = it },
-                        enableGeotagging = enableGeotagging,
-                        onEnableGeotaggingChange = { enableGeotagging = it },
-                        onOpenWatermarkSettings = { showWatermarkDialog = true },
-                        onOpenPluginManager = { showPluginManager = true },
-                        onClose = { showSettings = false }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
 
             val zoomOptions = mutableListOf<Float>()
             if (minZoomRatio < 1f) zoomOptions.add(minZoomRatio)
