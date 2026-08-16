@@ -169,7 +169,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     var isRecording by remember { mutableStateOf(false) }
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
-    var lastCapturedUri by remember { mutableStateOf<Uri?>(null) }
+    var lastCapturedUri by remember {
+        val saved = prefs.getString("lastCapturedUri", null)
+        val parsedUri = if (!saved.isNullOrEmpty()) Uri.parse(saved) else null
+        mutableStateOf<Uri?>(parsedUri ?: fetchLatestMediaUri(context))
+    }
     
     var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
     var camera2Control by remember { mutableStateOf<Camera2CameraControl?>(null) }
@@ -473,6 +477,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             imageCaptureUseCase?.let { cap ->
                 takePhoto(cap, context, ContextCompat.getMainExecutor(context), showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { uri ->
                     lastCapturedUri = uri 
+                    prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
                     if (!isShutterSoundEnabled) {
                         audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
                     }
@@ -487,7 +492,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         if (event is VideoRecordEvent.Start) isRecording = true
                         else if (event is VideoRecordEvent.Finalize) {
                             isRecording = false
-                            lastCapturedUri = event.outputResults.outputUri
+                            val uri = event.outputResults.outputUri
+                            lastCapturedUri = uri
+                            prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
                         }
                     }
                 }
@@ -1976,6 +1983,23 @@ fun rememberDeviceOrientation(): DeviceOrientationData {
         }
     }
     return data
+}
+
+private fun fetchLatestMediaUri(context: android.content.Context): Uri? {
+    try {
+        val projection = arrayOf(android.provider.MediaStore.MediaColumns._ID)
+        val sortOrder = "${android.provider.MediaStore.MediaColumns.DATE_ADDED} DESC"
+        val queryUri = android.provider.MediaStore.Files.getContentUri("external")
+        context.contentResolver.query(queryUri, projection, null, null, sortOrder)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns._ID))
+                return android.content.ContentUris.withAppendedId(queryUri, id)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return null
 }
 
 private fun takePhoto(
