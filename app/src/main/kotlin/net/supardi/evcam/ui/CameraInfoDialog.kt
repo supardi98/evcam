@@ -252,8 +252,35 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                             hsFpsList.add(maxPossibleFps)
                         }
                         
-                        val fpsStr = if (hsFpsList.isNotEmpty()) {
-                            val hsFpsStr = hsFpsList.sorted().joinToString(", ")
+                        // Check legacy CamcorderProfile for hidden high speed profiles
+                        try {
+                            val idInt = cameraId.toIntOrNull()
+                            if (idInt != null) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                    if (name == "720p" && android.media.CamcorderProfile.hasProfile(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_720P)) {
+                                        val profiles = android.media.CamcorderProfile.getAll(cameraId, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_720P)
+                                        profiles?.videoProfiles?.forEach { if (it.frameRate > baseFps) hsFpsList.add(it.frameRate) }
+                                    }
+                                    if (name == "1080p" && android.media.CamcorderProfile.hasProfile(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_1080P)) {
+                                        val profiles = android.media.CamcorderProfile.getAll(cameraId, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_1080P)
+                                        profiles?.videoProfiles?.forEach { if (it.frameRate > baseFps) hsFpsList.add(it.frameRate) }
+                                    }
+                                } else {
+                                    if (name == "720p" && android.media.CamcorderProfile.hasProfile(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_720P)) {
+                                        val p = android.media.CamcorderProfile.get(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_720P)
+                                        if (p.videoFrameRate > baseFps) hsFpsList.add(p.videoFrameRate)
+                                    }
+                                    if (name == "1080p" && android.media.CamcorderProfile.hasProfile(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_1080P)) {
+                                        val p = android.media.CamcorderProfile.get(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_1080P)
+                                        if (p.videoFrameRate > baseFps) hsFpsList.add(p.videoFrameRate)
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {}
+                        
+                        val distinctHsFpsList = hsFpsList.distinct().sorted()
+                        val fpsStr = if (distinctHsFpsList.isNotEmpty()) {
+                            val hsFpsStr = distinctHsFpsList.joinToString(", ")
                             "@ $baseFps, $hsFpsStr fps"
                         } else {
                             "@ $baseFps fps"
