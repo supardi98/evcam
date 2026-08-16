@@ -4,6 +4,8 @@ import net.supardi.evcam.ui.*
 import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clipToBounds
 
@@ -1115,26 +1117,28 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .height(250.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val zoomInteractionSource = remember { MutableInteractionSource() }
+                    val isZoomDragged by zoomInteractionSource.collectIsDraggedAsState()
+                    
+
                     Slider(
                         value = zoomAnim.value,
                         onValueChange = { targetVal ->
-
                             coroutineScope.launch {
-                                val diff = kotlin.math.abs(targetVal - zoomAnim.value)
-                                if (diff > 0.25f) {
-                                    // Smoothly animate large jumps (tap/click on slider track)
+                                if (isZoomDragged) {
+                                    // User is dragging knob natively: update instantly and lightweight
+                                    zoomAnim.snapTo(targetVal)
+                                } else {
+                                    // User tapped/clicked on slider track: perform smooth transition
                                     zoomAnim.animateTo(
                                         targetValue = targetVal,
-                                        animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                        animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                                     )
-                                } else {
-                                    // Instantly update small adjustments (dragging slider knob)
-                                    zoomAnim.snapTo(targetVal)
                                 }
                             }
                         },
                         valueRange = minZoomRatio..maxZoomRatio,
-
+                        interactionSource = zoomInteractionSource,
                         modifier = Modifier
                             .requiredWidth(250.dp)
                             .graphicsLayer { rotationZ = 270f }
