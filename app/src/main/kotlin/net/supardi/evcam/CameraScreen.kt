@@ -1163,6 +1163,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("MANUAL CONTROLS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(
+                            imageVector = Icons.Default.Close, 
+                            contentDescription = "Close panel", 
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp).clickable { showProPanel = false }
+                        )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
@@ -1266,41 +1272,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
-            val zoomOptions = mutableListOf<Float>()
-            if (minZoomRatio < 1f) zoomOptions.add(minZoomRatio)
-            zoomOptions.add(1f)
-            if (maxZoomRatio >= 2f) zoomOptions.add(2f)
-            if (maxZoomRatio >= 5f) zoomOptions.add(5f)
-
-            if (zoomOptions.size > 1) {
-                Row(
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    zoomOptions.forEach { zoomVal ->
-                        val label = if (zoomVal < 1f) String.format(Locale.US, "%.1fx", zoomVal) else "${zoomVal.toInt()}x"
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (currentZoom == zoomVal) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
-                                .clickable { currentZoom = zoomVal }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = label, 
-                                color = if (currentZoom == zoomVal) Color.Yellow else Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
             if (showLayerPanel && !showSettings) {
                 Column(
                     modifier = Modifier
@@ -1385,6 +1356,41 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            val zoomOptions = mutableListOf<Float>()
+            if (minZoomRatio < 1f) zoomOptions.add(minZoomRatio)
+            zoomOptions.add(1f)
+            if (maxZoomRatio >= 2f) zoomOptions.add(2f)
+            if (maxZoomRatio >= 5f) zoomOptions.add(5f)
+
+            if (zoomOptions.size > 1) {
+                Row(
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    zoomOptions.forEach { zoomVal ->
+                        val label = if (zoomVal < 1f) String.format(Locale.US, "%.1fx", zoomVal) else "${zoomVal.toInt()}x"
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(if (currentZoom == zoomVal) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
+                                .clickable { currentZoom = zoomVal }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = label, 
+                                color = if (currentZoom == zoomVal) Color.Yellow else Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
@@ -1397,7 +1403,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(if (isAnyOverlayActive) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
-                        .clickable { showLayerPanel = !showLayerPanel },
+                        .clickable { 
+                            showLayerPanel = !showLayerPanel 
+                            if (showLayerPanel) showProPanel = false
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -1450,6 +1459,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
                             showProPanel = !showProPanel 
+                            if (showProPanel) showLayerPanel = false
                         }
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
