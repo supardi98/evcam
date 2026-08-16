@@ -1466,7 +1466,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .height(38.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.6f))
+                        .background(Color.DarkGray.copy(alpha = 0.5f))
                         .padding(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
