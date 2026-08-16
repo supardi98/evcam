@@ -901,6 +901,80 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
+
+            if (showVirtualHorizon) {
+                val roll = deviceOrientation.roll
+                val pitch = deviceOrientation.pitch
+                val normalizedRoll = (roll % 90f + 90f) % 90f
+                val isRollLevel = normalizedRoll < 2f || normalizedRoll > 88f
+                val isPitchLevel = kotlin.math.abs(pitch) < 3f
+                val isLevel = isRollLevel && isPitchLevel
+                val levelColor = if (isLevel) Color(0xFF00FF00) else Color.White.copy(alpha = 0.6f)
+                
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val center = Offset(size.width / 2, size.height / 2)
+                    
+                    val tickLength = 25.dp.toPx()
+                    val tickGap = 35.dp.toPx()
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.4f),
+                        start = Offset(center.x - tickGap - tickLength, center.y),
+                        end = Offset(center.x - tickGap, center.y),
+                        strokeWidth = 2.dp.toPx()
+                    )
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.4f),
+                        start = Offset(center.x + tickGap, center.y),
+                        end = Offset(center.x + tickGap + tickLength, center.y),
+                        strokeWidth = 2.dp.toPx()
+                    )
+                    
+                    val circleRadius = 14.dp.toPx()
+                    val spokeInner = 14.dp.toPx()
+                    val spokeOuter = 40.dp.toPx()
+                    
+                    withTransform({
+                        rotate(degrees = -roll, pivot = center)
+                    }) {
+                        drawCircle(
+                            color = levelColor,
+                            radius = circleRadius,
+                            center = center,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                        )
+                        drawLine(levelColor, Offset(center.x - spokeOuter, center.y), Offset(center.x - spokeInner, center.y), 2.dp.toPx())
+                        drawLine(levelColor, Offset(center.x + spokeInner, center.y), Offset(center.x + spokeOuter, center.y), 2.dp.toPx())
+                        drawLine(levelColor, Offset(center.x, center.y - spokeOuter), Offset(center.x, center.y - spokeInner), 2.dp.toPx())
+                        drawLine(levelColor, Offset(center.x, center.y + spokeInner), Offset(center.x, center.y + spokeOuter), 2.dp.toPx())
+                    }
+                    
+                    val pitchFactor = (pitch / 45f).coerceIn(-1f, 1f)
+                    val bubbleOffset = Offset(
+                        x = center.x,
+                        y = center.y + pitchFactor * 80.dp.toPx()
+                    )
+                    
+                    drawCircle(
+                        color = if (isLevel) Color(0xFF00FF00) else Color.White.copy(alpha = 0.5f),
+                        radius = 10.dp.toPx(),
+                        center = bubbleOffset,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
+                    )
+                }
+                
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${kotlin.math.abs(roll).toInt()}°",
+                        color = levelColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.offset(y = (-30).dp)
+                    )
+                }
+            }
         }
         
         if (maxZoomRatio > minZoomRatio && showZoomSlider) {
@@ -1029,82 +1103,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
         
-        if (showVirtualHorizon) {
-            val roll = deviceOrientation.roll
-            val pitch = deviceOrientation.pitch
-            val normalizedRoll = (roll % 90f + 90f) % 90f
-            val isRollLevel = normalizedRoll < 2f || normalizedRoll > 88f
-            val isPitchLevel = kotlin.math.abs(pitch) < 3f
-            val isLevel = isRollLevel && isPitchLevel
-            val levelColor = if (isLevel) Color(0xFF00FF00) else Color.White.copy(alpha = 0.6f)
-            
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val center = Offset(size.width / 2, size.height / 2)
-                
-                // Fixed horizontal reference ticks
-                val tickLength = 25.dp.toPx()
-                val tickGap = 35.dp.toPx()
-                drawLine(
-                    color = Color.White.copy(alpha = 0.4f),
-                    start = Offset(center.x - tickGap - tickLength, center.y),
-                    end = Offset(center.x - tickGap, center.y),
-                    strokeWidth = 2.dp.toPx()
-                )
-                drawLine(
-                    color = Color.White.copy(alpha = 0.4f),
-                    start = Offset(center.x + tickGap, center.y),
-                    end = Offset(center.x + tickGap + tickLength, center.y),
-                    strokeWidth = 2.dp.toPx()
-                )
-                
-                // Rotating 4-spoke circle (Center Reticle)
-                val circleRadius = 14.dp.toPx()
-                val spokeInner = 14.dp.toPx()
-                val spokeOuter = 40.dp.toPx()
-                
-                withTransform({
-                    rotate(degrees = -roll, pivot = center)
-                }) {
-                    drawCircle(
-                        color = levelColor,
-                        radius = circleRadius,
-                        center = center,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
-                    )
-                    drawLine(levelColor, Offset(center.x - spokeOuter, center.y), Offset(center.x - spokeInner, center.y), 2.dp.toPx())
-                    drawLine(levelColor, Offset(center.x + spokeInner, center.y), Offset(center.x + spokeOuter, center.y), 2.dp.toPx())
-                    drawLine(levelColor, Offset(center.x, center.y - spokeOuter), Offset(center.x, center.y - spokeInner), 2.dp.toPx())
-                    drawLine(levelColor, Offset(center.x, center.y + spokeInner), Offset(center.x, center.y + spokeOuter), 2.dp.toPx())
-                }
-                
-                // Pitch bubble (Floating secondary circle for forward/backward tilt)
-                val pitchFactor = (pitch / 45f).coerceIn(-1f, 1f)
-                val bubbleOffset = Offset(
-                    x = center.x,
-                    y = center.y + pitchFactor * 80.dp.toPx()
-                )
-                
-                drawCircle(
-                    color = if (isLevel) Color(0xFF00FF00) else Color.White.copy(alpha = 0.5f),
-                    radius = 10.dp.toPx(),
-                    center = bubbleOffset,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
-                )
-            }
-            
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "${kotlin.math.abs(roll).toInt()}°",
-                    color = levelColor,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.offset(y = (-30).dp)
-                )
-            }
-        }
+
         
         // Top Center Overlays: Video Duration & AE/AF Lock Badge (Positioned below the top action bar)
         Box(
