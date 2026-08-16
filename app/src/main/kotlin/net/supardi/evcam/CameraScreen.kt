@@ -2156,80 +2156,84 @@ private fun MediaPreviewDialog(
             dismissOnClickOutside = true
         )
     ) {
-        androidx.compose.material3.Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Color.Black
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.75f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
         ) {
             Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                modifier = Modifier
+                    .fillMaxWidth(0.88f)
+                    .fillMaxHeight(0.75f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.DarkGray.copy(alpha = 0.95f))
+                    .clickable(enabled = false) {}
+                    .padding(16.dp)
             ) {
                 if (lastCapturedBitmap != null) {
                     androidx.compose.foundation.Image(
                         bitmap = lastCapturedBitmap.asImageBitmap(),
-                        contentDescription = "Full Preview",
+                        contentDescription = "Preview",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 56.dp)
                     )
                 } else if (lastCapturedUri != null) {
                     AsyncImage(
                         model = lastCapturedUri,
-                        contentDescription = "Full Preview",
+                        contentDescription = "Preview",
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 56.dp)
                     )
                 }
 
-                Row(
+                IconButton(
+                    onClick = onDismiss,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp, start = 16.dp, end = 16.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                        .align(Alignment.TopEnd)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f))
                 ) {
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                    ) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp))
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Close, 
+                        contentDescription = "Close", 
+                        tint = Color.White, 
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 36.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Button(
-                        onClick = {
-                            val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
-                            if (targetUri != null) {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(targetUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                Button(
+                    onClick = {
+                        val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
+                        if (targetUri != null) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(targetUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                            } else {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
                                 Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
                             }
-                        },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
+                        } else {
+                            Toast.makeText(context, "No Gallery item found", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
