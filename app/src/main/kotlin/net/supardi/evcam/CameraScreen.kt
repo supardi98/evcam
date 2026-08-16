@@ -1,6 +1,7 @@
 package net.supardi.evcam
 
 import net.supardi.evcam.ui.*
+import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.clipToBounds
@@ -244,6 +245,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var focusState by remember { mutableStateOf(FocusState.SEARCHING) }
     var isAeAfLocked by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableIntStateOf(0) }
+    var transitionFreezeBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
     LaunchedEffect(isRecording) {
         if (isRecording) {
@@ -424,6 +426,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER } }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
+        val lastBmp = try { previewView.bitmap } catch (e: Exception) { null }
+        if (lastBmp != null) {
+            transitionFreezeBitmap = lastBmp
+        }
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
         
@@ -513,6 +519,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
         }, executor)
+
+        kotlinx.coroutines.delay(220)
+        transitionFreezeBitmap = null
     }
 
     LaunchedEffect(currentZoom, cameraControl) {
@@ -758,6 +767,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     }
                 }
             )
+
+            if (transitionFreezeBitmap != null) {
+                Image(
+                    bitmap = transitionFreezeBitmap!!.asImageBitmap(),
+                    contentDescription = "Freeze Frame Transition",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             
             if (showWatermark && cameraMode == CameraMode.PHOTO) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

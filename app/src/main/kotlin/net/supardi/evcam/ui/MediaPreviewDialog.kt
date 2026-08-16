@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
@@ -141,14 +142,18 @@ fun MediaPreviewDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
-                    .fillMaxHeight(0.85f),
+                    .wrapContentHeight()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1E1E1E))
+                    .clickable(enabled = false) {}
+                    .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Top Bar: Counter & Close Button (X)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp, start = 8.dp, end = 8.dp, bottom = 12.dp),
+                        .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -167,7 +172,7 @@ fun MediaPreviewDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(Color.Black.copy(alpha = 0.5f))
                     ) {
@@ -175,17 +180,17 @@ fun MediaPreviewDialog(
                             imageVector = Icons.Default.Close, 
                             contentDescription = "Close", 
                             tint = Color.White, 
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
 
-                // Center Image Pager area
+                // Center Image Pager area: Tightly height-constrained to image content!
                 Box(
                     modifier = Modifier
-                        .weight(1f)
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .heightIn(max = 440.dp)
+                        .wrapContentHeight(),
                     contentAlignment = Alignment.Center
                 ) {
                     val openActiveMedia = {
@@ -210,20 +215,25 @@ fun MediaPreviewDialog(
                     if (pageCount > 0) {
                         HorizontalPager(
                             state = pagerState,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
                         ) { page ->
                             val item = mediaList.getOrNull(page)
                             Box(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (page == 0 && lastCapturedBitmap != null) {
                                     Image(
                                         bitmap = lastCapturedBitmap.asImageBitmap(),
                                         contentDescription = "Preview $page",
-                                        contentScale = ContentScale.Fit,
+                                        contentScale = ContentScale.FillWidth,
                                         modifier = Modifier
-                                            .fillMaxSize()
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
                                             .clickable { openActiveMedia() }
                                     )
                                 } else if (item != null) {
@@ -231,9 +241,10 @@ fun MediaPreviewDialog(
                                         model = item.uri,
                                         imageLoader = imageLoader,
                                         contentDescription = "Preview $page",
-                                        contentScale = ContentScale.Fit,
+                                        contentScale = ContentScale.FillWidth,
                                         modifier = Modifier
-                                            .fillMaxSize()
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
                                             .clickable { openActiveMedia() }
                                     )
                                 }
@@ -242,9 +253,9 @@ fun MediaPreviewDialog(
                                 if (item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)) {
                                     Box(
                                         modifier = Modifier
-                                            .size(72.dp)
+                                            .size(64.dp)
                                             .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.6f))
+                                            .background(Color.Black.copy(alpha = 0.65f))
                                             .clickable { openActiveMedia() },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -252,7 +263,7 @@ fun MediaPreviewDialog(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = "Play Video",
                                             tint = Color.Yellow,
-                                            modifier = Modifier.size(48.dp)
+                                            modifier = Modifier.size(42.dp)
                                         )
                                     }
                                 }
@@ -267,7 +278,7 @@ fun MediaPreviewDialog(
                     text = if (isCurrentVideo) "Ketuk tombol Putar / foto untuk memutar video" else "Ketuk foto untuk membuka di Galeri HP",
                     color = Color.Gray,
                     fontSize = 12.sp,
-                    modifier = Modifier.padding(vertical = 12.dp)
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                 )
             }
         }
