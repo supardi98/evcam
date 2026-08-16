@@ -181,7 +181,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var isIsoAuto by remember { mutableStateOf(true) }
     var isShutterAuto by remember { mutableStateOf(true) }
     var isFocusAuto by remember { mutableStateOf(true) }
-    var showProPanel by remember { mutableStateOf(true) }
+    var showProPanel by remember { mutableStateOf(false) }
     var enableHistogram by remember { mutableStateOf(prefs.getBoolean("enableHistogram", false)) }
     var enableFocusPeaking by remember { mutableStateOf(prefs.getBoolean("enableFocusPeaking", false)) }
     var enableRawCapture by remember { mutableStateOf(prefs.getBoolean("enableRawCapture", false)) }
