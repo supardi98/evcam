@@ -4,6 +4,7 @@ import net.supardi.evcam.ui.*
 import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.draw.clipToBounds
 
 import android.annotation.SuppressLint
@@ -1412,56 +1413,78 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 .padding(bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (showProPanel && !showSettings) {
-                ProControlPanel(
-                    iso = iso,
-                    minIso = minIso,
-                    maxIso = maxIso,
-                    isIsoAuto = isIsoAuto,
-                    onIsoChange = { isIsoAuto = false; iso = it; isProMode = true },
-                    onIsoAutoToggle = { isIsoAuto = !isIsoAuto },
-                    shutterSpeed = shutterSpeed,
-                    isShutterAuto = isShutterAuto,
-                    onShutterChange = { isShutterAuto = false; shutterSpeed = it },
-                    onShutterAutoToggle = { isShutterAuto = !isShutterAuto },
-                    focusDistance = focusDistance,
-                    isFocusAuto = isFocusAuto,
-                    onFocusChange = { isFocusAuto = false; focusDistance = it },
-                    onFocusAutoToggle = { isFocusAuto = !isFocusAuto },
-                    whiteBalance = whiteBalance,
-                    onWhiteBalanceChange = { whiteBalance = it },
-                    manualKelvin = manualKelvin,
-                    onManualKelvinChange = { manualKelvin = it },
-                    onClose = { showProPanel = false }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showProPanel && !showSettings,
+                enter = androidx.compose.animation.expandVertically(
+                    animationSpec = androidx.compose.animation.core.spring(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
+                    )
+                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
+                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+            ) {
+                Column {
+                    ProControlPanel(
+                        iso = iso,
+                        minIso = minIso,
+                        maxIso = maxIso,
+                        isIsoAuto = isIsoAuto,
+                        onIsoChange = { isIsoAuto = false; iso = it; isProMode = true },
+                        onIsoAutoToggle = { isIsoAuto = !isIsoAuto },
+                        shutterSpeed = shutterSpeed,
+                        isShutterAuto = isShutterAuto,
+                        onShutterChange = { isShutterAuto = false; shutterSpeed = it },
+                        onShutterAutoToggle = { isShutterAuto = !isShutterAuto },
+                        focusDistance = focusDistance,
+                        isFocusAuto = isFocusAuto,
+                        onFocusChange = { isFocusAuto = false; focusDistance = it },
+                        onFocusAutoToggle = { isFocusAuto = !isFocusAuto },
+                        whiteBalance = whiteBalance,
+                        onWhiteBalanceChange = { whiteBalance = it },
+                        manualKelvin = manualKelvin,
+                        onManualKelvinChange = { manualKelvin = it },
+                        onClose = { showProPanel = false }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
             
-            if (showLayerPanel && !showSettings) {
-                DisplayOverlaysPanel(
-                    gridType = gridType,
-                    onGridTypeChange = {
-                        gridType = it
-                        prefs.edit().putString("gridType", it.name).apply()
-                    },
-                    showVirtualHorizon = showVirtualHorizon,
-                    onVirtualHorizonChange = {
-                        showVirtualHorizon = it
-                        prefs.edit().putBoolean("showVirtualHorizon", it).apply()
-                    },
-                    enableHistogram = enableHistogram,
-                    onHistogramChange = {
-                        enableHistogram = it
-                        prefs.edit().putBoolean("enableHistogram", it).apply()
-                    },
-                    enableFocusPeaking = enableFocusPeaking,
-                    onFocusPeakingChange = {
-                        enableFocusPeaking = it
-                        prefs.edit().putBoolean("enableFocusPeaking", it).apply()
-                    },
-                    onClose = { showLayerPanel = false }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showLayerPanel && !showSettings,
+                enter = androidx.compose.animation.expandVertically(
+                    animationSpec = androidx.compose.animation.core.spring(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
+                    )
+                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
+                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+            ) {
+                Column {
+                    DisplayOverlaysPanel(
+                        gridType = gridType,
+                        onGridTypeChange = {
+                            gridType = it
+                            prefs.edit().putString("gridType", it.name).apply()
+                        },
+                        showVirtualHorizon = showVirtualHorizon,
+                        onVirtualHorizonChange = {
+                            showVirtualHorizon = it
+                            prefs.edit().putBoolean("showVirtualHorizon", it).apply()
+                        },
+                        enableHistogram = enableHistogram,
+                        onHistogramChange = {
+                            enableHistogram = it
+                            prefs.edit().putBoolean("enableHistogram", it).apply()
+                        },
+                        enableFocusPeaking = enableFocusPeaking,
+                        onFocusPeakingChange = {
+                            enableFocusPeaking = it
+                            prefs.edit().putBoolean("enableFocusPeaking", it).apply()
+                        },
+                        onClose = { showLayerPanel = false }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
 
             val zoomOptions = mutableListOf<Float>()
@@ -1526,54 +1549,82 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
-                Row(
+                val photoSelected = cameraMode == CameraMode.PHOTO
+                val targetBias = if (photoSelected) -1f else 1f
+                val animatedBias by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = targetBias,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
+                    ),
+                    label = "TogglePillSpring"
+                )
+                val photoTextColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (photoSelected) Color.Black else Color.White,
+                    label = "PhotoTextAnim"
+                )
+                val videoTextColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (!photoSelected) Color.Black else Color.White,
+                    label = "VideoTextAnim"
+                )
+
+                Box(
                     modifier = Modifier
                         .height(38.dp)
+                        .width(160.dp)
                         .clip(CircleShape)
                         .background(Color.DarkGray.copy(alpha = 0.5f))
                         .padding(3.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    val photoSelected = cameraMode == CameraMode.PHOTO
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
+                            .fillMaxWidth(0.5f)
+                            .align(BiasAlignment(horizontalBias = animatedBias, verticalBias = 0f))
                             .clip(CircleShape)
-                            .background(if (photoSelected) Color.Yellow else Color.Transparent)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { if (!isRecording) cameraMode = CameraMode.PHOTO }
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "PHOTO",
-                            color = if (photoSelected) Color.Black else Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
+                            .background(Color.Yellow)
+                    )
 
-                    val videoSelected = cameraMode == CameraMode.VIDEO
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .clip(CircleShape)
-                            .background(if (videoSelected) Color.Yellow else Color.Transparent)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { if (!isRecording) cameraMode = CameraMode.VIDEO }
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "VIDEO",
-                            color = if (videoSelected) Color.Black else Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .weight(1f)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { if (!isRecording) cameraMode = CameraMode.PHOTO },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "PHOTO",
+                                color = photoTextColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .weight(1f)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { if (!isRecording) cameraMode = CameraMode.VIDEO },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "VIDEO",
+                                color = videoTextColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
                 
