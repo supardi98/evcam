@@ -67,7 +67,7 @@ class CameraUiState(
     
     var keepScreenOn by mutableStateOf(prefs.getBoolean("keepScreenOn", false))
     var maxBrightness by mutableStateOf(prefs.getBoolean("maxBrightness", false))
-    var evScrollAnchorY by mutableFloatStateOf(0f)
+
     
     var minZoomRatio by mutableFloatStateOf(1f)
     var maxZoomRatio by mutableFloatStateOf(1f)

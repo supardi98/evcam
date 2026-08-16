@@ -263,7 +263,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     var keepScreenOn by uiState::keepScreenOn
     var maxBrightness by uiState::maxBrightness
-    var evScrollAnchorY by uiState::evScrollAnchorY
+
     
     var minZoomRatio by uiState::minZoomRatio
     var maxZoomRatio by uiState::maxZoomRatio
@@ -1419,174 +1419,48 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val isAnyOverlayActive = gridType != GridType.NONE || showVirtualHorizon || enableHistogram || enableFocusPeaking
-                
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(if (isAnyOverlayActive) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
-                        .clickable { 
-                            showLayerPanel = !showLayerPanel 
-                            if (showLayerPanel) {
-                                showProPanel = false
-                                showSettings = false
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = "Layer Settings",
-                        tint = if (isAnyOverlayActive) Color.Yellow else Color.LightGray,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-                val photoSelected = cameraMode == CameraMode.PHOTO
-                val targetBias = if (photoSelected) -1f else 1f
-                val animatedBias by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = targetBias,
-                    animationSpec = androidx.compose.animation.core.spring(
-                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
-                    ),
-                    label = "TogglePillSpring"
-                )
-                val photoTextColor by androidx.compose.animation.animateColorAsState(
-                    targetValue = if (photoSelected) Color.Black else Color.White,
-                    label = "PhotoTextAnim"
-                )
-                val videoTextColor by androidx.compose.animation.animateColorAsState(
-                    targetValue = if (!photoSelected) Color.Black else Color.White,
-                    label = "VideoTextAnim"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .height(38.dp)
-                        .width(160.dp)
-                        .clip(CircleShape)
-                        .background(Color.DarkGray.copy(alpha = 0.5f))
-                        .padding(3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(0.5f)
-                            .align(BiasAlignment(horizontalBias = animatedBias, verticalBias = 0f))
-                            .clip(CircleShape)
-                            .background(Color.Yellow)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .weight(1f)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { if (!isRecording) cameraMode = CameraMode.PHOTO },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "PHOTO",
-                                color = photoTextColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .weight(1f)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { if (!isRecording) cameraMode = CameraMode.VIDEO },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "VIDEO",
-                                color = videoTextColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
+            ModeSwitchAndProControls(
+                cameraMode = cameraMode,
+                isRecording = isRecording,
+                isIsoAuto = isIsoAuto,
+                isShutterAuto = isShutterAuto,
+                isFocusAuto = isFocusAuto,
+                whiteBalance = whiteBalance,
+                exposureIndex = exposureIndex,
+                showProPanel = showProPanel,
+                showLayerPanel = showLayerPanel,
+                showSettings = showSettings,
+                gridType = gridType,
+                showVirtualHorizon = showVirtualHorizon,
+                enableHistogram = enableHistogram,
+                enableFocusPeaking = enableFocusPeaking,
+                onCameraModeChange = { cameraMode = it },
+                onProPanelToggle = {
+                    showProPanel = it
+                    if (it) {
+                        showLayerPanel = false
+                        showSettings = false
                     }
-                }
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                val hasManualPro = !isIsoAuto || !isShutterAuto || !isFocusAuto || whiteBalance != CaptureRequest.CONTROL_AWB_MODE_AUTO || exposureIndex != 0
-                
-                LaunchedEffect(hasManualPro) {
-                    isProMode = hasManualPro
-                }
-
-                Box(
-                    modifier = Modifier
-                        .height(40.dp)
-                        .clip(CircleShape)
-                        .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
-                        .clickable { 
-                            showProPanel = !showProPanel 
-                            if (showProPanel) {
-                                showLayerPanel = false
-                                showSettings = false
-                            }
-                        }
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "PRO",
-                        color = if (hasManualPro) Color.Yellow else Color.LightGray,
-                        fontWeight = if (hasManualPro) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-
-                if (hasManualPro) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.DarkGray.copy(alpha = 0.5f))
-                            .clickable { 
-                                // Reset all pro settings to AUTO
-                                isIsoAuto = true
-                                isShutterAuto = true
-                                isFocusAuto = true
-                                whiteBalance = CaptureRequest.CONTROL_AWB_MODE_AUTO
-                                exposureIndex = 0
-                                cameraControl?.setExposureCompensationIndex(0)
-                                isProMode = false
-                                showProPanel = false
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close, 
-                            contentDescription = "Auto all Pro settings", 
-                            tint = Color.Yellow, 
-                            modifier = Modifier.size(20.dp)
-                        )
+                },
+                onLayerPanelToggle = {
+                    showLayerPanel = it
+                    if (it) {
+                        showProPanel = false
+                        showSettings = false
                     }
+                },
+                onAutoAllProSettings = {
+                    isIsoAuto = true
+                    isShutterAuto = true
+                    isFocusAuto = true
+                    whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
+                    exposureIndex = 0
+                    cameraControl?.setExposureCompensationIndex(0)
+                    isProMode = false
+                    showProPanel = false
                 }
-            }
+            )
+
             
             if (isBursting && burstCount > 0) {
                 Text(
