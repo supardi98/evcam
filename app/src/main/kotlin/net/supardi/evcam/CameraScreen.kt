@@ -2236,14 +2236,31 @@ private fun MediaPreviewDialog(
                     }
                 }
 
-                // Center Image Pager area: Pure borderless floating images
+                // Center Image Pager area: Pure borderless floating images (Tap photo to open in Gallery)
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val openGallery = {
+                        val activeUri = mediaList.getOrNull(pagerState.currentPage) ?: lastCapturedUri ?: fetchLatestMediaUri(context)
+                        if (activeUri != null) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(activeUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "No Gallery item found", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
                     if (pageCount > 0) {
                         androidx.compose.foundation.pager.HorizontalPager(
                             state = pagerState,
@@ -2255,53 +2272,31 @@ private fun MediaPreviewDialog(
                                     bitmap = lastCapturedBitmap.asImageBitmap(),
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { openGallery() }
                                 )
                             } else if (itemUri != null) {
                                 AsyncImage(
                                     model = itemUri,
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { openGallery() }
                                 )
                             }
                         }
                     }
                 }
 
-                // Bottom Bar: Open in Gallery Button cleanly below image
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Button(
-                        onClick = {
-                            val activeUri = mediaList.getOrNull(pagerState.currentPage) ?: lastCapturedUri ?: fetchLatestMediaUri(context)
-                            if (activeUri != null) {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(activeUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                Toast.makeText(context, "No Gallery item found", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                }
+                // Subtitle hint at bottom
+                Text(
+                    text = "Ketuk foto untuk membuka di Galeri HP",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
             }
         }
     }
