@@ -242,8 +242,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var isIsoAuto by uiState::isIsoAuto
     var isShutterAuto by uiState::isShutterAuto
     var isFocusAuto by uiState::isFocusAuto
-    var showProPanel by uiState::showProPanel
     var enableHistogram by uiState::enableHistogram
+
     var enableFocusPeaking by uiState::enableFocusPeaking
     var enableRawCapture by uiState::enableRawCapture
     var manualKelvin by uiState::manualKelvin
@@ -257,9 +257,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var isBursting by uiState::isBursting
     var burstCount by uiState::burstCount
     
-    var showSettings by uiState::showSettings
-    var showLayerPanel by uiState::showLayerPanel
     var showMediaPreviewDialog by uiState::showMediaPreviewDialog
+
     
     var keepScreenOn by uiState::keepScreenOn
     var maxBrightness by uiState::maxBrightness
