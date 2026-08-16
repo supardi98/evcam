@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,7 +26,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.VideoFrameDecoder
 import net.supardi.evcam.CameraMode
 
 @Composable
@@ -41,6 +44,14 @@ fun CameraBottomBar(
     onBurstEnd: () -> Unit,
     onSwitchCamera: () -> Unit
 ) {
+    val imageLoader = remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                add(VideoFrameDecoder.Factory())
+            }
+            .build()
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -70,6 +81,7 @@ fun CameraBottomBar(
             } else if (lastCapturedUri != null) {
                 AsyncImage(
                     model = lastCapturedUri,
+                    imageLoader = imageLoader,
                     contentDescription = "Gallery Thumbnail",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()

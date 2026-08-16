@@ -68,8 +68,9 @@ dependencies {
     // Icons
     implementation("androidx.compose.material:material-icons-extended")
     
-    // Coil (Image Loading)
+    // Coil (Image & Video Loading)
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-video:2.5.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
