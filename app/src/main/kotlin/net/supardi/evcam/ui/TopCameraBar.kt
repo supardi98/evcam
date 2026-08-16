@@ -278,9 +278,10 @@ fun TopCameraBar(
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.4f))
                         .clickable {
-                            uiState.videoFps = when (uiState.videoFps) {
-                                VideoFpsMode.FPS_30 -> VideoFpsMode.FPS_60
-                                VideoFpsMode.FPS_60 -> VideoFpsMode.FPS_30
+                            if (uiState.supportedFpsModes.isNotEmpty()) {
+                                val currentIndex = uiState.supportedFpsModes.indexOf(uiState.videoFps)
+                                val nextIndex = if (currentIndex == -1 || currentIndex >= uiState.supportedFpsModes.size - 1) 0 else currentIndex + 1
+                                uiState.videoFps = uiState.supportedFpsModes[nextIndex]
                             }
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),

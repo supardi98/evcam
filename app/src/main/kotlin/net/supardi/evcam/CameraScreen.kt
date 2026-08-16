@@ -464,21 +464,42 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             val extensionsManagerFuture = androidx.camera.extensions.ExtensionsManager.getInstanceAsync(context, cameraProvider)
             extensionsManagerFuture.addListener({
                 var finalCameraSelector = cameraSelector
+                var hasCameraXNight = false
+                var hasCameraXHdr = false
                 try {
                     val extensionsManager = extensionsManagerFuture.get()
+                    hasCameraXNight = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
+                    hasCameraXHdr = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
                     
-                    // Extract supported extensions
-                    uiState.hasNightExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
-                    uiState.hasHdrExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
-                    
-                    if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && uiState.hasNightExtension) {
+                    if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && hasCameraXNight) {
                         finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
-                    } else if (isHdrEnabled && cameraMode == CameraMode.PHOTO && uiState.hasHdrExtension) {
+                    } else if (isHdrEnabled && cameraMode == CameraMode.PHOTO && hasCameraXHdr) {
                         finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("Evcam", "Failed to initialize ExtensionsManager", e)
                 }
+
+                var hasLegacyNight = false
+                var hasLegacyHdr = false
+                try {
+                    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                    val expectedLensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT else android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+                    val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                        cameraManager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == expectedLensFacing
+                    }
+                    if (cameraId != null) {
+                        val chars = cameraManager.getCameraCharacteristics(cameraId)
+                        val sceneModes = chars.get(android.hardware.camera2.CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES) ?: intArrayOf()
+                        hasLegacyNight = sceneModes.contains(android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_NIGHT)
+                        hasLegacyHdr = sceneModes.contains(android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_HDR)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                uiState.hasNightExtension = hasCameraXNight || hasLegacyNight
+                uiState.hasHdrExtension = hasCameraXHdr || hasLegacyHdr
             
             var boundCamera: androidx.camera.core.Camera? = null
             try {
@@ -510,6 +531,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 cameraControl = camera.cameraControl
                 camera2Control = Camera2CameraControl.from(camera.cameraControl)
                 
+                val builder = androidx.camera.camera2.interop.CaptureRequestOptions.Builder()
+                if (isNightModeEnabled && hasLegacyNight && !hasCameraXNight) {
+                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_MODE, android.hardware.camera2.CameraMetadata.CONTROL_MODE_USE_SCENE_MODE)
+                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE, android.hardware.camera2.CameraMetadata.CONTROL_SCENE_MODE_NIGHT)
+                } else if (isHdrEnabled && hasLegacyHdr && !hasCameraXHdr) {
+                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_MODE, android.hardware.camera2.CameraMetadata.CONTROL_MODE_USE_SCENE_MODE)
+                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE, android.hardware.camera2.CameraMetadata.CONTROL_SCENE_MODE_HDR)
+                }
+                camera2Control?.captureRequestOptions = builder.build()
+                
                 val zoomState = camera.cameraInfo.zoomState.value
                 if (zoomState != null) {
                     minZoomRatio = zoomState.minZoomRatio
@@ -527,6 +558,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 uiState.supportedVideoQualities = VideoQualityMode.values().filter { supportedQualities.contains(it.quality) }
                 if (uiState.supportedVideoQualities.isNotEmpty() && !uiState.supportedVideoQualities.contains(uiState.videoQuality)) {
                     uiState.videoQuality = uiState.supportedVideoQualities.first()
+                }
+                
+                // Extract Supported FPS
+                val supportedFpsList = mutableListOf<Int>()
+                val fpsRanges = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                fpsRanges?.forEach { range ->
+                    if (range.upper == range.lower) {
+                        supportedFpsList.add(range.upper)
+                    }
+                }
+                if (supportedFpsList.isEmpty()) {
+                    supportedFpsList.addAll(listOf(24, 30, 60))
+                }
+                uiState.supportedFpsModes = VideoFpsMode.values().filter { supportedFpsList.contains(it.fps) }
+                if (uiState.supportedFpsModes.isNotEmpty() && !uiState.supportedFpsModes.contains(uiState.videoFps)) {
+                    uiState.videoFps = uiState.supportedFpsModes.first()
                 }
                 
                 // Extract Flash and Manual Sensor capabilities

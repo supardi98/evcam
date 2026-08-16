@@ -122,6 +122,7 @@ class CameraUiState(
     var hasNightExtension by mutableStateOf(true)
     var hasManualSensorSupport by mutableStateOf(true)
     var supportedVideoQualities by mutableStateOf<List<VideoQualityMode>>(VideoQualityMode.values().toList())
+    var supportedFpsModes by mutableStateOf<List<VideoFpsMode>>(VideoFpsMode.values().toList())
     var supportedVideoProfiles by mutableStateOf<List<String>>(emptyList())
     var showFilterDialog by mutableStateOf(false)
     var imageFormat by mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name))
