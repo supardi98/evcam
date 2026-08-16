@@ -111,7 +111,7 @@ enum class GridType(val label: String) { NONE("Off"), THIRDS("3x3"), FOURTHS("4x
 enum class FlashMode { AUTO, ON, OFF }
 enum class TimerMode(val seconds: Int) { OFF(0), SEC_3(3), SEC_10(10), SEC_15(15), SEC_20(20), PEACE(3) }
 enum class AspectRatioMode(val value: Int, val label: String) { RATIO_4_3(AspectRatio.RATIO_4_3, "4:3"), RATIO_16_9(AspectRatio.RATIO_16_9, "16:9"), RATIO_1_1(AspectRatio.RATIO_4_3, "1:1") }
-enum class VideoQualityMode(val quality: Quality, val label: String) { HD(Quality.HD, "1080p"), FHD(Quality.FHD, "1080p FHD"), UHD(Quality.UHD, "4K") }
+enum class VideoQualityMode(val quality: Quality, val label: String) { HD(Quality.HD, "720p"), FHD(Quality.FHD, "1080p"), UHD(Quality.UHD, "4K") }
 enum class ImageFormatMode(val label: String) { JPEG("JPEG"), RAW("RAW+JPEG") }
 enum class LocationFormat(val label: String) { CITY("City Only"), CITY_COUNTRY("City, Country"), FULL_ADDRESS("Full Address"), COORDINATES("Lat/Lng") }
 enum class WatermarkElementType { TEXT, LOCATION, DATE }
@@ -1115,27 +1115,52 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (cameraMode == CameraMode.PHOTO) Color.Black.copy(alpha = 0.4f) else Color.DarkGray.copy(alpha = 0.3f))
-                        .clickable(enabled = cameraMode == CameraMode.PHOTO) {
-                            aspectRatio = when (aspectRatio) {
-                                AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
-                                AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
-                                AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
+                if (cameraMode == CameraMode.PHOTO) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                aspectRatio = when (aspectRatio) {
+                                    AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
+                                    AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
+                                    AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
+                                }
+                                prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
                             }
-                            prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (cameraMode == CameraMode.VIDEO) "16:9" else aspectRatio.label,
-                        color = if (cameraMode == CameraMode.PHOTO) Color.Yellow else Color.Gray,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = aspectRatio.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                videoQuality = when (videoQuality) {
+                                    VideoQualityMode.HD -> VideoQualityMode.FHD
+                                    VideoQualityMode.FHD -> VideoQualityMode.UHD
+                                    VideoQualityMode.UHD -> VideoQualityMode.HD
+                                }
+                                prefs.edit().putString("videoQuality", videoQuality.name).apply()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = videoQuality.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1656,28 +1681,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Video Quality", color = Color.White)
-                            Row {
-                                VideoQualityMode.values().forEach { mode ->
-                                    Text(
-                                        text = mode.label,
-                                        color = if (videoQuality == mode) Color.Black else Color.White,
-                                        modifier = Modifier
-                                            .padding(start = 8.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (videoQuality == mode) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                                            .clickable { videoQuality = mode }
-                                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        }
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         Row(
