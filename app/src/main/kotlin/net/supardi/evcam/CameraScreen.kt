@@ -520,7 +520,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }, executor)
 
-        kotlinx.coroutines.delay(200)
+        kotlinx.coroutines.delay(380)
         isTransitioningRatio = false
     }
 
