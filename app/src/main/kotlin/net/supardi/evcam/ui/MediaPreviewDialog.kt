@@ -140,15 +140,15 @@ fun MediaPreviewDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(enabled = false) {},
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.85f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Bar: Counter & Close Button (X) completely outside image area
+                // Top Bar: Counter & Close Button (X)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 40.dp, start = 24.dp, end = 24.dp, bottom = 12.dp),
+                        .padding(top = 16.dp, start = 8.dp, end = 8.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -180,12 +180,12 @@ fun MediaPreviewDialog(
                     }
                 }
 
-                // Center Image Pager area: Pure borderless floating images / video preview
+                // Center Image Pager area
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     val openActiveMedia = {
@@ -267,7 +267,7 @@ fun MediaPreviewDialog(
                     text = if (isCurrentVideo) "Ketuk tombol Putar / foto untuk memutar video" else "Ketuk foto untuk membuka di Galeri HP",
                     color = Color.Gray,
                     fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                    modifier = Modifier.padding(vertical = 12.dp)
                 )
             }
         }
