@@ -865,29 +865,31 @@ fun MediaPreviewDialog(
                                     .fillMaxHeight()
                                     .width(48.dp)
                                     .padding(vertical = 8.dp)
-                                    .pointerInput(totalItems, visibleCount) {
+                                    .pointerInput(totalItems) {
                                         detectVerticalDragGestures(
                                             onDragStart = { offset ->
+                                                val currentVisible = gridState.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1)
                                                 val trackH = size.height.toFloat()
                                                 val thumbH = 64.dp.toPx()
                                                 val maxThumbTop = trackH - thumbH
                                                 var rawFraction = (offset.y - thumbH/2) / maxThumbTop
                                                 rawFraction = rawFraction.coerceIn(0f, 1f)
                                                 scrollbarDragY = rawFraction
-                                                val targetIdx = (rawFraction * (totalItems - visibleCount)).toInt().coerceIn(0, totalItems - 1)
+                                                val targetIdx = (rawFraction * (totalItems - currentVisible)).toInt().coerceIn(0, totalItems - 1)
                                                 scope.launch { gridState.scrollToItem(targetIdx) }
                                             },
                                             onDragEnd = { scrollbarDragY = -1f },
                                             onDragCancel = { scrollbarDragY = -1f },
                                             onVerticalDrag = { change, _ ->
                                                 change.consume()
+                                                val currentVisible = gridState.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1)
                                                 val trackH = size.height.toFloat()
                                                 val thumbH = 64.dp.toPx()
                                                 val maxThumbTop = trackH - thumbH
                                                 var rawFraction = (change.position.y - thumbH/2) / maxThumbTop
                                                 rawFraction = rawFraction.coerceIn(0f, 1f)
                                                 scrollbarDragY = rawFraction
-                                                val targetIdx = (rawFraction * (totalItems - visibleCount)).toInt().coerceIn(0, totalItems - 1)
+                                                val targetIdx = (rawFraction * (totalItems - currentVisible)).toInt().coerceIn(0, totalItems - 1)
                                                 scope.launch { gridState.scrollToItem(targetIdx) }
                                             }
                                         )
