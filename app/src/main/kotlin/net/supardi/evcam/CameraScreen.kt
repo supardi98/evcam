@@ -839,153 +839,52 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .clipToBounds()
             .aspectRatio(animatedAspectRatio)
         ) {
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawWithContent {
-                        if (selectedFilter != ColorFilterMode.NORMAL) {
-                            val paint = androidx.compose.ui.graphics.Paint().apply {
-                                colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                                    androidx.compose.ui.graphics.ColorMatrix(selectedFilter.matrixValues)
-                                )
-                            }
-                            drawIntoCanvas { canvas ->
-                                canvas.saveLayer(size.toRect(), paint)
-                                drawContent()
-                                canvas.restore()
-                            }
-                        } else {
-                            drawContent()
-                        }
-                    },
-
-                factory = { ctx -> 
-
-                    previewView.apply {
-                        val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                            override fun onScale(detector: ScaleGestureDetector): Boolean {
-                                showZoomSlider = true
-                                // Pinch: snapTo = instant, cancels any running preset animation
-                                val newZoom = (zoomAnim.value * detector.scaleFactor).coerceIn(minZoomRatio, maxZoomRatio)
-                                coroutineScope.launch { zoomAnim.snapTo(newZoom) }
-                                return true
-                            }
-                        })
-                        val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
-                            override fun onSingleTapUp(e: MotionEvent): Boolean {
-                                if (isAeAfLocked) {
-                                    isAeAfLocked = false
-                                    cameraControl?.cancelFocusAndMetering()
-                                }
-                                
-                                if (isProMode && !isFocusAuto) {
-                                    return true
-                                }
-                                
-                                isFocusAuto = true
-                                focusOffset = Offset(e.x, e.y)
-                                showFocusBox = true
-                                showZoomSlider = true
-                                showBrightnessSlider = true
-                                focusState = FocusState.SEARCHING
-                                val factory = previewView.meteringPointFactory
-                                val point = factory.createPoint(e.x, e.y)
-                                val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
-                                    .setAutoCancelDuration(2, TimeUnit.SECONDS)
-                                    .build()
-                                val future = cameraControl?.startFocusAndMetering(action)
-                                future?.addListener({
-                                    try {
-                                        val result = future.get()
-                                        focusState = if (result != null && result.isFocusSuccessful) FocusState.SUCCESS else FocusState.FAILED
-                                    } catch (exc: Exception) {
-                                        focusState = FocusState.FAILED
-                                    }
-                                }, ContextCompat.getMainExecutor(ctx))
-                                return true
-                            }
-
-                            override fun onLongPress(e: MotionEvent) {
-                                val factory = previewView.meteringPointFactory
-                                val point = factory.createPoint(e.x, e.y)
-                                val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
-                                    .disableAutoCancel()
-                                    .build()
-                                cameraControl?.startFocusAndMetering(action)
-                                isAeAfLocked = true
-                                focusOffset = Offset(e.x, e.y)
-                                showFocusBox = true
-                                focusState = FocusState.SUCCESS
-                            }
-
-                            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                                if (e1 == null) return false
-                                val diffX = e2.x - e1.x
-                                val diffY = e2.y - e1.y
-                                if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(velocityX) > 100) {
-                                    if (diffX < 0 && cameraMode == CameraMode.PHOTO) {
-                                        if (!isRecording) cameraMode = CameraMode.VIDEO
-                                        return true
-                                    } else if (diffX > 0 && cameraMode == CameraMode.VIDEO) {
-                                        if (!isRecording) cameraMode = CameraMode.PHOTO
-                                        return true
-                                    }
-                                }
-                                return false
-                            }
-                        })
-                        setOnTouchListener { _, event ->
-                            scaleGestureDetector.onTouchEvent(event)
-                            if (!scaleGestureDetector.isInProgress) {
-                                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                                    evScrollAnchorY = event.y
-                                } else if (event.actionMasked == MotionEvent.ACTION_MOVE && !isProMode) {
-                                    val deltaY = evScrollAnchorY - event.y // positive = swipe up
-                                    val scrollStepThreshold = 50f // pixels per EV step
-                                    val steps = (deltaY / scrollStepThreshold).toInt()
-                                    if (steps != 0) {
-                                        val newIdx = (exposureIndex + steps).coerceIn(minExposureIndex, maxExposureIndex)
-                                        if (newIdx != exposureIndex) {
-                                            exposureIndex = newIdx
-                                            cameraControl?.setExposureCompensationIndex(newIdx)
-                                            showBrightnessSlider = true
-                                            if (newIdx != 0) {
-                                                isProMode = true
-                                            }
-                                        }
-                                        // Reset anchor to current y to support continuous scrolling
-                                        evScrollAnchorY = event.y
-                                    }
-                                }
-                                gestureDetector.onTouchEvent(event)
-                            }
-                            true
-                        }
-
-
+            CameraViewfinder(
+                previewView = previewView,
+                cameraMode = cameraMode,
+                aspectRatio = aspectRatio,
+                selectedFilter = selectedFilter,
+                zoomAnim = zoomAnim,
+                minZoomRatio = minZoomRatio,
+                maxZoomRatio = maxZoomRatio,
+                isAeAfLocked = isAeAfLocked,
+                isProMode = isProMode,
+                isFocusAuto = isFocusAuto,
+                minExposureIndex = minExposureIndex,
+                maxExposureIndex = maxExposureIndex,
+                exposureIndex = exposureIndex,
+                isTransitioningRatio = isTransitioningRatio,
+                cameraControl = cameraControl,
+                coroutineScope = coroutineScope,
+                onZoomChange = {
+                    showZoomSlider = true
+                    currentZoom = it
+                },
+                onFocusStart = {
+                    focusOffset = it
+                    showFocusBox = true
+                    showZoomSlider = true
+                    showBrightnessSlider = true
+                    focusState = FocusState.SEARCHING
+                },
+                onFocusSuccess = {
+                    focusState = if (it) FocusState.SUCCESS else FocusState.FAILED
+                },
+                onAeAfLockToggle = { isAeAfLocked = it },
+                onFocusAutoToggle = { isFocusAuto = it },
+                onExposureChange = {
+                    exposureIndex = it
+                    showBrightnessSlider = true
+                    if (it != 0) {
+                        isProMode = true
                     }
-                }
+                },
+                onCameraModeChange = {
+                    if (!isRecording) cameraMode = it
+                },
+                modifier = Modifier.fillMaxSize()
             )
 
-            androidx.compose.animation.AnimatedVisibility(
-                visible = isTransitioningRatio,
-                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(100)),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.55f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (cameraMode == CameraMode.VIDEO) "16:9 VIDEO" else aspectRatio.label,
-                        color = Color.Yellow,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                }
-            }
             
             if (showWatermark && cameraMode == CameraMode.PHOTO) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
