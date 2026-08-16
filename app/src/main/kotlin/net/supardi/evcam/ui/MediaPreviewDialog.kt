@@ -906,7 +906,8 @@ fun MediaPreviewDialog(
                                         .width(32.dp)
                                         .height(64.dp)
                                         .alpha(scrollbarAlpha)
-                                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
+                                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
+                                        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
