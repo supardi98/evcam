@@ -137,5 +137,38 @@ fun rememberCameraUiState(
         }
     }
     
+    // Auto-Saver preferences effects
+    LaunchedEffect(state.keepScreenOn) { prefs.edit().putBoolean("keepScreenOn", state.keepScreenOn).apply() }
+    LaunchedEffect(state.maxBrightness) { prefs.edit().putBoolean("maxBrightness", state.maxBrightness).apply() }
+    LaunchedEffect(state.gridType) { prefs.edit().putString("gridType", state.gridType.name).apply() }
+    LaunchedEffect(state.flashMode) { prefs.edit().putString("flashMode", state.flashMode.name).apply() }
+    LaunchedEffect(state.timerMode) { prefs.edit().putString("timerMode", state.timerMode.name).apply() }
+    LaunchedEffect(state.showVirtualHorizon) { prefs.edit().putBoolean("showVirtualHorizon", state.showVirtualHorizon).apply() }
+    LaunchedEffect(state.volumeShutterEnabled) { prefs.edit().putBoolean("volumeShutterEnabled", state.volumeShutterEnabled).apply() }
+    LaunchedEffect(state.isShutterSoundEnabled) { prefs.edit().putBoolean("isShutterSoundEnabled", state.isShutterSoundEnabled).apply() }
+    LaunchedEffect(state.isHandTrackingInstalled) { prefs.edit().putBoolean("isHandTrackingInstalled", state.isHandTrackingInstalled).apply() }
+    LaunchedEffect(state.isHandTrackingEnabled) { prefs.edit().putBoolean("isHandTrackingEnabled", state.isHandTrackingEnabled).apply() }
+    LaunchedEffect(state.showWatermark) { prefs.edit().putBoolean("showWatermark", state.showWatermark).apply() }
+    LaunchedEffect(state.enableGeotagging) { prefs.edit().putBoolean("enableGeotagging", state.enableGeotagging).apply() }
+    LaunchedEffect(state.aspectRatio) { prefs.edit().putString("aspectRatio", state.aspectRatio.name).apply() }
+    LaunchedEffect(state.videoQuality) { prefs.edit().putString("videoQuality", state.videoQuality.name).apply() }
+    LaunchedEffect(state.videoFps) { prefs.edit().putString("videoFps", state.videoFps.name).apply() }
+    LaunchedEffect(state.videoAudioEnabled) { prefs.edit().putBoolean("videoAudioEnabled", state.videoAudioEnabled).apply() }
+    LaunchedEffect(state.isNightModeEnabled) { prefs.edit().putBoolean("isNightModeEnabled", state.isNightModeEnabled).apply() }
+    LaunchedEffect(state.selectedFilter) { prefs.edit().putString("selectedFilter", state.selectedFilter.name).apply() }
+    LaunchedEffect(state.imageFormat) { prefs.edit().putString("imageFormat", state.imageFormat.name).apply() }
+    
+    LaunchedEffect(state.enableHistogram) { prefs.edit().putBoolean("enableHistogram", state.enableHistogram).apply() }
+    LaunchedEffect(state.enableFocusPeaking) { prefs.edit().putBoolean("enableFocusPeaking", state.enableFocusPeaking).apply() }
+    LaunchedEffect(state.enableRawCapture) { prefs.edit().putBoolean("enableRawCapture", state.enableRawCapture).apply() }
+    LaunchedEffect(state.manualKelvin) { prefs.edit().putFloat("manualKelvin", state.manualKelvin).apply() }
+    LaunchedEffect(state.whiteBalance) { prefs.edit().putInt("whiteBalance", state.whiteBalance).apply() }
+    LaunchedEffect(state.timerBurstCount) { prefs.edit().putInt("timerBurstCount", state.timerBurstCount).apply() }
+    
+    LaunchedEffect(state.watermarkElements) {
+        prefs.edit().putString("watermarkElements", serializeWatermarkElements(state.watermarkElements)).apply()
+    }
+    
     return state
+
 }

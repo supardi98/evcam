@@ -392,28 +392,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         onDispose { orientationEventListener.disable() }
     }
     
-    LaunchedEffect(keepScreenOn) { prefs.edit().putBoolean("keepScreenOn", keepScreenOn).apply() }
-    LaunchedEffect(maxBrightness) { prefs.edit().putBoolean("maxBrightness", maxBrightness).apply() }
-    LaunchedEffect(gridType) { prefs.edit().putString("gridType", gridType.name).apply() }
-    LaunchedEffect(flashMode) { prefs.edit().putString("flashMode", flashMode.name).apply() }
-    LaunchedEffect(timerMode) { prefs.edit().putString("timerMode", timerMode.name).apply() }
-    LaunchedEffect(showVirtualHorizon) { prefs.edit().putBoolean("showVirtualHorizon", showVirtualHorizon).apply() }
-    LaunchedEffect(volumeShutterEnabled) { prefs.edit().putBoolean("volumeShutterEnabled", volumeShutterEnabled).apply() }
-    LaunchedEffect(isShutterSoundEnabled) { prefs.edit().putBoolean("isShutterSoundEnabled", isShutterSoundEnabled).apply() }
-    LaunchedEffect(isHandTrackingInstalled) { prefs.edit().putBoolean("isHandTrackingInstalled", isHandTrackingInstalled).apply() }
-    LaunchedEffect(isHandTrackingEnabled) { prefs.edit().putBoolean("isHandTrackingEnabled", isHandTrackingEnabled).apply() }
-    LaunchedEffect(showWatermark) { prefs.edit().putBoolean("showWatermark", showWatermark).apply() }
-    
-    LaunchedEffect(enableHistogram) { prefs.edit().putBoolean("enableHistogram", enableHistogram).apply() }
-    LaunchedEffect(enableFocusPeaking) { prefs.edit().putBoolean("enableFocusPeaking", enableFocusPeaking).apply() }
-    LaunchedEffect(enableRawCapture) { prefs.edit().putBoolean("enableRawCapture", enableRawCapture).apply() }
-    LaunchedEffect(manualKelvin) { prefs.edit().putFloat("manualKelvin", manualKelvin).apply() }
-    LaunchedEffect(whiteBalance) { prefs.edit().putInt("whiteBalance", whiteBalance).apply() }
-    LaunchedEffect(timerBurstCount) { prefs.edit().putInt("timerBurstCount", timerBurstCount).apply() }
-    LaunchedEffect(watermarkElements) {
-        prefs.edit().putString("watermarkElements", serializeWatermarkElements(watermarkElements)).apply()
-    }
-    
     // Fetch live location if any element uses location
     LaunchedEffect(watermarkElements) { 
         val hasLocation = watermarkElements.any { it.type == WatermarkElementType.LOCATION }
@@ -430,20 +408,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     if (addresses != null && addresses.isNotEmpty()) {
                         liveAddress = addresses[0]
                     }
-
-
                 } catch(e: Exception) {}
             }
         }
     }
-    LaunchedEffect(enableGeotagging) { prefs.edit().putBoolean("enableGeotagging", enableGeotagging).apply() }
-    LaunchedEffect(aspectRatio) { prefs.edit().putString("aspectRatio", aspectRatio.name).apply() }
-    LaunchedEffect(videoQuality) { prefs.edit().putString("videoQuality", videoQuality.name).apply() }
-    LaunchedEffect(videoFps) { prefs.edit().putString("videoFps", videoFps.name).apply() }
-    LaunchedEffect(videoAudioEnabled) { prefs.edit().putBoolean("videoAudioEnabled", videoAudioEnabled).apply() }
-    LaunchedEffect(isNightModeEnabled) { prefs.edit().putBoolean("isNightModeEnabled", isNightModeEnabled).apply() }
-    LaunchedEffect(selectedFilter) { prefs.edit().putString("selectedFilter", selectedFilter.name).apply() }
-    LaunchedEffect(imageFormat) { prefs.edit().putString("imageFormat", imageFormat.name).apply() }
+
 
 
 
