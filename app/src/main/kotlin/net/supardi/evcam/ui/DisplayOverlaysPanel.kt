@@ -35,8 +35,9 @@ fun DisplayOverlaysPanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(Color.Black.copy(alpha = 0.6f))
+            .padding(horizontal = 12.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.Black.copy(alpha = 0.75f))
             .padding(16.dp)
     ) {
         Row(

@@ -4,9 +4,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,13 +19,13 @@ import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -38,10 +41,12 @@ fun CameraBottomBar(
     context: Context,
     cameraMode: CameraMode,
     isRecording: Boolean,
+    isFrontCamera: Boolean,
     onThumbnailClick: () -> Unit,
     onShutterTap: () -> Unit,
-    onBurstStart: () -> Unit,
-    onBurstEnd: () -> Unit,
+    onQuickRecordStart: () -> Unit,
+    onQuickRecordStop: () -> Unit,
+    onDragZoom: (Float) -> Unit,
     onSwitchCamera: () -> Unit
 ) {
     val imageLoader = remember(context) {
@@ -51,6 +56,13 @@ fun CameraBottomBar(
             }
             .build()
     }
+
+    var isLongPressActive by remember { mutableStateOf(false) }
+    val cameraSwitchRotation by animateFloatAsState(
+        targetValue = if (isFrontCamera) 180f else 0f,
+        animationSpec = tween(300),
+        label = "CameraSwitchRotation"
+    )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -96,24 +108,33 @@ fun CameraBottomBar(
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(if (isRecording) Color.Red else Color.White)
-                .pointerInput(Unit) {
+                .pointerInput(cameraMode, isRecording) {
                     detectTapGestures(
                         onTap = { onShutterTap() },
                         onLongPress = {
-                            if (cameraMode == CameraMode.PHOTO) {
-                                onBurstStart()
-                            } else {
-                                onShutterTap()
-                            }
+                            isLongPressActive = true
+                            onQuickRecordStart()
                         },
                         onPress = {
                             try {
-                                tryAwaitRelease()
+                                awaitRelease()
                             } finally {
-                                onBurstEnd()
+                                if (isLongPressActive) {
+                                    isLongPressActive = false
+                                    onQuickRecordStop()
+                                }
                             }
                         }
                     )
+                }
+                .pointerInput(isLongPressActive) {
+                    if (isLongPressActive) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            val dragY = -dragAmount.y
+                            onDragZoom(dragY)
+                        }
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {}
@@ -126,7 +147,9 @@ fun CameraBottomBar(
                 imageVector = Icons.Default.Cameraswitch,
                 contentDescription = "Switch Camera",
                 tint = Color.White,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier
+                    .size(32.dp)
+                    .graphicsLayer { rotationZ = cameraSwitchRotation }
             )
         }
     }

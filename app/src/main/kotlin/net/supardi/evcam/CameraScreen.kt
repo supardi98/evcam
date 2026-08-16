@@ -551,8 +551,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         isTransitioningRatio = false
     }
 
-    LaunchedEffect(currentZoom, cameraControl) {
-        cameraControl?.setZoomRatio(currentZoom)
+    val animatedZoomRatio by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = currentZoom,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 250, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "SmoothLensZoom"
+    )
+
+    LaunchedEffect(animatedZoomRatio, cameraControl) {
+        cameraControl?.setZoomRatio(animatedZoomRatio)
     }
     
     val executeCapture = {
@@ -1487,6 +1493,38 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
 
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showSettings,
+                enter = androidx.compose.animation.expandVertically(
+                    animationSpec = androidx.compose.animation.core.spring(
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
+                    )
+                ) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
+                exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+            ) {
+                Column {
+                    SettingsPanel(
+                        enableRawCapture = enableRawCapture,
+                        onEnableRawCaptureChange = { enableRawCapture = it },
+                        keepScreenOn = keepScreenOn,
+                        onKeepScreenOnChange = { keepScreenOn = it },
+                        maxBrightness = maxBrightness,
+                        onMaxBrightnessChange = { maxBrightness = it },
+                        volumeShutterEnabled = volumeShutterEnabled,
+                        onVolumeShutterEnabledChange = { volumeShutterEnabled = it },
+                        isShutterSoundEnabled = isShutterSoundEnabled,
+                        onIsShutterSoundEnabledChange = { isShutterSoundEnabled = it },
+                        enableGeotagging = enableGeotagging,
+                        onEnableGeotaggingChange = { enableGeotagging = it },
+                        onOpenWatermarkSettings = { showWatermarkDialog = true },
+                        onOpenPluginManager = { showPluginManager = true },
+                        onClose = { showSettings = false }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
             val zoomOptions = mutableListOf<Float>()
             if (minZoomRatio < 1f) zoomOptions.add(minZoomRatio)
             zoomOptions.add(1f)
@@ -1702,10 +1740,26 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 context = context,
                 cameraMode = cameraMode,
                 isRecording = isRecording,
+                isFrontCamera = lensFacing == CameraSelector.LENS_FACING_FRONT,
                 onThumbnailClick = { showMediaPreviewDialog = true },
                 onShutterTap = { initiateCapture() },
-                onBurstStart = { isBursting = true },
-                onBurstEnd = { isBursting = false },
+                onQuickRecordStart = {
+                    if (cameraMode != CameraMode.VIDEO) {
+                        cameraMode = CameraMode.VIDEO
+                    }
+                    if (!isRecording) {
+                        initiateCapture()
+                    }
+                },
+                onQuickRecordStop = {
+                    if (isRecording) {
+                        initiateCapture()
+                    }
+                },
+                onDragZoom = { deltaY ->
+                    val zoomStep = (deltaY / 300f) * (maxZoomRatio - minZoomRatio)
+                    currentZoom = (currentZoom + zoomStep).coerceIn(minZoomRatio, maxZoomRatio)
+                },
                 onSwitchCamera = {
                     if (!isRecording) {
                         lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
@@ -1714,27 +1768,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             )
         }
         
-        if (showSettings) {
-            MainSettingsDialog(
-                showSettings = showSettings,
-                enableRawCapture = enableRawCapture,
-                onEnableRawCaptureChange = { enableRawCapture = it },
-                keepScreenOn = keepScreenOn,
-                onKeepScreenOnChange = { keepScreenOn = it },
-                maxBrightness = maxBrightness,
-                onMaxBrightnessChange = { maxBrightness = it },
-                volumeShutterEnabled = volumeShutterEnabled,
-                onVolumeShutterEnabledChange = { volumeShutterEnabled = it },
-                isShutterSoundEnabled = isShutterSoundEnabled,
-                onIsShutterSoundEnabledChange = { isShutterSoundEnabled = it },
-                enableGeotagging = enableGeotagging,
-                onEnableGeotaggingChange = { enableGeotagging = it },
-                onOpenWatermarkSettings = { showWatermarkDialog = true },
-                onOpenPluginManager = { showPluginManager = true },
-                onDismiss = { showSettings = false }
-            )
-        }
-        
+
         if (showMediaPreviewDialog && (lastCapturedBitmap != null || lastCapturedUri != null)) {
             MediaPreviewDialog(
                 lastCapturedBitmap = lastCapturedBitmap,

@@ -46,8 +46,9 @@ fun ProControlPanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(Color.Black.copy(alpha = 0.6f))
+            .padding(horizontal = 12.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.Black.copy(alpha = 0.75f))
             .padding(16.dp)
     ) {
         Row(
@@ -109,46 +110,50 @@ fun ProControlPanel(
         
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(start = 16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(start = 16.dp)) {
                 Text(
                     text = "AUTO",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.Transparent)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_AUTO) }
                         .padding(horizontal = 8.dp, vertical = 4.dp),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) FontWeight.Bold else FontWeight.Normal
                 )
                 Text(
                     text = "DAY",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Black else Color.White,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.Transparent)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) }
                         .padding(horizontal = 8.dp, vertical = 4.dp),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
                 )
                 Text(
                     text = "CLD",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Black else Color.White,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.Transparent)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) }
                         .padding(horizontal = 8.dp, vertical = 4.dp),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
                 )
                 Text(
                     text = "CUS",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Black else Color.White,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.Transparent)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_OFF) }
                         .padding(horizontal = 8.dp, vertical = 4.dp),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) FontWeight.Bold else FontWeight.Normal
                 )
             }
             if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
