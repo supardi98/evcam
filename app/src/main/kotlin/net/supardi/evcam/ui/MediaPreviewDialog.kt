@@ -11,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -136,68 +137,21 @@ fun MediaPreviewDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable { onDismiss() },
-            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .wrapContentHeight()
-                    .clickable(enabled = false) {},
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Top Bar: Counter & Close Button (X)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val currentCountText = if (pageCount > 0) "${pagerState.currentPage + 1} / $pageCount" else "1 / 1"
-                    Text(
-                        text = currentCountText,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                    )
+            if (pageCount > 0) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    val item = mediaList.getOrNull(page)
+                    val isCurrentVideo = item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close, 
-                            contentDescription = "Close", 
-                            tint = Color.White, 
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                // Center Image Pager area: Pure floating image / video
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 480.dp)
-                        .wrapContentHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
                     val openActiveMedia = {
-                        val activeItem = mediaList.getOrNull(pagerState.currentPage)
-                        val activeUri = activeItem?.uri ?: lastCapturedUri ?: fetchLatestMediaUri(context)
-                        val isVideo = activeItem?.isVideo ?: (cameraMode == CameraMode.VIDEO)
+                        val activeUri = item?.uri ?: lastCapturedUri ?: fetchLatestMediaUri(context)
                         if (activeUri != null) {
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(activeUri, if (isVideo) "video/*" else "image/*")
+                                    setDataAndType(activeUri, if (isCurrentVideo) "video/*" else "image/*")
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
                                 context.startActivity(intent)
@@ -209,17 +163,62 @@ fun MediaPreviewDialog(
                         }
                     }
 
-                    if (pageCount > 0) {
-                        HorizontalPager(
-                            state = pagerState,
+                    // Page root container: background tap dismisses, swipe anywhere changes page
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight()
-                        ) { page ->
-                            val item = mediaList.getOrNull(page)
+                                .fillMaxWidth(0.92f)
+                                .wrapContentHeight(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Top Bar: Counter & Close Button (X)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${page + 1} / $pageCount",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                )
+
+                                IconButton(
+                                    onClick = onDismiss,
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close, 
+                                        contentDescription = "Close", 
+                                        tint = Color.White, 
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            // Center Image / Video preview element
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .heightIn(max = 480.dp)
                                     .wrapContentHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -231,7 +230,7 @@ fun MediaPreviewDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(14.dp))
-                                            .clickable { onDismiss() }
+                                            .clickable { openActiveMedia() }
                                     )
                                 } else if (item != null) {
                                     AsyncImage(
@@ -242,12 +241,12 @@ fun MediaPreviewDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(14.dp))
-                                            .clickable { onDismiss() }
+                                            .clickable { openActiveMedia() }
                                     )
                                 }
 
                                 // If Video, show big prominent Play icon badge over the preview!
-                                if (item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)) {
+                                if (isCurrentVideo) {
                                     Box(
                                         modifier = Modifier
                                             .size(64.dp)
@@ -265,23 +264,22 @@ fun MediaPreviewDialog(
                                     }
                                 }
                             }
+
+                            // Subtitle hint at bottom (English)
+                            Text(
+                                text = "Tap image to open in Gallery • Tap outside to dismiss",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier
+                                    .padding(top = 10.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.5f))
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
                         }
                     }
                 }
-
-                // Subtitle hint at bottom (English)
-                val isCurrentVideo = mediaList.getOrNull(pagerState.currentPage)?.isVideo == true || (pagerState.currentPage == 0 && cameraMode == CameraMode.VIDEO)
-                Text(
-                    text = if (isCurrentVideo) "Tap preview to dismiss • Tap play button to watch" else "Tap preview to dismiss • Swipe to view media",
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .padding(top = 10.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                )
             }
         }
     }
