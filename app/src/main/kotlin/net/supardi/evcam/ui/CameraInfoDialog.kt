@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
@@ -38,8 +39,10 @@ data class CameraHardwareInfo(
     val id: String,
     val facing: String,
     val megapixels: String,
+    val effectiveMegapixels: String,
     val aperture: String,
     val focalLength: String,
+    val equivalentFocalLength: String,
     val resolution: String,
     val sensorSize: String,
     val pixelSize: String,
@@ -73,34 +76,67 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
             
             val facingInt = chars.get(CameraCharacteristics.LENS_FACING)
             val facingStr = when (facingInt) {
-                CameraCharacteristics.LENS_FACING_FRONT -> "Front camera (ID: $cameraId)"
-                CameraCharacteristics.LENS_FACING_BACK -> "Rear camera (ID: $cameraId)"
-                CameraCharacteristics.LENS_FACING_EXTERNAL -> "External camera (ID: $cameraId)"
-                else -> "Unknown camera (ID: $cameraId)"
+                CameraCharacteristics.LENS_FACING_FRONT -> "Front camera"
+                CameraCharacteristics.LENS_FACING_BACK -> "Rear camera"
+                CameraCharacteristics.LENS_FACING_EXTERNAL -> "External camera"
+                else -> "Unknown camera"
             }
+            
+            val maxPixelArray = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION) else null
+            val maxActiveRect = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION) else null
             
             val activeArrayRect = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
             val pixelArraySize = chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
             
             var resStr = "N/A"
             var mpStr = "N/A"
+            var effectiveMpStr = "N/A"
             var pixelSizeStr = "N/A"
             val physicalSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
             
-            val w = pixelArraySize?.width ?: activeArrayRect?.width() ?: 0
-            val h = pixelArraySize?.height ?: activeArrayRect?.height() ?: 0
+            var w = maxPixelArray?.width ?: maxActiveRect?.width() ?: pixelArraySize?.width ?: activeArrayRect?.width() ?: 0
+            var h = maxPixelArray?.height ?: maxActiveRect?.height() ?: pixelArraySize?.height ?: activeArrayRect?.height() ?: 0
+            
+            // DevCheck fallback for hidden Quad-Bayer sensors (if the device hides 50MP behind 12.5MP binning)
+            if (maxPixelArray == null && maxActiveRect == null && (w * h) in 12_000_000..13_000_000) {
+                w *= 2
+                h *= 2
+            }
             
             if (w > 0 && h > 0) {
-                resStr = "${w}x${h}"
                 val mp = (w * h) / 1000000f
-                mpStr = "%.1f MP".format(mp)
+                mpStr = "%.0f MP".format(mp)
                 if (physicalSize != null) {
                     val pixelSize = (physicalSize.width / w) * 1000f
-                    pixelSizeStr = "%.2f µm".format(pixelSize)
+                    pixelSizeStr = "%.0f µm".format(pixelSize).replace(",0", "").replace(".0", "")
                 }
             }
             
-            val sensorStr = if (physicalSize != null) "%.2f x %.2f mm".format(physicalSize.width, physicalSize.height) else "N/A"
+            if (pixelArraySize != null) {
+                resStr = "${pixelArraySize.width}x${pixelArraySize.height}"
+                val effMp = (pixelArraySize.width * pixelArraySize.height) / 1000000f
+                effectiveMpStr = "%.1f MP".format(effMp).replace(".0", "")
+            }
+            
+            var sensorStr = "N/A"
+            var eqFocalLenStr = "N/A"
+            val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+            val focalStr = if (focalLengths != null && focalLengths.isNotEmpty()) "ƒ/${chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)?.get(0)} • ${focalLengths[0]} mm" else "N/A"
+
+            if (physicalSize != null) {
+                // Calculate diagonal in mm
+                val diagonal = kotlin.math.sqrt((physicalSize.width * physicalSize.width + physicalSize.height * physicalSize.height).toDouble())
+                // Optical format fraction (rule of thumb: 16mm diagonal = 1 inch type)
+                val opticalFormat = 16.0 / diagonal
+                sensorStr = "1/%.1f\"".format(opticalFormat)
+                
+                // 35mm equivalent focal length
+                if (focalLengths != null && focalLengths.isNotEmpty()) {
+                    val cropFactor = 43.27 / diagonal
+                    val eqFocal = focalLengths[0] * cropFactor
+                    eqFocalLenStr = "%.0f mm".format(eqFocal)
+                }
+            }
             
             val exposureRange = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
             val shutterStr = if (exposureRange != null) {
@@ -300,9 +336,6 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
             val apertures = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
             val apertureStr = if (apertures != null && apertures.isNotEmpty()) "ƒ/${apertures[0]}" else "N/A"
             
-            val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
-            val focalStr = if (focalLengths != null && focalLengths.isNotEmpty()) "${focalLengths[0]} mm" else "N/A"
-            
             val isoRange = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
             val isoStr = if (isoRange != null) "${isoRange.lower} - ${isoRange.upper}" else "N/A"
             
@@ -320,8 +353,10 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                     id = cameraId,
                     facing = facingStr,
                     megapixels = mpStr,
+                    effectiveMegapixels = effectiveMpStr,
                     aperture = apertureStr,
                     focalLength = focalStr,
+                    equivalentFocalLength = eqFocalLenStr,
                     resolution = resStr,
                     sensorSize = sensorStr,
                     pixelSize = pixelSizeStr,
@@ -426,45 +461,89 @@ private fun CameraHardwareCard(info: CameraHardwareInfo, onMoreClick: () -> Unit
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .background(Color.DarkGray, RoundedCornerShape(12.dp))
+            .background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "${info.facing}",
+                text = info.facing,
                 color = Color.Green,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp)
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(64.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(text = info.megapixels, color = Color.Green, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "${info.aperture} • ${info.focalLength}", color = Color.White, fontSize = 14.sp)
+                    Text(info.megapixels, color = Color.Green, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(info.focalLength, color = Color.White, fontSize = 14.sp)
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            Row {
+                if (info.flashSupport) {
+                    Box(modifier = Modifier.border(1.dp, Color.Green, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text("Flash", color = Color.Green, fontSize = 12.sp)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                if (info.oisSupport) {
+                    Box(modifier = Modifier.border(1.dp, Color.Green, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text("OIS", color = Color.Green, fontSize = 12.sp)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    InfoLabel("Resolution", info.resolution)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    InfoLabel("Sensor size", info.sensorSize)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    InfoLabel("ISO range", info.isoRange)
+                    Text("Effective megapixels", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.effectiveMegapixels, color = Color.White, fontSize = 14.sp)
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    InfoLabel("Pixel size", info.pixelSize)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    InfoLabel("Shutter speed", info.shutterSpeedRange)
+                    Text("Resolution", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.resolution, color = Color.White, fontSize = 14.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Sensor size", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.sensorSize, color = Color.White, fontSize = 14.sp)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Pixel size", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.pixelSize, color = Color.White, fontSize = 14.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("35mm equivalent focal length", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.equivalentFocalLength, color = Color.White, fontSize = 14.sp)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Shutter speed", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.shutterSpeedRange, color = Color.White, fontSize = 14.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("ISO sensitivity range", color = Color.LightGray, fontSize = 12.sp)
+                    Text(info.isoRange, color = Color.White, fontSize = 14.sp)
                 }
             }
         }
