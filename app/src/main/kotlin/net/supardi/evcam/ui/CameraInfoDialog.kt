@@ -515,7 +515,7 @@ private fun CameraHardwareCard(info: CameraHardwareInfo, onMoreClick: () -> Unit
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(

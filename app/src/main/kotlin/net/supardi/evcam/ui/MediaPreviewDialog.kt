@@ -37,7 +37,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import kotlinx.coroutines.delay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -825,7 +831,6 @@ fun MediaPreviewDialog(
                         val layoutInfo = gridState.layoutInfo
                         val visibleCount = layoutInfo.visibleItemsInfo.size.coerceAtLeast(1)
                         val firstIdx = gridState.firstVisibleItemScrollOffset
-                        val thumbHeightFraction = (visibleCount.toFloat() / totalItems.toFloat()).coerceIn(0.05f, 1f)
                         
                         var scrollbarDragY by remember { mutableFloatStateOf(-1f) }
                         
@@ -837,32 +842,47 @@ fun MediaPreviewDialog(
                             else 0f
                         }
 
-                        Canvas(
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .fillMaxHeight()
-                                .width(24.dp)
-                                .pointerInput(totalItems, visibleCount) {
-                                    detectVerticalDragGestures(
-                                        onDragStart = { offset ->
-                                            if (totalItems > visibleCount) {
+                        // Auto-hide logic
+                        var isScrollbarVisible by remember { mutableStateOf(false) }
+                        val isScrollInProgress = gridState.isScrollInProgress
+                        LaunchedEffect(isScrollInProgress, scrollbarDragY) {
+                            if (isScrollInProgress || scrollbarDragY >= 0f) {
+                                isScrollbarVisible = true
+                            } else {
+                                delay(2000)
+                                isScrollbarVisible = false
+                            }
+                        }
+                        val scrollbarAlpha by animateFloatAsState(
+                            targetValue = if (isScrollbarVisible) 1f else 0f,
+                            animationSpec = tween(300)
+                        )
+
+                        if (totalItems > visibleCount) {
+                            BoxWithConstraints(
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .fillMaxHeight()
+                                    .width(48.dp)
+                                    .padding(vertical = 8.dp)
+                                    .pointerInput(totalItems, visibleCount) {
+                                        detectVerticalDragGestures(
+                                            onDragStart = { offset ->
                                                 val trackH = size.height.toFloat()
-                                                val thumbH = trackH * thumbHeightFraction
+                                                val thumbH = 64.dp.toPx()
                                                 val maxThumbTop = trackH - thumbH
                                                 var rawFraction = (offset.y - thumbH/2) / maxThumbTop
                                                 rawFraction = rawFraction.coerceIn(0f, 1f)
                                                 scrollbarDragY = rawFraction
                                                 val targetIdx = (rawFraction * (totalItems - visibleCount)).toInt().coerceIn(0, totalItems - 1)
                                                 scope.launch { gridState.scrollToItem(targetIdx) }
-                                            }
-                                        },
-                                        onDragEnd = { scrollbarDragY = -1f },
-                                        onDragCancel = { scrollbarDragY = -1f },
-                                        onVerticalDrag = { change, _ ->
-                                            change.consume()
-                                            if (totalItems > visibleCount) {
+                                            },
+                                            onDragEnd = { scrollbarDragY = -1f },
+                                            onDragCancel = { scrollbarDragY = -1f },
+                                            onVerticalDrag = { change, _ ->
+                                                change.consume()
                                                 val trackH = size.height.toFloat()
-                                                val thumbH = trackH * thumbHeightFraction
+                                                val thumbH = 64.dp.toPx()
                                                 val maxThumbTop = trackH - thumbH
                                                 var rawFraction = (change.position.y - thumbH/2) / maxThumbTop
                                                 rawFraction = rawFraction.coerceIn(0f, 1f)
@@ -870,28 +890,31 @@ fun MediaPreviewDialog(
                                                 val targetIdx = (rawFraction * (totalItems - visibleCount)).toInt().coerceIn(0, totalItems - 1)
                                                 scope.launch { gridState.scrollToItem(targetIdx) }
                                             }
-                                        }
-                                    )
+                                        )
+                                    }
+                            ) {
+                                val densityValue = androidx.compose.ui.platform.LocalDensity.current.density
+                                val trackH = maxHeight.value * densityValue
+                                val thumbH = 64.dp.value * densityValue
+                                val maxThumbTop = (trackH - thumbH).coerceAtLeast(0f)
+                                val thumbTop = maxThumbTop * scrollFraction
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset { androidx.compose.ui.unit.IntOffset(x = -16, y = thumbTop.toInt()) }
+                                        .width(32.dp)
+                                        .height(64.dp)
+                                        .alpha(scrollbarAlpha)
+                                        .background(Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                        Icon(Icons.Filled.ArrowDropUp, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp).offset(y = 2.dp))
+                                        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp).offset(y = (-2).dp))
+                                    }
                                 }
-                                .padding(vertical = 8.dp)
-                        ) {
-                            val trackH = size.height
-                            val thumbH = trackH * thumbHeightFraction
-                            val thumbTop = (trackH - thumbH) * scrollFraction
-                            // Track
-                            drawRoundRect(
-                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
-                                topLeft = androidx.compose.ui.geometry.Offset(size.width - 4.dp.toPx(), 0f),
-                                size = androidx.compose.ui.geometry.Size(4.dp.toPx(), trackH),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f)
-                            )
-                            // Thumb
-                            drawRoundRect(
-                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (scrollbarDragY >= 0f) 0.8f else 0.45f),
-                                topLeft = androidx.compose.ui.geometry.Offset(size.width - 4.dp.toPx(), thumbTop),
-                                size = androidx.compose.ui.geometry.Size(4.dp.toPx(), thumbH),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f)
-                            )
+                            }
                         }
                     }
                 }
