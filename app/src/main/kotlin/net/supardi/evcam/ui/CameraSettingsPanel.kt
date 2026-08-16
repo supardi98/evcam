@@ -3,12 +3,6 @@ package net.supardi.evcam.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,33 +27,16 @@ import net.supardi.evcam.GridType
 
 @Composable
 fun ModeSwitchAndProControls(
-    cameraMode: CameraMode,
-    isRecording: Boolean,
-    isIsoAuto: Boolean,
-    isShutterAuto: Boolean,
-    isFocusAuto: Boolean,
-    whiteBalance: Int,
-    exposureIndex: Int,
-    showProPanel: Boolean,
-    showLayerPanel: Boolean,
-    showSettings: Boolean,
-    gridType: GridType,
-    showVirtualHorizon: Boolean,
-    enableHistogram: Boolean,
-    enableFocusPeaking: Boolean,
-    onCameraModeChange: (CameraMode) -> Unit,
-    onProPanelToggle: (Boolean) -> Unit,
-    onLayerPanelToggle: (Boolean) -> Unit,
-    onAutoAllProSettings: () -> Unit,
+    uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
-    val isAnyOverlayActive = gridType != GridType.NONE || showVirtualHorizon || enableHistogram || enableFocusPeaking
-    val photoSelected = cameraMode == CameraMode.PHOTO
+    val isAnyOverlayActive = uiState.gridType != GridType.NONE || uiState.showVirtualHorizon || uiState.enableHistogram || uiState.enableFocusPeaking
+    val photoSelected = uiState.cameraMode == CameraMode.PHOTO
     val targetBias = if (photoSelected) -1f else 1f
     
     val animatedBias by animateFloatAsState(
         targetValue = targetBias,
-        animationSpec = spring(
+        animationSpec = androidx.compose.animation.core.spring(
             stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy
         ),
@@ -86,8 +63,11 @@ fun ModeSwitchAndProControls(
                 .clip(CircleShape)
                 .background(if (isAnyOverlayActive) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                 .clickable { 
-                    val nextVal = !showLayerPanel
-                    onLayerPanelToggle(nextVal)
+                    uiState.showLayerPanel = !uiState.showLayerPanel
+                    if (uiState.showLayerPanel) {
+                        uiState.showProPanel = false
+                        uiState.showSettings = false
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -131,7 +111,7 @@ fun ModeSwitchAndProControls(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { if (!isRecording) onCameraModeChange(CameraMode.PHOTO) },
+                        ) { if (!uiState.isRecording) uiState.cameraMode = CameraMode.PHOTO },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -149,7 +129,7 @@ fun ModeSwitchAndProControls(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { if (!isRecording) onCameraModeChange(CameraMode.VIDEO) },
+                        ) { if (!uiState.isRecording) uiState.cameraMode = CameraMode.VIDEO },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -165,7 +145,7 @@ fun ModeSwitchAndProControls(
         Spacer(modifier = Modifier.width(16.dp))
         
         // PRO Mode Button
-        val hasManualPro = !isIsoAuto || !isShutterAuto || !isFocusAuto || whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO || exposureIndex != 0
+        val hasManualPro = !uiState.isIsoAuto || !uiState.isShutterAuto || !uiState.isFocusAuto || uiState.whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO || uiState.exposureIndex != 0
 
         Box(
             modifier = Modifier
@@ -173,7 +153,11 @@ fun ModeSwitchAndProControls(
                 .clip(CircleShape)
                 .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                 .clickable { 
-                    onProPanelToggle(!showProPanel)
+                    uiState.showProPanel = !uiState.showProPanel
+                    if (uiState.showProPanel) {
+                        uiState.showLayerPanel = false
+                        uiState.showSettings = false
+                    }
                 }
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
@@ -192,7 +176,16 @@ fun ModeSwitchAndProControls(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(Color.DarkGray.copy(alpha = 0.5f))
-                    .clickable { onAutoAllProSettings() },
+                    .clickable { 
+                        uiState.isIsoAuto = true
+                        uiState.isShutterAuto = true
+                        uiState.isFocusAuto = true
+                        uiState.whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
+                        uiState.exposureIndex = 0
+                        uiState.cameraControl?.setExposureCompensationIndex(0)
+                        uiState.isProMode = false
+                        uiState.showProPanel = false
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

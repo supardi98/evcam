@@ -4,12 +4,9 @@ import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import androidx.camera.core.CameraControl
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -43,28 +40,8 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun CameraViewfinder(
     previewView: PreviewView,
-    cameraMode: CameraMode,
-    aspectRatio: AspectRatioMode,
-    selectedFilter: ColorFilterMode,
-    zoomAnim: Animatable<Float, AnimationVector1D>,
-    minZoomRatio: Float,
-    maxZoomRatio: Float,
-    isAeAfLocked: Boolean,
-    isProMode: Boolean,
-    isFocusAuto: Boolean,
-    minExposureIndex: Int,
-    maxExposureIndex: Int,
-    exposureIndex: Int,
-    isTransitioningRatio: Boolean,
-    cameraControl: CameraControl?,
+    uiState: CameraUiState,
     coroutineScope: CoroutineScope,
-    onZoomChange: (Float) -> Unit,
-    onFocusStart: (Offset) -> Unit,
-    onFocusSuccess: (Boolean) -> Unit,
-    onAeAfLockToggle: (Boolean) -> Unit,
-    onFocusAutoToggle: (Boolean) -> Unit,
-    onExposureChange: (Int) -> Unit,
-    onCameraModeChange: (CameraMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var evScrollAnchorY by remember { mutableFloatStateOf(0f) }
@@ -74,10 +51,10 @@ fun CameraViewfinder(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    if (selectedFilter != ColorFilterMode.NORMAL) {
+                    if (uiState.selectedFilter != ColorFilterMode.NORMAL) {
                         val paint = Paint().apply {
                             colorFilter = ColorFilter.colorMatrix(
-                                ColorMatrix(selectedFilter.matrixValues)
+                                ColorMatrix(uiState.selectedFilter.matrixValues)
                             )
                         }
                         drawIntoCanvas { canvas ->
@@ -93,27 +70,31 @@ fun CameraViewfinder(
                 previewView.apply {
                     val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                         override fun onScale(detector: ScaleGestureDetector): Boolean {
-                            val newZoom = (zoomAnim.value * detector.scaleFactor).coerceIn(minZoomRatio, maxZoomRatio)
-                            coroutineScope.launch { zoomAnim.snapTo(newZoom) }
-                            onZoomChange(newZoom)
+                            uiState.showZoomSlider = true
+                            val newZoom = (uiState.zoomAnim.value * detector.scaleFactor).coerceIn(uiState.minZoomRatio, uiState.maxZoomRatio)
+                            coroutineScope.launch { uiState.zoomAnim.snapTo(newZoom) }
+                            uiState.currentZoom = newZoom
                             return true
                         }
                     })
 
                     val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
                         override fun onSingleTapUp(e: MotionEvent): Boolean {
-                            if (isAeAfLocked) {
-                                onAeAfLockToggle(false)
-                                cameraControl?.cancelFocusAndMetering()
+                            if (uiState.isAeAfLocked) {
+                                uiState.isAeAfLocked = false
+                                uiState.cameraControl?.cancelFocusAndMetering()
                             }
                             
-                            if (isProMode && !isFocusAuto) {
+                            if (uiState.isProMode && !uiState.isFocusAuto) {
                                 return true
                             }
                             
-                            onFocusAutoToggle(true)
-                            val offset = Offset(e.x, e.y)
-                            onFocusStart(offset)
+                            uiState.isFocusAuto = true
+                            uiState.focusOffset = Offset(e.x, e.y)
+                            uiState.showFocusBox = true
+                            uiState.showZoomSlider = true
+                            uiState.showBrightnessSlider = true
+                            uiState.focusState = FocusState.SEARCHING
                             
                             val factory = previewView.meteringPointFactory
                             val point = factory.createPoint(e.x, e.y)
@@ -121,13 +102,13 @@ fun CameraViewfinder(
                                 .setAutoCancelDuration(2, TimeUnit.SECONDS)
                                 .build()
                             
-                            val future = cameraControl?.startFocusAndMetering(action)
+                            val future = uiState.cameraControl?.startFocusAndMetering(action)
                             future?.addListener({
                                 try {
                                     val result = future.get()
-                                    onFocusSuccess(result != null && result.isFocusSuccessful)
+                                    uiState.focusState = if (result != null && result.isFocusSuccessful) FocusState.SUCCESS else FocusState.FAILED
                                 } catch (exc: Exception) {
-                                    onFocusSuccess(false)
+                                    uiState.focusState = FocusState.FAILED
                                 }
                             }, ContextCompat.getMainExecutor(ctx))
                             return true
@@ -139,11 +120,11 @@ fun CameraViewfinder(
                             val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
                                 .disableAutoCancel()
                                 .build()
-                            cameraControl?.startFocusAndMetering(action)
-                            onAeAfLockToggle(true)
-                            val offset = Offset(e.x, e.y)
-                            onFocusStart(offset)
-                            onFocusSuccess(true)
+                            uiState.cameraControl?.startFocusAndMetering(action)
+                            uiState.isAeAfLocked = true
+                            uiState.focusOffset = Offset(e.x, e.y)
+                            uiState.showFocusBox = true
+                            uiState.focusState = FocusState.SUCCESS
                         }
 
                         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
@@ -151,11 +132,11 @@ fun CameraViewfinder(
                             val diffX = e2.x - e1.x
                             val diffY = e2.y - e1.y
                             if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(velocityX) > 100) {
-                                if (diffX < 0 && cameraMode == CameraMode.PHOTO) {
-                                    onCameraModeChange(CameraMode.VIDEO)
+                                if (diffX < 0 && uiState.cameraMode == CameraMode.PHOTO) {
+                                    if (!uiState.isRecording) uiState.cameraMode = CameraMode.VIDEO
                                     return true
-                                } else if (diffX > 0 && cameraMode == CameraMode.VIDEO) {
-                                    onCameraModeChange(CameraMode.PHOTO)
+                                } else if (diffX > 0 && uiState.cameraMode == CameraMode.VIDEO) {
+                                    if (!uiState.isRecording) uiState.cameraMode = CameraMode.PHOTO
                                     return true
                                 }
                             }
@@ -168,15 +149,19 @@ fun CameraViewfinder(
                         if (!scaleGestureDetector.isInProgress) {
                             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                                 evScrollAnchorY = event.y
-                            } else if (event.actionMasked == MotionEvent.ACTION_MOVE && !isProMode) {
+                            } else if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode) {
                                 val deltaY = evScrollAnchorY - event.y
                                 val scrollStepThreshold = 50f
                                 val steps = (deltaY / scrollStepThreshold).toInt()
                                 if (steps != 0) {
-                                    val newIdx = (exposureIndex + steps).coerceIn(minExposureIndex, maxExposureIndex)
-                                    if (newIdx != exposureIndex) {
-                                        onExposureChange(newIdx)
-                                        cameraControl?.setExposureCompensationIndex(newIdx)
+                                    val newIdx = (uiState.exposureIndex + steps).coerceIn(uiState.minExposureIndex, uiState.maxExposureIndex)
+                                    if (newIdx != uiState.exposureIndex) {
+                                        uiState.exposureIndex = newIdx
+                                        uiState.cameraControl?.setExposureCompensationIndex(newIdx)
+                                        uiState.showBrightnessSlider = true
+                                        if (newIdx != 0) {
+                                            uiState.isProMode = true
+                                        }
                                     }
                                     evScrollAnchorY = event.y
                                 }
@@ -190,7 +175,7 @@ fun CameraViewfinder(
         )
 
         AnimatedVisibility(
-            visible = isTransitioningRatio,
+            visible = uiState.isTransitioningRatio,
             enter = fadeIn(tween(100)),
             exit = fadeOut(tween(300))
         ) {
@@ -201,7 +186,7 @@ fun CameraViewfinder(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (cameraMode == CameraMode.VIDEO) "16:9 VIDEO" else aspectRatio.label,
+                    text = if (uiState.cameraMode == CameraMode.VIDEO) "16:9 VIDEO" else uiState.aspectRatio.label,
                     color = Color.Yellow,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp

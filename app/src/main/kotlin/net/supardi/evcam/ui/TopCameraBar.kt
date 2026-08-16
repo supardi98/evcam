@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,31 +24,7 @@ import net.supardi.evcam.*
 
 @Composable
 fun TopCameraBar(
-    cameraMode: CameraMode,
-    flashMode: FlashMode,
-    isTorchOn: Boolean,
-    onFlashModeChange: (FlashMode) -> Unit,
-    onTorchToggle: () -> Unit,
-    videoAudioEnabled: Boolean,
-    onVideoAudioToggle: () -> Unit,
-    isNightModeEnabled: Boolean,
-    onNightModeToggle: () -> Unit,
-    selectedFilter: ColorFilterMode,
-    onFilterClick: () -> Unit,
-    timerMode: TimerMode,
-    onTimerModeChange: (TimerMode) -> Unit,
-    isHandTrackingInstalled: Boolean,
-    isHandTrackingEnabled: Boolean,
-    timerBurstCount: Int,
-    onTimerBurstCountChange: (Int) -> Unit,
-    aspectRatio: AspectRatioMode,
-    onAspectRatioChange: (AspectRatioMode) -> Unit,
-    videoQuality: VideoQualityMode,
-    onVideoQualityChange: (VideoQualityMode) -> Unit,
-    videoFps: VideoFpsMode,
-    onVideoFpsChange: (VideoFpsMode) -> Unit,
-    showSettings: Boolean,
-    onSettingsClick: () -> Unit,
+    uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -66,63 +41,61 @@ fun TopCameraBar(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = {
-
-                                if (isTorchOn) {
-                                    onTorchToggle()
+                                if (uiState.isTorchOn) {
+                                    uiState.isTorchOn = false
                                 } else {
-                                    val nextFlash = when (flashMode) {
+                                    uiState.flashMode = when (uiState.flashMode) {
                                         FlashMode.AUTO -> FlashMode.ON
                                         FlashMode.ON -> FlashMode.OFF
                                         FlashMode.OFF -> FlashMode.AUTO
                                     }
-                                    onFlashModeChange(nextFlash)
                                 }
                             },
                             onLongPress = {
-                                onTorchToggle()
+                                uiState.isTorchOn = !uiState.isTorchOn
                             }
                         )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                val flashIcon = if (isTorchOn) {
+                val flashIcon = if (uiState.isTorchOn) {
                     Icons.Default.FlashOn
                 } else {
-                    when (flashMode) {
+                    when (uiState.flashMode) {
                         FlashMode.AUTO -> Icons.Default.FlashAuto
                         FlashMode.ON -> Icons.Default.FlashOn
                         FlashMode.OFF -> Icons.Default.FlashOff
                     }
                 }
-                val iconTint = if (isTorchOn) Color.Yellow else Color.White
+                val iconTint = if (uiState.isTorchOn) Color.Yellow else Color.White
                 Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
             }
             
-            if (cameraMode == CameraMode.VIDEO) {
+            if (uiState.cameraMode == CameraMode.VIDEO) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .clickable { onVideoAudioToggle() },
+                        .clickable { uiState.videoAudioEnabled = !uiState.videoAudioEnabled },
                     contentAlignment = Alignment.Center
                 ) {
-                    val emoji = if (videoAudioEnabled) "🔊" else "🔇"
+                    val emoji = if (uiState.videoAudioEnabled) "🔊" else "🔇"
                     Text(text = emoji, fontSize = 20.sp)
                 }
             }
 
-            if (cameraMode == CameraMode.PHOTO) {
+            if (uiState.cameraMode == CameraMode.PHOTO) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .clickable { onNightModeToggle() },
+                        .clickable { uiState.isNightModeEnabled = !uiState.isNightModeEnabled },
                     contentAlignment = Alignment.Center
                 ) {
                     val emoji = "🌙"
-                    val backgroundAlpha = if (isNightModeEnabled) 0.3f else 0f
+                    val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -138,11 +111,11 @@ fun TopCameraBar(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .clickable { onFilterClick() },
+                        .clickable { uiState.showFilterDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
                     val emoji = "🎨"
-                    val backgroundAlpha = if (selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
+                    val backgroundAlpha = if (uiState.selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -155,23 +128,22 @@ fun TopCameraBar(
                 
                 Spacer(modifier = Modifier.width(4.dp))
                 IconButton(onClick = {
-                    val nextTimer = when (timerMode) {
+                    uiState.timerMode = when (uiState.timerMode) {
                         TimerMode.OFF -> TimerMode.SEC_3
                         TimerMode.SEC_3 -> TimerMode.SEC_10
                         TimerMode.SEC_10 -> TimerMode.SEC_15
                         TimerMode.SEC_15 -> TimerMode.SEC_20
-                        TimerMode.SEC_20 -> if (isHandTrackingInstalled && isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
+                        TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
                         TimerMode.PEACE -> TimerMode.OFF
                     }
-                    onTimerModeChange(nextTimer)
                 }) {
-                    val timerTint = if (timerMode == TimerMode.OFF) Color.White else Color.Yellow
+                    val timerTint = if (uiState.timerMode == TimerMode.OFF) Color.White else Color.Yellow
                     Box(contentAlignment = Alignment.Center) {
-                        val icon = if (timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
+                        val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
                         Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint)
-                        if (timerMode != TimerMode.OFF && timerMode != TimerMode.PEACE) {
+                        if (uiState.timerMode != TimerMode.OFF && uiState.timerMode != TimerMode.PEACE) {
                             Text(
-                                text = "${timerMode.seconds}",
+                                text = "${uiState.timerMode.seconds}",
                                 color = Color.Black,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -181,23 +153,22 @@ fun TopCameraBar(
                     }
                 }
                 
-                if (timerMode != TimerMode.OFF) {
+                if (uiState.timerMode != TimerMode.OFF) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${timerBurstCount}x",
+                        text = "${uiState.timerBurstCount}x",
                         color = Color.Yellow,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
                             .clickable {
-                                val nextBurst = when (timerBurstCount) {
+                                uiState.timerBurstCount = when (uiState.timerBurstCount) {
                                     1 -> 3
                                     3 -> 5
                                     5 -> 10
                                     else -> 1
                                 }
-                                onTimerBurstCountChange(nextBurst)
                             }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
@@ -206,24 +177,23 @@ fun TopCameraBar(
         }
         
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (cameraMode == CameraMode.PHOTO) {
+            if (uiState.cameraMode == CameraMode.PHOTO) {
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.4f))
                         .clickable {
-                            val nextRatio = when (aspectRatio) {
+                            uiState.aspectRatio = when (uiState.aspectRatio) {
                                 AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
                                 AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
                                 AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
                             }
-                            onAspectRatioChange(nextRatio)
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = aspectRatio.label,
+                        text = uiState.aspectRatio.label,
                         color = Color.Yellow,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
@@ -235,18 +205,17 @@ fun TopCameraBar(
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.4f))
                         .clickable {
-                            val nextQuality = when (videoQuality) {
+                            uiState.videoQuality = when (uiState.videoQuality) {
                                 VideoQualityMode.HD -> VideoQualityMode.FHD
                                 VideoQualityMode.FHD -> VideoQualityMode.UHD
                                 VideoQualityMode.UHD -> VideoQualityMode.HD
                             }
-                            onVideoQualityChange(nextQuality)
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = videoQuality.label,
+                        text = uiState.videoQuality.label,
                         color = Color.Yellow,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
@@ -260,17 +229,16 @@ fun TopCameraBar(
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.4f))
                         .clickable {
-                            val nextFps = when (videoFps) {
+                            uiState.videoFps = when (uiState.videoFps) {
                                 VideoFpsMode.FPS_30 -> VideoFpsMode.FPS_60
                                 VideoFpsMode.FPS_60 -> VideoFpsMode.FPS_30
                             }
-                            onVideoFpsChange(nextFps)
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = videoFps.label,
+                        text = uiState.videoFps.label,
                         color = Color.Yellow,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
@@ -280,11 +248,17 @@ fun TopCameraBar(
             
             Spacer(modifier = Modifier.width(8.dp))
 
-            IconButton(onClick = onSettingsClick) {
+            IconButton(onClick = {
+                uiState.showSettings = !uiState.showSettings
+                if (uiState.showSettings) {
+                    uiState.showProPanel = false
+                    uiState.showLayerPanel = false
+                }
+            }) {
                 Icon(
                     imageVector = Icons.Default.Settings, 
                     contentDescription = "Settings", 
-                    tint = if (showSettings) Color.Yellow else Color.White
+                    tint = if (uiState.showSettings) Color.Yellow else Color.White
                 )
             }
         }

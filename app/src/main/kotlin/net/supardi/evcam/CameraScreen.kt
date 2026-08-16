@@ -841,49 +841,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         ) {
             CameraViewfinder(
                 previewView = previewView,
-                cameraMode = cameraMode,
-                aspectRatio = aspectRatio,
-                selectedFilter = selectedFilter,
-                zoomAnim = zoomAnim,
-                minZoomRatio = minZoomRatio,
-                maxZoomRatio = maxZoomRatio,
-                isAeAfLocked = isAeAfLocked,
-                isProMode = isProMode,
-                isFocusAuto = isFocusAuto,
-                minExposureIndex = minExposureIndex,
-                maxExposureIndex = maxExposureIndex,
-                exposureIndex = exposureIndex,
-                isTransitioningRatio = isTransitioningRatio,
-                cameraControl = cameraControl,
+                uiState = uiState,
                 coroutineScope = coroutineScope,
-                onZoomChange = {
-                    showZoomSlider = true
-                    currentZoom = it
-                },
-                onFocusStart = {
-                    focusOffset = it
-                    showFocusBox = true
-                    showZoomSlider = true
-                    showBrightnessSlider = true
-                    focusState = FocusState.SEARCHING
-                },
-                onFocusSuccess = {
-                    focusState = if (it) FocusState.SUCCESS else FocusState.FAILED
-                },
-                onAeAfLockToggle = { isAeAfLocked = it },
-                onFocusAutoToggle = { isFocusAuto = it },
-                onExposureChange = {
-                    exposureIndex = it
-                    showBrightnessSlider = true
-                    if (it != 0) {
-                        isProMode = true
-                    }
-                },
-                onCameraModeChange = {
-                    if (!isRecording) cameraMode = it
-                },
                 modifier = Modifier.fillMaxSize()
             )
+
 
             
             if (showWatermark && cameraMode == CameraMode.PHOTO) {
@@ -1227,39 +1189,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        TopCameraBar(
-            cameraMode = cameraMode,
-            flashMode = flashMode,
-            isTorchOn = isTorchOn,
-            onFlashModeChange = { flashMode = it },
-            onTorchToggle = { isTorchOn = !isTorchOn },
-            videoAudioEnabled = videoAudioEnabled,
-            onVideoAudioToggle = { videoAudioEnabled = !videoAudioEnabled },
-            isNightModeEnabled = isNightModeEnabled,
-            onNightModeToggle = { isNightModeEnabled = !isNightModeEnabled },
-            selectedFilter = selectedFilter,
-            onFilterClick = { showFilterDialog = true },
-            timerMode = timerMode,
-            onTimerModeChange = { timerMode = it },
-            isHandTrackingInstalled = isHandTrackingInstalled,
-            isHandTrackingEnabled = isHandTrackingEnabled,
-            timerBurstCount = timerBurstCount,
-            onTimerBurstCountChange = { timerBurstCount = it },
-            aspectRatio = aspectRatio,
-            onAspectRatioChange = { aspectRatio = it },
-            videoQuality = videoQuality,
-            onVideoQualityChange = { videoQuality = it },
-            videoFps = videoFps,
-            onVideoFpsChange = { videoFps = it },
-            showSettings = showSettings,
-            onSettingsClick = {
-                showSettings = !showSettings
-                if (showSettings) {
-                    showProPanel = false
-                    showLayerPanel = false
-                }
-            }
-        )
+        TopCameraBar(uiState = uiState)
+
 
         
         Column(
@@ -1419,47 +1350,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            ModeSwitchAndProControls(
-                cameraMode = cameraMode,
-                isRecording = isRecording,
-                isIsoAuto = isIsoAuto,
-                isShutterAuto = isShutterAuto,
-                isFocusAuto = isFocusAuto,
-                whiteBalance = whiteBalance,
-                exposureIndex = exposureIndex,
-                showProPanel = showProPanel,
-                showLayerPanel = showLayerPanel,
-                showSettings = showSettings,
-                gridType = gridType,
-                showVirtualHorizon = showVirtualHorizon,
-                enableHistogram = enableHistogram,
-                enableFocusPeaking = enableFocusPeaking,
-                onCameraModeChange = { cameraMode = it },
-                onProPanelToggle = {
-                    showProPanel = it
-                    if (it) {
-                        showLayerPanel = false
-                        showSettings = false
-                    }
-                },
-                onLayerPanelToggle = {
-                    showLayerPanel = it
-                    if (it) {
-                        showProPanel = false
-                        showSettings = false
-                    }
-                },
-                onAutoAllProSettings = {
-                    isIsoAuto = true
-                    isShutterAuto = true
-                    isFocusAuto = true
-                    whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
-                    exposureIndex = 0
-                    cameraControl?.setExposureCompensationIndex(0)
-                    isProMode = false
-                    showProPanel = false
-                }
-            )
+            ModeSwitchAndProControls(uiState = uiState)
+
 
             
             if (isBursting && burstCount > 0) {
