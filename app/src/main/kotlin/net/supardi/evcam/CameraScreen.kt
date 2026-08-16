@@ -1777,8 +1777,8 @@ fun rememberDeviceOrientation(): DeviceOrientationData {
                 val pitch = Math.toDegrees(kotlin.math.atan2(-z.toDouble(), norm.coerceAtLeast(0.001f).toDouble())).toFloat()
                 
                 data = DeviceOrientationData(
-                    roll = kotlin.math.round(roll),
-                    pitch = kotlin.math.round(pitch),
+                    roll = kotlin.math.floor(roll),
+                    pitch = kotlin.math.floor(pitch),
                     isFlat = isFlat
                 )
             }
