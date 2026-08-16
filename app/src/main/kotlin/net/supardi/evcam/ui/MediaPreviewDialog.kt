@@ -307,7 +307,28 @@ fun MediaPreviewDialog(
                             } else Toast.makeText(context, "Media not found", Toast.LENGTH_SHORT).show()
                         }
 
-                        Box(modifier = Modifier.fillMaxWidth().height(420.dp), contentAlignment = Alignment.Center) {
+                        // Parse dynamic aspect ratio float value. Fallback to 1f if invalid or not loaded yet.
+                        val parsedRatio = remember(currentInfo.aspectRatioStr) {
+                            if (currentInfo.aspectRatioStr.isNotEmpty()) {
+                                try {
+                                    val parts = currentInfo.aspectRatioStr.split(':')
+                                    if (parts.size == 2) {
+                                        parts[0].toFloat() / parts[1].toFloat()
+                                    } else 1f
+                                } catch(e: Exception) { 1f }
+                            } else {
+                                if (cameraMode == CameraMode.VIDEO) 16f/9f else 4f/3f
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(parsedRatio)
+                                .clip(RoundedCornerShape(14.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+
                             if (page == 0 && lastCapturedBitmap != null) {
                                 Image(
                                     bitmap = lastCapturedBitmap.asImageBitmap(),
