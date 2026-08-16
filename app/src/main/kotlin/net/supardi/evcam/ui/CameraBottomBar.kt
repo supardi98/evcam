@@ -42,39 +42,44 @@ fun CameraBottomBar(
     cameraMode: CameraMode,
     isRecording: Boolean,
     isFrontCamera: Boolean,
-    onThumbnailClick: () -> Unit,
+    // Photo mode
     onShutterTap: () -> Unit,
+    onBurstStart: () -> Unit,
+    onBurstEnd: () -> Unit,
+    // Video mode
+    onVideoTap: () -> Unit,
+    onVideoTapStop: () -> Unit,
     onQuickRecordStart: () -> Unit,
     onQuickRecordStop: () -> Unit,
     onDragZoom: (Float) -> Unit,
-    onSwitchCamera: () -> Unit
+    onSwitchCamera: () -> Unit,
+    onThumbnailClick: () -> Unit
 ) {
     val imageLoader = remember(context) {
-        ImageLoader.Builder(context)
-            .components {
-                add(VideoFrameDecoder.Factory())
-            }
-            .build()
+        ImageLoader.Builder(context).components { add(VideoFrameDecoder.Factory()) }.build()
     }
 
-    var isLongPressActive by remember { mutableStateOf(false) }
     val cameraSwitchRotation by animateFloatAsState(
         targetValue = if (isFrontCamera) 180f else 0f,
         animationSpec = tween(300),
         label = "CameraSwitchRotation"
     )
 
+    // Tracks whether we're in long-press state
+    var isLongPressActive by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        // ── Thumbnail ──────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .size(64.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.DarkGray.copy(alpha = 0.5f))
-                .clickable { 
+                .clickable {
                     if (lastCapturedBitmap != null || lastCapturedUri != null) {
                         onThumbnailClick()
                     } else {
@@ -99,46 +104,74 @@ fun CameraBottomBar(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
+                Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
             }
         }
 
+        // ── Shutter ────────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(if (isRecording) Color.Red else Color.White)
+                // Tap & long-press handler — works for both modes
                 .pointerInput(cameraMode, isRecording) {
                     detectTapGestures(
-                        onTap = { onShutterTap() },
+                        onTap = {
+                            // Single tap
+                            when (cameraMode) {
+                                CameraMode.PHOTO -> onShutterTap()
+                                CameraMode.VIDEO -> if (isRecording) onVideoTapStop() else onVideoTap()
+                            }
+                        },
                         onLongPress = {
+                            // Long press (500ms hold)
                             isLongPressActive = true
-                            onQuickRecordStart()
+                            when (cameraMode) {
+                                CameraMode.PHOTO -> onBurstStart()
+                                CameraMode.VIDEO -> onQuickRecordStart()
+                            }
                         },
                         onPress = {
+                            // onPress is always called on finger down.
+                            // Wait for release, then clean up long-press state.
                             try {
                                 awaitRelease()
                             } finally {
                                 if (isLongPressActive) {
                                     isLongPressActive = false
-                                    onQuickRecordStop()
+                                    when (cameraMode) {
+                                        CameraMode.PHOTO -> onBurstEnd()
+                                        CameraMode.VIDEO -> onQuickRecordStop()
+                                    }
                                 }
                             }
                         }
                     )
                 }
+                // Drag-to-zoom — only active during long-press (video quick-record)
                 .pointerInput(isLongPressActive) {
                     if (isLongPressActive) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            val dragY = -dragAmount.y
-                            onDragZoom(dragY)
+                            onDragZoom(-dragAmount.y)
                         }
                     }
                 },
             contentAlignment = Alignment.Center
-        ) {}
+        ) {
+            // Show stop square icon when recording
+            if (isRecording) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White)
+                )
+            }
+        }
 
+        // ── Camera Switch ──────────────────────────────────────────────────────
         IconButton(
             onClick = onSwitchCamera,
             modifier = Modifier.size(64.dp).background(Color.DarkGray.copy(alpha = 0.5f), CircleShape)
@@ -147,9 +180,7 @@ fun CameraBottomBar(
                 imageVector = Icons.Default.Cameraswitch,
                 contentDescription = "Switch Camera",
                 tint = Color.White,
-                modifier = Modifier
-                    .size(32.dp)
-                    .graphicsLayer { rotationZ = cameraSwitchRotation }
+                modifier = Modifier.size(32.dp).graphicsLayer { rotationZ = cameraSwitchRotation }
             )
         }
     }

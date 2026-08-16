@@ -1774,19 +1774,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 isRecording = isRecording,
                 isFrontCamera = lensFacing == CameraSelector.LENS_FACING_FRONT,
                 onThumbnailClick = { showMediaPreviewDialog = true },
+                // Photo mode
                 onShutterTap = { initiateCapture() },
+                onBurstStart = { isBursting = true },
+                onBurstEnd = { isBursting = false },
+                // Video mode
+                onVideoTap = { initiateCapture() },
+                onVideoTapStop = { initiateCapture() },
                 onQuickRecordStart = {
-                    if (cameraMode != CameraMode.VIDEO) {
-                        cameraMode = CameraMode.VIDEO
-                    }
-                    if (!isRecording) {
-                        initiateCapture()
-                    }
+                    if (!isRecording) initiateCapture()
                 },
                 onQuickRecordStop = {
-                    if (isRecording) {
-                        initiateCapture()
-                    }
+                    if (isRecording) initiateCapture()
                 },
                 onDragZoom = { deltaY ->
                     val zoomStep = (deltaY / 300f) * (maxZoomRatio - minZoomRatio)

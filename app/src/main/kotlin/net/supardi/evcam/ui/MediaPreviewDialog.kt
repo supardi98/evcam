@@ -11,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -29,12 +30,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
@@ -174,6 +178,7 @@ fun MediaPreviewDialog(
 
     val pageCount = if (mediaList.isNotEmpty()) mediaList.size else if (lastCapturedBitmap != null) 1 else 0
     val pagerState = rememberPagerState(initialPage = 0) { pageCount }
+    val scope = rememberCoroutineScope()
 
     // Fetch info for current page
     val currentItem = mediaList.getOrNull(pagerState.currentPage)
@@ -189,11 +194,47 @@ fun MediaPreviewDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
+        // Full-screen backdrop:
+        //   • horizontal swipe anywhere → navigate pager
+        //   • tap (little/no drag) → dismiss
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.7f))
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onDismiss() },
+                .pointerInput(pageCount) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val down = awaitPointerEvent(PointerEventPass.Initial)
+                            val downChange = down.changes.firstOrNull() ?: continue
+                            if (!downChange.pressed) continue
+                            val startX = downChange.position.x
+                            val startY = downChange.position.y
+                            var totalX = 0f
+                            var totalY = 0f
+                            var swiped = false
+                            // Track until release
+                            inner@ while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                val c = event.changes.firstOrNull() ?: break@inner
+                                totalX = c.position.x - startX
+                                totalY = c.position.y - startY
+                                if (!c.pressed) break@inner
+                            }
+                            val isHorizontalSwipe = kotlin.math.abs(totalX) > 40 && kotlin.math.abs(totalX) > kotlin.math.abs(totalY) * 1.5f
+                            if (isHorizontalSwipe && pageCount > 1) {
+                                val next = if (totalX < 0) {
+                                    (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
+                                } else {
+                                    (pagerState.currentPage - 1).coerceAtLeast(0)
+                                }
+                                scope.launch { pagerState.animateScrollToPage(next) }
+                            } else if (kotlin.math.abs(totalX) < 15 && kotlin.math.abs(totalY) < 15) {
+                                // Pure tap on backdrop → dismiss
+                                onDismiss()
+                            }
+                        }
+                    }
+                },
             contentAlignment = Alignment.Center
         ) {
             if (pageCount > 0) {
@@ -223,9 +264,10 @@ fun MediaPreviewDialog(
                         }
                     }
 
-                    // HorizontalPager — swipe ONLY on image/video area
+                    // HorizontalPager — driven programmatically from the full-screen swipe above
                     HorizontalPager(
                         state = pagerState,
+                        userScrollEnabled = false,
                         modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).wrapContentHeight()
                     ) { page ->
                         val item = mediaList.getOrNull(page)
@@ -251,19 +293,29 @@ fun MediaPreviewDialog(
                                     bitmap = lastCapturedBitmap.asImageBitmap(),
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { openActiveMedia() }
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) }
                                 )
                             } else if (item != null) {
                                 AsyncImage(
                                     model = item.uri, imageLoader = imageLoader,
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.FillWidth,
-                                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { openActiveMedia() }
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) }
                                 )
                             }
                             if (isCurrentVideo) {
                                 Box(
-                                    modifier = Modifier.size(64.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.65f)).clickable { openActiveMedia() },
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.65f))
+                                        .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Yellow, modifier = Modifier.size(42.dp))
