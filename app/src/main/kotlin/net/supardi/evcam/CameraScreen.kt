@@ -4,7 +4,6 @@ import net.supardi.evcam.ui.*
 import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 
 import android.annotation.SuppressLint
@@ -246,7 +245,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var focusState by remember { mutableStateOf(FocusState.SEARCHING) }
     var isAeAfLocked by remember { mutableStateOf(false) }
     var recordingSeconds by remember { mutableIntStateOf(0) }
-    var transitionFreezeBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var isTransitioningRatio by remember { mutableStateOf(false) }
 
     LaunchedEffect(isRecording) {
         if (isRecording) {
@@ -302,8 +301,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
     val animatedAspectRatio by androidx.compose.animation.core.animateFloatAsState(
         targetValue = targetRatio,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-        label = "AspectRatioAnimation"
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 350, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "AspectRatioAnimation",
+        finishedListener = {
+            isTransitioningRatio = false
+        }
     )
     
     var imageCaptureUseCase by remember { mutableStateOf<ImageCapture?>(null) }
@@ -424,22 +426,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    val previewView = remember { PreviewView(context).apply { 
-        scaleType = PreviewView.ScaleType.FIT_CENTER
-        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-    } }
-
-    val triggerTransition: (() -> Unit) -> Unit = { action ->
-        val bmp = try { previewView.bitmap } catch (e: Exception) { null }
-        if (bmp != null && bmp.width > 0 && bmp.height > 0) {
-            val w = (bmp.width / 6).coerceAtLeast(1)
-            val h = (bmp.height / 6).coerceAtLeast(1)
-            transitionFreezeBitmap = android.graphics.Bitmap.createScaledBitmap(bmp, w, h, true)
-        }
-        action()
-    }
+    val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER } }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
+        isTransitioningRatio = true
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
         
@@ -530,18 +520,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }, executor)
 
-        var isReady = false
-        val startMs = System.currentTimeMillis()
-        while (!isReady && System.currentTimeMillis() - startMs < 800) {
-            if (previewView.previewStreamState.value == PreviewView.StreamState.STREAMING) {
-                kotlinx.coroutines.delay(100)
-                isReady = true
-            } else {
-                kotlinx.coroutines.delay(30)
-            }
-        }
-        android.util.Log.d("EvcamTransition", "Camera ready, releasing freeze bitmap")
-        transitionFreezeBitmap = null
+        kotlinx.coroutines.delay(200)
+        isTransitioningRatio = false
     }
 
     LaunchedEffect(currentZoom, cameraControl) {
@@ -761,20 +741,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                 focusState = FocusState.SUCCESS
                             }
 
-                             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
                                 if (e1 == null) return false
                                 val diffX = e2.x - e1.x
                                 val diffY = e2.y - e1.y
                                 if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(velocityX) > 100) {
                                     if (diffX < 0 && cameraMode == CameraMode.PHOTO) {
-                                        if (!isRecording) {
-                                            triggerTransition { cameraMode = CameraMode.VIDEO }
-                                        }
+                                        if (!isRecording) cameraMode = CameraMode.VIDEO
                                         return true
                                     } else if (diffX > 0 && cameraMode == CameraMode.VIDEO) {
-                                        if (!isRecording) {
-                                            triggerTransition { cameraMode = CameraMode.PHOTO }
-                                        }
+                                        if (!isRecording) cameraMode = CameraMode.PHOTO
                                         return true
                                     }
                                 }
@@ -793,24 +769,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             )
 
             androidx.compose.animation.AnimatedVisibility(
-                visible = transitionFreezeBitmap != null,
+                visible = isTransitioningRatio,
                 enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(100)),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(350))
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300))
             ) {
-                transitionFreezeBitmap?.let { bmp ->
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = "Freeze Frame Transition",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.35f))
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (cameraMode == CameraMode.VIDEO) "16:9 VIDEO" else aspectRatio.label,
+                        color = Color.Yellow,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
                 }
             }
             
@@ -1331,14 +1305,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             .clip(CircleShape)
                             .background(Color.Black.copy(alpha = 0.4f))
                             .clickable {
-                                triggerTransition {
-                                    aspectRatio = when (aspectRatio) {
-                                        AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
-                                        AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
-                                        AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
-                                    }
-                                    prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
+                                aspectRatio = when (aspectRatio) {
+                                    AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
+                                    AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
+                                    AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
                                 }
+                                prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
@@ -1539,18 +1511,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val photoSelected = cameraMode == CameraMode.PHOTO
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxHeight()
                             .clip(CircleShape)
                             .background(if (photoSelected) Color.Yellow else Color.Transparent)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { 
-                                if (!isRecording && cameraMode != CameraMode.PHOTO) {
-                                    triggerTransition { cameraMode = CameraMode.PHOTO }
-                                }
-                            }
-                            .padding(vertical = 8.dp),
+                            ) { if (!isRecording) cameraMode = CameraMode.PHOTO }
+                            .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -1564,18 +1532,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val videoSelected = cameraMode == CameraMode.VIDEO
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxHeight()
                             .clip(CircleShape)
                             .background(if (videoSelected) Color.Yellow else Color.Transparent)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { 
-                                if (!isRecording && cameraMode != CameraMode.VIDEO) {
-                                    triggerTransition { cameraMode = CameraMode.VIDEO }
-                                }
-                            }
-                            .padding(vertical = 8.dp),
+                            ) { if (!isRecording) cameraMode = CameraMode.VIDEO }
+                            .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
