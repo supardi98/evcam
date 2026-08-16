@@ -61,8 +61,11 @@ data class MediaInfo(
     val dateTime: String = "",
     val resolution: String = "",
     val duration: String = "",   // video only
-    val mimeType: String = ""
+    val mimeType: String = "",
+    val aspectRatioStr: String = "" // e.g., "16:9", "4:3"
 )
+
+private fun getGcd(a: Int, b: Int): Int = if (b == 0) a else getGcd(b, a % b)
 
 private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaInfo {
     return try {
@@ -109,6 +112,22 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                 val dateStr = if (date > 0) SimpleDateFormat("dd MMM yyyy  HH:mm", Locale.getDefault()).format(Date(date * 1000)) else ""
                 val resStr = if (width > 0 && height > 0) "${width} × ${height}" else ""
                 val mimeShort = mime.substringAfterLast('/').uppercase()
+                
+                var aspect = ""
+                if (width > 0 && height > 0) {
+                    val factor = getGcd(width, height)
+                    if (factor > 0) {
+                        val wRatio = width / factor
+                        val hRatio = height / factor
+                        // Normalize orientation ratios to standard labels, e.g. 16:9, 4:3, 1:1
+                        val maxR = kotlin.math.max(wRatio, hRatio)
+                        val minR = kotlin.math.min(wRatio, hRatio)
+                        aspect = if (maxR == 16 && minR == 9) "16:9"
+                                 else if (maxR == 4 && minR == 3) "4:3"
+                                 else if (maxR == 1 && minR == 1) "1:1"
+                                 else "$wRatio:$hRatio"
+                    }
+                }
 
                 MediaInfo(
                     fileName = name,
@@ -116,7 +135,8 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                     dateTime = dateStr,
                     resolution = resStr,
                     duration = duration,
-                    mimeType = mimeShort
+                    mimeType = mimeShort,
+                    aspectRatioStr = aspect
                 )
             } else MediaInfo()
         } ?: MediaInfo()
@@ -124,6 +144,7 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
         MediaInfo()
     }
 }
+
 
 private fun fetchRecentMediaList(context: Context, limit: Int = 500): List<MediaItem> {
     val list = mutableListOf<MediaItem>()
@@ -286,14 +307,14 @@ fun MediaPreviewDialog(
                             } else Toast.makeText(context, "Media not found", Toast.LENGTH_SHORT).show()
                         }
 
-                        Box(modifier = Modifier.fillMaxWidth().wrapContentHeight(), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.fillMaxWidth().height(420.dp), contentAlignment = Alignment.Center) {
                             if (page == 0 && lastCapturedBitmap != null) {
                                 Image(
                                     bitmap = lastCapturedBitmap.asImageBitmap(),
                                     contentDescription = "Preview $page",
-                                    contentScale = ContentScale.FillWidth,
+                                    contentScale = ContentScale.Fit,
                                     modifier = Modifier
-                                        .fillMaxWidth()
+                                        .fillMaxSize()
                                         .clip(RoundedCornerShape(14.dp))
                                         .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) }
                                 )
@@ -301,9 +322,9 @@ fun MediaPreviewDialog(
                                 AsyncImage(
                                     model = item.uri, imageLoader = imageLoader,
                                     contentDescription = "Preview $page",
-                                    contentScale = ContentScale.FillWidth,
+                                    contentScale = ContentScale.Fit,
                                     modifier = Modifier
-                                        .fillMaxWidth()
+                                        .fillMaxSize()
                                         .clip(RoundedCornerShape(14.dp))
                                         .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) }
                                 )
@@ -343,14 +364,18 @@ fun MediaPreviewDialog(
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 if (currentInfo.resolution.isNotEmpty()) {
                                     MediaInfoPill(label = currentInfo.resolution)
                                 }
+                                if (currentInfo.aspectRatioStr.isNotEmpty()) {
+                                    MediaInfoPill(label = currentInfo.aspectRatioStr, highlight = true)
+                                }
                                 if (currentInfo.fileSize.isNotEmpty()) {
                                     MediaInfoPill(label = currentInfo.fileSize)
                                 }
+
                                 if (currentInfo.duration.isNotEmpty()) {
                                     MediaInfoPill(label = "⏱ ${currentInfo.duration}", highlight = true)
                                 }
