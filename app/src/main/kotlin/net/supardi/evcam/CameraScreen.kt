@@ -219,12 +219,101 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     val activity = context as? android.app.Activity
     val prefs = context.getSharedPreferences("evcam_prefs", android.content.Context.MODE_PRIVATE)
     
-    var cameraMode by remember { mutableStateOf(CameraMode.PHOTO) }
-    var isProMode by remember { mutableStateOf(false) }
-    var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
-    var isRecording by remember { mutableStateOf(false) }
-    var activeRecording by remember { mutableStateOf<Recording?>(null) }
+    val uiState = rememberCameraUiState(context, prefs)
     
+    var cameraMode by uiState::cameraMode
+    var isProMode by uiState::isProMode
+    var lensFacing by uiState::lensFacing
+    var isRecording by uiState::isRecording
+    var activeRecording by uiState::activeRecording
+    
+    var lastCapturedUri by uiState::lastCapturedUri
+    var lastCapturedBitmap by uiState::lastCapturedBitmap
+    
+    var cameraControl by uiState::cameraControl
+    var camera2Control by uiState::camera2Control
+    var iso by uiState::iso
+    var minIso by uiState::minIso
+    var maxIso by uiState::maxIso
+    var shutterSpeed by uiState::shutterSpeed
+    var focusDistance by uiState::focusDistance
+    var whiteBalance by uiState::whiteBalance
+    
+    var isIsoAuto by uiState::isIsoAuto
+    var isShutterAuto by uiState::isShutterAuto
+    var isFocusAuto by uiState::isFocusAuto
+    var showProPanel by uiState::showProPanel
+    var enableHistogram by uiState::enableHistogram
+    var enableFocusPeaking by uiState::enableFocusPeaking
+    var enableRawCapture by uiState::enableRawCapture
+    var manualKelvin by uiState::manualKelvin
+    var timerBurstCount by uiState::timerBurstCount
+    
+    var histogramData by uiState::histogramData
+    var histogramUpdateCount by uiState::histogramUpdateCount
+    var peakingBitmap by uiState::peakingBitmap
+    var peakingUpdateCount by uiState::peakingUpdateCount
+    
+    var isBursting by uiState::isBursting
+    var burstCount by uiState::burstCount
+    
+    var showSettings by uiState::showSettings
+    var showLayerPanel by uiState::showLayerPanel
+    var showMediaPreviewDialog by uiState::showMediaPreviewDialog
+    
+    var keepScreenOn by uiState::keepScreenOn
+    var maxBrightness by uiState::maxBrightness
+    var evScrollAnchorY by uiState::evScrollAnchorY
+    
+    var minZoomRatio by uiState::minZoomRatio
+    var maxZoomRatio by uiState::maxZoomRatio
+    var currentZoom by uiState::currentZoom
+    val zoomAnim = uiState.zoomAnim
+    
+    var focusOffset by uiState::focusOffset
+    var showFocusBox by uiState::showFocusBox
+    var focusState by uiState::focusState
+    var isAeAfLocked by uiState::isAeAfLocked
+    var recordingSeconds by uiState::recordingSeconds
+    var isTransitioningRatio by uiState::isTransitioningRatio
+    
+    var gridType by uiState::gridType
+    var flashMode by uiState::flashMode
+    var timerMode by uiState::timerMode
+    var showVirtualHorizon by uiState::showVirtualHorizon
+    var showZoomSlider by uiState::showZoomSlider
+    var showBrightnessSlider by uiState::showBrightnessSlider
+    var minExposureIndex by uiState::minExposureIndex
+    var maxExposureIndex by uiState::maxExposureIndex
+    var exposureStep by uiState::exposureStep
+    var exposureIndex by uiState::exposureIndex
+    var isTorchOn by uiState::isTorchOn
+    var volumeShutterEnabled by uiState::volumeShutterEnabled
+    
+    var showPluginManager by uiState::showPluginManager
+    var isHandTrackingInstalled by uiState::isHandTrackingInstalled
+    var isHandTrackingEnabled by uiState::isHandTrackingEnabled
+    var isShutterSoundEnabled by uiState::isShutterSoundEnabled
+    var showRemoveConfirmation by uiState::showRemoveConfirmation
+    var showWatermark by uiState::showWatermark
+    var watermarkElements by uiState::watermarkElements
+    var enableGeotagging by uiState::enableGeotagging
+    var showWatermarkDialog by uiState::showWatermarkDialog
+    var liveLocation by uiState::liveLocation
+    var liveAddress by uiState::liveAddress
+    
+    var aspectRatio by uiState::aspectRatio
+    var videoQuality by uiState::videoQuality
+    var videoFps by uiState::videoFps
+    var videoAudioEnabled by uiState::videoAudioEnabled
+    var isNightModeEnabled by uiState::isNightModeEnabled
+    var selectedFilter by uiState::selectedFilter
+    var showFilterDialog by uiState::showFilterDialog
+    var imageFormat by uiState::imageFormat
+    
+    var imageCaptureUseCase by uiState::imageCaptureUseCase
+    var videoCaptureUseCase by uiState::videoCaptureUseCase
+
     val triggerVibe = {
         try {
             val vibrator = if (Build.VERSION.SDK_INT >= 31) {
@@ -245,41 +334,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         } catch (e: Exception) {}
     }
 
-    
-    var lastCapturedUri by remember {
-
-        val saved = prefs.getString("lastCapturedUri", null)
-        val parsedUri = if (!saved.isNullOrEmpty()) Uri.parse(saved) else null
-        mutableStateOf<Uri?>(parsedUri ?: fetchLatestMediaUri(context))
-    }
-    var lastCapturedBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    
-    var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
-    var camera2Control by remember { mutableStateOf<Camera2CameraControl?>(null) }
-    var iso by remember { mutableFloatStateOf(100f) }
-    var minIso by remember { mutableFloatStateOf(50f) }
-    var maxIso by remember { mutableFloatStateOf(3200f) }
-    var shutterSpeed by remember { mutableFloatStateOf(10000000f) } // 10ms
-    var focusDistance by remember { mutableFloatStateOf(0f) }
-    var whiteBalance by remember { mutableIntStateOf(prefs.getInt("whiteBalance", android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO)) }
-    
-    var isIsoAuto by remember { mutableStateOf(true) }
-    var isShutterAuto by remember { mutableStateOf(true) }
-    var isFocusAuto by remember { mutableStateOf(true) }
-    var showProPanel by remember { mutableStateOf(false) }
-    var enableHistogram by remember { mutableStateOf(prefs.getBoolean("enableHistogram", false)) }
-    var enableFocusPeaking by remember { mutableStateOf(prefs.getBoolean("enableFocusPeaking", false)) }
-    var enableRawCapture by remember { mutableStateOf(prefs.getBoolean("enableRawCapture", false)) }
-    var manualKelvin by remember { mutableFloatStateOf(prefs.getFloat("manualKelvin", 5000f)) }
-    var timerBurstCount by remember { mutableIntStateOf(prefs.getInt("timerBurstCount", 1)) }
-    var histogramData by remember { mutableStateOf<IntArray?>(null) }
-    var histogramUpdateCount by remember { mutableLongStateOf(0L) }
-    var peakingBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var peakingUpdateCount by remember { mutableLongStateOf(0L) }
-    
-    var isBursting by remember { mutableStateOf(false) }
-    var burstCount by remember { mutableIntStateOf(0) }
-    
     val proAnalyzer = remember {
         ProAnalyzer(
             enableHistogram = enableHistogram,
@@ -299,77 +353,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         proAnalyzer.enableHistogram = enableHistogram
         proAnalyzer.enableFocusPeaking = enableFocusPeaking
     }
-    
-    var showSettings by remember { mutableStateOf(false) }
-    var showLayerPanel by remember { mutableStateOf(false) }
-    var showMediaPreviewDialog by remember { mutableStateOf(false) }
-    
-    var keepScreenOn by remember { mutableStateOf(prefs.getBoolean("keepScreenOn", false)) }
-    var maxBrightness by remember { mutableStateOf(prefs.getBoolean("maxBrightness", false)) }
-    var evScrollAnchorY by remember { mutableFloatStateOf(0f) }
 
-    
-    var minZoomRatio by remember { mutableFloatStateOf(1f) }
-    var maxZoomRatio by remember { mutableFloatStateOf(1f) }
-    var currentZoom by remember { mutableFloatStateOf(1f) }
-    val zoomAnim = remember { androidx.compose.animation.core.Animatable(1f) }
-    
-    var focusOffset by remember { mutableStateOf<Offset?>(null) }
-    var showFocusBox by remember { mutableStateOf(false) }
-    var focusState by remember { mutableStateOf(FocusState.SEARCHING) }
-    var isAeAfLocked by remember { mutableStateOf(false) }
-    var recordingSeconds by remember { mutableIntStateOf(0) }
-    var isTransitioningRatio by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isRecording) {
-        if (isRecording) {
-            recordingSeconds = 0
-            while (isRecording) {
-                kotlinx.coroutines.delay(1000)
-                recordingSeconds++
-            }
-        } else {
-            recordingSeconds = 0
-        }
-    }
-    
-    var gridType by remember { mutableStateOf(GridType.valueOf(prefs.getString("gridType", GridType.NONE.name) ?: GridType.NONE.name)) }
-    var flashMode by remember { mutableStateOf(FlashMode.valueOf(prefs.getString("flashMode", FlashMode.AUTO.name) ?: FlashMode.AUTO.name)) }
-    var timerMode by remember { mutableStateOf(TimerMode.valueOf(prefs.getString("timerMode", TimerMode.OFF.name) ?: TimerMode.OFF.name)) }
-    var showVirtualHorizon by remember { mutableStateOf(prefs.getBoolean("showVirtualHorizon", true)) }
-    var showZoomSlider by remember { mutableStateOf(false) }
-    var showBrightnessSlider by remember { mutableStateOf(false) }
-    var minExposureIndex by remember { mutableIntStateOf(-6) }
-    var maxExposureIndex by remember { mutableIntStateOf(6) }
-    var exposureStep by remember { mutableFloatStateOf(0.3333f) }
-    var exposureIndex by remember { mutableIntStateOf(0) }
-    var isTorchOn by remember { mutableStateOf(false) }
-    var volumeShutterEnabled by remember { mutableStateOf(prefs.getBoolean("volumeShutterEnabled", true)) }
-    
-    var showPluginManager by remember { mutableStateOf(false) }
-    var isHandTrackingInstalled by remember { mutableStateOf(prefs.getBoolean("isHandTrackingInstalled", false)) }
-    var isHandTrackingEnabled by remember { mutableStateOf(prefs.getBoolean("isHandTrackingEnabled", true)) }
-    var isShutterSoundEnabled by remember { mutableStateOf(prefs.getBoolean("isShutterSoundEnabled", true)) }
-    var showRemoveConfirmation by remember { mutableStateOf(false) }
-    var showWatermark by remember { mutableStateOf(prefs.getBoolean("showWatermark", false)) }
-    var watermarkElements by remember { mutableStateOf(deserializeWatermarkElements(prefs.getString("watermarkElements", null))) }
-    var enableGeotagging by remember { mutableStateOf(prefs.getBoolean("enableGeotagging", false)) }
-    var showWatermarkDialog by remember { mutableStateOf(false) }
-    var liveLocation by remember { mutableStateOf<android.location.Location?>(null) }
-    var liveAddress by remember { mutableStateOf<android.location.Address?>(null) }
-    
-    var aspectRatio by remember { mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_4_3.name) ?: AspectRatioMode.RATIO_4_3.name)) }
-    var videoQuality by remember { mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name)) }
-    var videoFps by remember { mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name)) }
-    var videoAudioEnabled by remember { mutableStateOf(prefs.getBoolean("videoAudioEnabled", true)) }
-    var isNightModeEnabled by remember { mutableStateOf(prefs.getBoolean("isNightModeEnabled", false)) }
-    var selectedFilter by remember { mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name)) }
-    var showFilterDialog by remember { mutableStateOf(false) }
-    var imageFormat by remember { mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name)) }
-
-
-
-    
     val targetRatio = if (cameraMode == CameraMode.VIDEO) {
         9f / 16f
     } else {
@@ -388,9 +372,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             isTransitioningRatio = false
         }
     )
-    
-    var imageCaptureUseCase by remember { mutableStateOf<ImageCapture?>(null) }
-    var videoCaptureUseCase by remember { mutableStateOf<androidx.camera.video.VideoCapture<Recorder>?>(null) }
+
+
     
     DisposableEffect(context, imageCaptureUseCase, videoCaptureUseCase) {
         val orientationEventListener = object : android.view.OrientationEventListener(context) {
