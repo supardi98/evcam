@@ -27,6 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -67,6 +74,8 @@ fun CameraBottomBar(
 
     // Tracks whether we're in long-press state
     var isLongPressActive by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -116,48 +125,60 @@ fun CameraBottomBar(
                 .background(if (isRecording) Color.Red else Color.White)
                 // Tap & long-press handler — works for both modes
                 .pointerInput(cameraMode, isRecording) {
-                    detectTapGestures(
-                        onTap = {
-                            // Single tap
-                            when (cameraMode) {
-                                CameraMode.PHOTO -> onShutterTap()
-                                CameraMode.VIDEO -> if (isRecording) onVideoTapStop() else onVideoTap()
-                            }
-                        },
-                        onLongPress = {
-                            // Long press (500ms hold)
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        
+                        var isLongPress = false
+                        val startTime = System.currentTimeMillis()
+                        
+                        // Launch a coroutine to monitor hold duration
+                        val longPressJob = scope.launch {
+                            delay(500)
+                            isLongPress = true
                             isLongPressActive = true
                             when (cameraMode) {
                                 CameraMode.PHOTO -> onBurstStart()
                                 CameraMode.VIDEO -> onQuickRecordStart()
                             }
-                        },
-                        onPress = {
-                            // onPress is always called on finger down.
-                            // Wait for release, then clean up long-press state.
-                            try {
-                                awaitRelease()
-                            } finally {
-                                if (isLongPressActive) {
-                                    isLongPressActive = false
-                                    when (cameraMode) {
-                                        CameraMode.PHOTO -> onBurstEnd()
-                                        CameraMode.VIDEO -> onQuickRecordStop()
-                                    }
-                                }
-                            }
                         }
-                    )
-                }
-                // Drag-to-zoom — only active during long-press (video quick-record)
-                .pointerInput(isLongPressActive) {
-                    if (isLongPressActive) {
-                        detectDragGestures { change, dragAmount ->
+
+                        // Track touch movements for drag-zoom and wait for release
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            
+                            if (change.changedToUp()) {
+                                change.consume()
+                                break
+                            }
+                            
+                            // If we are in long-press mode and drag vertically, trigger zoom
+                            if (isLongPress && cameraMode == CameraMode.VIDEO) {
+                                val dragY = -(change.position.y - (change.previousPosition?.y ?: change.position.y))
+                                onDragZoom(dragY)
+                            }
                             change.consume()
-                            onDragZoom(-dragAmount.y)
+                        }
+                        
+                        longPressJob.cancel()
+                        
+                        if (isLongPress) {
+                            isLongPressActive = false
+                            when (cameraMode) {
+                                CameraMode.PHOTO -> onBurstEnd()
+                                CameraMode.VIDEO -> onQuickRecordStop()
+                            }
+                        } else {
+                            // Tap gesture
+                            when (cameraMode) {
+                                CameraMode.PHOTO -> onShutterTap()
+                                CameraMode.VIDEO -> if (isRecording) onVideoTapStop() else onVideoTap()
+                            }
                         }
                     }
                 },
+
             contentAlignment = Alignment.Center
         ) {
             // Show stop square icon when recording
