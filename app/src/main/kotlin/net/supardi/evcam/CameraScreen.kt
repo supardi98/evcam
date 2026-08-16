@@ -2,6 +2,7 @@ package net.supardi.evcam
 
 import net.supardi.evcam.ui.*
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -1461,28 +1462,53 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Row(
                     modifier = Modifier
-                        .height(40.dp)
-                        .background(Color.DarkGray.copy(alpha = 0.5f), CircleShape)
-                        .padding(horizontal = 16.dp),
+                        .height(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "PHOTO",
-                        color = if (cameraMode == CameraMode.PHOTO) Color.Yellow else Color.White,
-                        fontWeight = if (cameraMode == CameraMode.PHOTO) FontWeight.Bold else FontWeight.Normal,
+                    val photoSelected = cameraMode == CameraMode.PHOTO
+                    Box(
                         modifier = Modifier
-                            .clickable { if (!isRecording) cameraMode = CameraMode.PHOTO }
-                            .padding(horizontal = 12.dp)
-                    )
-                    Text(text = "|", color = Color.Gray)
-                    Text(
-                        text = "VIDEO",
-                        color = if (cameraMode == CameraMode.VIDEO) Color.Yellow else Color.White,
-                        fontWeight = if (cameraMode == CameraMode.VIDEO) FontWeight.Bold else FontWeight.Normal,
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(if (photoSelected) Color.Yellow else Color.Transparent)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { if (!isRecording) cameraMode = CameraMode.PHOTO }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "PHOTO",
+                            color = if (photoSelected) Color.Black else Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    val videoSelected = cameraMode == CameraMode.VIDEO
+                    Box(
                         modifier = Modifier
-                            .clickable { if (!isRecording) cameraMode = CameraMode.VIDEO }
-                            .padding(horizontal = 12.dp)
-                    )
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(if (videoSelected) Color.Yellow else Color.Transparent)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { if (!isRecording) cameraMode = CameraMode.VIDEO }
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "VIDEO",
+                            color = if (videoSelected) Color.Black else Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.width(16.dp))
