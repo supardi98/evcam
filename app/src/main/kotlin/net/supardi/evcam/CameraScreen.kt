@@ -1103,11 +1103,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
         
-        // Top Center Overlays: Video Duration & AE/AF Lock Badge
+        // Top Center Overlays: Video Duration & AE/AF Lock Badge (Positioned below the top action bar)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 48.dp),
+                .padding(top = 104.dp),
             contentAlignment = Alignment.TopCenter
         ) {
             if (isRecording) {
