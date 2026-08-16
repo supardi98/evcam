@@ -902,7 +902,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             
             if (showWatermark && cameraMode == CameraMode.PHOTO) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val normalizedRotation = ((deviceRotation ?: 0f) % 360f + 360f) % 360f
+                    val normalizedRotation = (deviceRotation % 360f + 360f) % 360f
+
                     val snapAngle = when {
                         normalizedRotation < 45f || normalizedRotation >= 315f -> 0f
                         normalizedRotation < 135f -> 90f
