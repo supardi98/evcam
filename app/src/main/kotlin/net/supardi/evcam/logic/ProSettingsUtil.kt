@@ -1,4 +1,5 @@
-package net.supardi.evcam.ui
+package net.supardi.evcam.logic
+
 
 import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.CaptureRequestOptions

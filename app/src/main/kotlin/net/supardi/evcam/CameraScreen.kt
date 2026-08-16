@@ -1,7 +1,9 @@
 package net.supardi.evcam
 
 import net.supardi.evcam.ui.*
+import net.supardi.evcam.logic.*
 import androidx.compose.foundation.Image
+
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -902,9 +904,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
 
             if (showVirtualHorizon) {
-                val orientData = net.supardi.evcam.ui.DeviceOrientationData(deviceOrientation.roll, deviceOrientation.pitch, deviceOrientation.isFlat)
+                val orientData = DeviceOrientationData(deviceOrientation.roll, deviceOrientation.pitch, deviceOrientation.isFlat)
                 VirtualHorizonOverlay(deviceOrientation = orientData, modifier = Modifier.fillMaxSize())
             }
+
 
         }
         

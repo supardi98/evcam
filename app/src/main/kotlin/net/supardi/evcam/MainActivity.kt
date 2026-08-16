@@ -22,6 +22,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import net.supardi.evcam.ui.theme.EvcamTheme
+import net.supardi.evcam.logic.*
+
 
 class MainActivity : ComponentActivity() {
     

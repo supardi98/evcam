@@ -1,4 +1,5 @@
-package net.supardi.evcam
+package net.supardi.evcam.logic
+
 
 import android.graphics.Bitmap
 import android.graphics.Color

@@ -16,7 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.supardi.evcam.GridType
-import net.supardi.evcam.ui.DeviceOrientationData
+import net.supardi.evcam.logic.*
+import kotlin.math.abs
+
 
 @Composable
 fun GridOverlay(

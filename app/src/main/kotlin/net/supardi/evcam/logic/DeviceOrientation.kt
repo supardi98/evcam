@@ -1,4 +1,5 @@
-package net.supardi.evcam.ui
+package net.supardi.evcam.logic
+
 
 import android.content.Context
 import android.hardware.Sensor
