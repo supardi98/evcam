@@ -1706,9 +1706,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             Switch(checked = volumeShutterEnabled, onCheckedChange = { volumeShutterEnabled = it }, modifier = Modifier.scale(0.8f))
                         }
                         
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
