@@ -1222,209 +1222,54 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (showProPanel && !showSettings) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), 
-                        horizontalArrangement = Arrangement.SpaceBetween, 
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("MANUAL CONTROLS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Icon(
-                            imageVector = Icons.Default.Close, 
-                            contentDescription = "Close panel", 
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp).clickable { showProPanel = false }
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-                        Text("ISO", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-                        Slider(
-                            value = iso.coerceIn(minIso, maxIso), 
-                            onValueChange = { isIsoAuto = false; iso = it; isProMode = true }, 
-                            valueRange = minIso..maxIso, 
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                        )
-                        Text(
-                            text = if (isIsoAuto) "AUTO" else "${iso.toInt()}", 
-                            color = if (isIsoAuto) Color.Yellow else Color.White, 
-                            modifier = Modifier.width(40.dp).clickable { isIsoAuto = !isIsoAuto }, 
-                            textAlign = TextAlign.End, 
-                            fontSize = 12.sp
-                        )
-                    }
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-                        Text("SHT", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-                        Slider(value = shutterSpeed, onValueChange = { isShutterAuto = false; shutterSpeed = it }, valueRange = 100000f..1000000000f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-                        Text(
-                            text = if (isShutterAuto) "AUTO" else "1/${1_000_000_000L / shutterSpeed.toLong().coerceAtLeast(1)}", 
-                            color = if (isShutterAuto) Color.Yellow else Color.White, 
-                            modifier = Modifier.width(40.dp).clickable { isShutterAuto = !isShutterAuto }, 
-                            textAlign = TextAlign.End, 
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-                        Text("FOC", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-                        Slider(value = focusDistance, onValueChange = { isFocusAuto = false; focusDistance = it }, valueRange = 0f..10f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-                        Text(
-                            text = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance), 
-                            color = if (isFocusAuto) Color.Yellow else Color.White, 
-                            modifier = Modifier.width(40.dp).clickable { isFocusAuto = !isFocusAuto }, 
-                            textAlign = TextAlign.End, 
-                            fontSize = 12.sp
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(start = 16.dp)) {
-                            Text(
-                                text = "AUTO",
-                                color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.Transparent)
-                                    .clickable { whiteBalance = CaptureRequest.CONTROL_AWB_MODE_AUTO }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = "DAY",
-                                color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Black else Color.White,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.Transparent)
-                                    .clickable { whiteBalance = CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = "CLD",
-                                color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Black else Color.White,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.Transparent)
-                                    .clickable { whiteBalance = CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = "CUS",
-                                color = if (whiteBalance == android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Black else Color.White,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(if (whiteBalance == android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.Transparent)
-                                    .clickable { whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontSize = 12.sp
-                            )
-                        }
-                        if (whiteBalance == android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) {
-                            Slider(
-                                value = manualKelvin,
-                                onValueChange = { manualKelvin = it },
-                                valueRange = 2000f..10000f,
-                                modifier = Modifier.height(30.dp)
-                            )
-                            Text("${manualKelvin.toInt()}K", color = Color.White, fontSize = 12.sp)
-                        }
-                    }
-                }
+                ProControlPanel(
+                    iso = iso,
+                    minIso = minIso,
+                    maxIso = maxIso,
+                    isIsoAuto = isIsoAuto,
+                    onIsoChange = { isIsoAuto = false; iso = it; isProMode = true },
+                    onIsoAutoToggle = { isIsoAuto = !isIsoAuto },
+                    shutterSpeed = shutterSpeed,
+                    isShutterAuto = isShutterAuto,
+                    onShutterChange = { isShutterAuto = false; shutterSpeed = it },
+                    onShutterAutoToggle = { isShutterAuto = !isShutterAuto },
+                    focusDistance = focusDistance,
+                    isFocusAuto = isFocusAuto,
+                    onFocusChange = { isFocusAuto = false; focusDistance = it },
+                    onFocusAutoToggle = { isFocusAuto = !isFocusAuto },
+                    whiteBalance = whiteBalance,
+                    onWhiteBalanceChange = { whiteBalance = it },
+                    manualKelvin = manualKelvin,
+                    onManualKelvinChange = { manualKelvin = it },
+                    onClose = { showProPanel = false }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
             if (showLayerPanel && !showSettings) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("DISPLAY OVERLAYS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp).clickable { showLayerPanel = false }
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("Grid", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
-                            GridType.values().forEach { g ->
-                                val isSelected = gridType == g
-                                Text(
-                                    text = g.label,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                                        .clickable {
-                                            gridType = g
-                                            prefs.edit().putString("gridType", g.name).apply()
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("Level", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
-                        Switch(
-                            checked = showVirtualHorizon,
-                            onCheckedChange = {
-                                showVirtualHorizon = it
-                                prefs.edit().putBoolean("showVirtualHorizon", it).apply()
-                            },
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("Histogram", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
-                        Switch(
-                            checked = enableHistogram,
-                            onCheckedChange = {
-                                enableHistogram = it
-                                prefs.edit().putBoolean("enableHistogram", it).apply()
-                            },
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("Focus Peaking", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
-                        Switch(
-                            checked = enableFocusPeaking,
-                            onCheckedChange = {
-                                enableFocusPeaking = it
-                                prefs.edit().putBoolean("enableFocusPeaking", it).apply()
-                            },
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
-                }
+                DisplayOverlaysPanel(
+                    gridType = gridType,
+                    onGridTypeChange = {
+                        gridType = it
+                        prefs.edit().putString("gridType", it.name).apply()
+                    },
+                    showVirtualHorizon = showVirtualHorizon,
+                    onVirtualHorizonChange = {
+                        showVirtualHorizon = it
+                        prefs.edit().putBoolean("showVirtualHorizon", it).apply()
+                    },
+                    enableHistogram = enableHistogram,
+                    onHistogramChange = {
+                        enableHistogram = it
+                        prefs.edit().putBoolean("enableHistogram", it).apply()
+                    },
+                    enableFocusPeaking = enableFocusPeaking,
+                    onFocusPeakingChange = {
+                        enableFocusPeaking = it
+                        prefs.edit().putBoolean("enableFocusPeaking", it).apply()
+                    },
+                    onClose = { showLayerPanel = false }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -1584,287 +1429,53 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.DarkGray.copy(alpha = 0.5f))
-                        .clickable { 
-                            if (lastCapturedBitmap != null || lastCapturedUri != null) {
-                                showMediaPreviewDialog = true
-                            } else {
-                                Toast.makeText(context, "Belum ada foto atau video yang diambil", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (lastCapturedBitmap != null) {
-                        androidx.compose.foundation.Image(
-                            bitmap = lastCapturedBitmap!!.asImageBitmap(),
-                            contentDescription = "Gallery Thumbnail",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else if (lastCapturedUri != null) {
-                        AsyncImage(
-                            model = lastCapturedUri,
-                            contentDescription = "Gallery Thumbnail",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
+            CameraBottomBar(
+                lastCapturedBitmap = lastCapturedBitmap,
+                lastCapturedUri = lastCapturedUri,
+                isRecording = isRecording,
+                cameraMode = cameraMode,
+                lensFacing = lensFacing,
+                context = context,
+                onThumbnailClick = { showMediaPreviewDialog = true },
+                onShutterTap = { initiateCapture() },
+                onBurstStart = { isBursting = true },
+                onBurstEnd = { isBursting = false },
+                onSwitchCamera = {
+                    if (!isRecording) {
+                        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
                     }
                 }
-
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(if (isRecording) Color.Red else Color.White)
-                        .pointerInput(Unit) {
-                                        detectTapGestures(
-                                onTap = { initiateCapture() },
-                                onLongPress = {
-                                    if (cameraMode == CameraMode.PHOTO) {
-                                        isBursting = true
-                                    } else {
-                                        initiateCapture()
-                                    }
-                                },
-                                onPress = {
-                                    try {
-                                        tryAwaitRelease()
-                                    } finally {
-                                        isBursting = false
-                                    }
-                                }
-                            )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                }
-
-                IconButton(
-                    onClick = { 
-                        if (!isRecording) {
-                            lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
-                        }
-                    },
-                    modifier = Modifier.size(64.dp).background(Color.DarkGray.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cameraswitch,
-                        contentDescription = "Switch Camera",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
+            )
         }
         
         if (showSettings) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .clickable { showSettings = false },
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color.DarkGray.copy(alpha = 0.9f))
-                        .clickable(enabled = false) {}
-                        .padding(24.dp)
-                ) {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text("Settings", color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("RAW (DNG) Capture", color = Color.White)
-                            Switch(checked = enableRawCapture, onCheckedChange = { enableRawCapture = it }, modifier = Modifier.scale(0.8f))
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Keep Screen On", color = Color.White)
-                            Switch(checked = keepScreenOn, onCheckedChange = { keepScreenOn = it }, modifier = Modifier.scale(0.8f))
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Max Brightness", color = Color.White)
-                            Switch(checked = maxBrightness, onCheckedChange = { maxBrightness = it }, modifier = Modifier.scale(0.8f))
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Volume Key Shutter", color = Color.White)
-                            Switch(checked = volumeShutterEnabled, onCheckedChange = { volumeShutterEnabled = it }, modifier = Modifier.scale(0.8f))
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Shutter Sound", color = Color.White)
-                            Switch(checked = isShutterSoundEnabled, onCheckedChange = { isShutterSoundEnabled = it }, modifier = Modifier.scale(0.8f))
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Watermark Settings", color = Color.White)
-                            Button(
-                                onClick = { showWatermarkDialog = true },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                            ) {
-                                Text("Edit", color = Color.White)
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Save Location (Geotag EXIF)", color = Color.White)
-                            Switch(checked = enableGeotagging, onCheckedChange = { enableGeotagging = it }, modifier = Modifier.scale(0.8f))
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = { showPluginManager = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Open Plugin Manager")
-                        }
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = { showSettings = false },
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
-                            Text("Done")
-                        }
-                    }
-                }
-            }
+            MainSettingsDialog(
+                enableRawCapture = enableRawCapture,
+                onEnableRawCaptureChange = { enableRawCapture = it },
+                keepScreenOn = keepScreenOn,
+                onKeepScreenOnChange = { keepScreenOn = it },
+                maxBrightness = maxBrightness,
+                onMaxBrightnessChange = { maxBrightness = it },
+                volumeShutterEnabled = volumeShutterEnabled,
+                onVolumeShutterEnabledChange = { volumeShutterEnabled = it },
+                isShutterSoundEnabled = isShutterSoundEnabled,
+                onIsShutterSoundEnabledChange = { isShutterSoundEnabled = it },
+                enableGeotagging = enableGeotagging,
+                onEnableGeotaggingChange = { enableGeotagging = it },
+                onOpenWatermarkSettings = { showWatermarkDialog = true },
+                onOpenPluginManager = { showPluginManager = true },
+                onDismiss = { showSettings = false }
+            )
+        }
         
         if (showMediaPreviewDialog && (lastCapturedBitmap != null || lastCapturedUri != null)) {
-            androidx.compose.ui.window.Dialog(
-                onDismissRequest = { showMediaPreviewDialog = false },
-                properties = androidx.compose.ui.window.DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = true
-                )
-            ) {
-                androidx.compose.material3.Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Black
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (lastCapturedBitmap != null) {
-                            androidx.compose.foundation.Image(
-                                bitmap = lastCapturedBitmap!!.asImageBitmap(),
-                                contentDescription = "Full Preview",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else if (lastCapturedUri != null) {
-                            AsyncImage(
-                                model = lastCapturedUri,
-                                contentDescription = "Full Preview",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.TopCenter)
-                                .padding(top = 16.dp, start = 16.dp, end = 16.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = { showMediaPreviewDialog = false },
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.6f))
-                            ) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp))
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 36.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Button(
-                                onClick = {
-                                    val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
-                                    if (targetUri != null) {
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(targetUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } else {
-                                        Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
-                                shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier.padding(horizontal = 24.dp)
-                            ) {
-                                Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
+            MediaPreviewDialog(
+                lastCapturedBitmap = lastCapturedBitmap,
+                lastCapturedUri = lastCapturedUri,
+                cameraMode = cameraMode,
+                context = context,
+                onDismiss = { showMediaPreviewDialog = false }
+            )
         }
         if (showPluginManager) {
             var downloadProgress by remember { mutableStateOf(0f) }
@@ -1946,7 +1557,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
     }
     
     if (showWatermarkDialog) {
@@ -2543,5 +2153,546 @@ fun formatDateElement(format: String): String {
         java.text.SimpleDateFormat(fmt, java.util.Locale.US).format(java.util.Date())
     } catch (e: Exception) {
         fmt
+    }
+}
+
+@Composable
+private fun MediaPreviewDialog(
+    lastCapturedBitmap: android.graphics.Bitmap?,
+    lastCapturedUri: Uri?,
+    cameraMode: CameraMode,
+    context: android.content.Context,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Black
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (lastCapturedBitmap != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = lastCapturedBitmap.asImageBitmap(),
+                        contentDescription = "Full Preview",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (lastCapturedUri != null) {
+                    AsyncImage(
+                        model = lastCapturedUri,
+                        contentDescription = "Full Preview",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                    ) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp))
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 36.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Button(
+                        onClick = {
+                            val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
+                            if (targetUri != null) {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(targetUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainSettingsDialog(
+    enableRawCapture: Boolean,
+    onEnableRawCaptureChange: (Boolean) -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
+    maxBrightness: Boolean,
+    onMaxBrightnessChange: (Boolean) -> Unit,
+    volumeShutterEnabled: Boolean,
+    onVolumeShutterEnabledChange: (Boolean) -> Unit,
+    isShutterSoundEnabled: Boolean,
+    onIsShutterSoundEnabledChange: (Boolean) -> Unit,
+    enableGeotagging: Boolean,
+    onEnableGeotaggingChange: (Boolean) -> Unit,
+    onOpenWatermarkSettings: () -> Unit,
+    onOpenPluginManager: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color.DarkGray.copy(alpha = 0.9f))
+                .clickable(enabled = false) {}
+                .padding(24.dp)
+        ) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text("Settings", color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("RAW (DNG) Capture", color = Color.White)
+                    Switch(checked = enableRawCapture, onCheckedChange = onEnableRawCaptureChange, modifier = Modifier.scale(0.8f))
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Keep Screen On", color = Color.White)
+                    Switch(checked = keepScreenOn, onCheckedChange = onKeepScreenOnChange, modifier = Modifier.scale(0.8f))
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Max Brightness", color = Color.White)
+                    Switch(checked = maxBrightness, onCheckedChange = onMaxBrightnessChange, modifier = Modifier.scale(0.8f))
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Volume Key Shutter", color = Color.White)
+                    Switch(checked = volumeShutterEnabled, onCheckedChange = onVolumeShutterEnabledChange, modifier = Modifier.scale(0.8f))
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Shutter Sound", color = Color.White)
+                    Switch(checked = isShutterSoundEnabled, onCheckedChange = onIsShutterSoundEnabledChange, modifier = Modifier.scale(0.8f))
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Watermark Settings", color = Color.White)
+                    Button(
+                        onClick = onOpenWatermarkSettings,
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+                    ) {
+                        Text("Edit", color = Color.White)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Save Location (Geotag EXIF)", color = Color.White)
+                    Switch(checked = enableGeotagging, onCheckedChange = onEnableGeotaggingChange, modifier = Modifier.scale(0.8f))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Button(
+                    onClick = onOpenPluginManager,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Open Plugin Manager")
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Done")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CameraBottomBar(
+    lastCapturedBitmap: android.graphics.Bitmap?,
+    lastCapturedUri: Uri?,
+    isRecording: Boolean,
+    cameraMode: CameraMode,
+    lensFacing: Int,
+    context: android.content.Context,
+    onThumbnailClick: () -> Unit,
+    onShutterTap: () -> Unit,
+    onBurstStart: () -> Unit,
+    onBurstEnd: () -> Unit,
+    onSwitchCamera: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.DarkGray.copy(alpha = 0.5f))
+                .clickable { 
+                    if (lastCapturedBitmap != null || lastCapturedUri != null) {
+                        onThumbnailClick()
+                    } else {
+                        Toast.makeText(context, "Belum ada foto atau video yang diambil", Toast.LENGTH_SHORT).show()
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            if (lastCapturedBitmap != null) {
+                androidx.compose.foundation.Image(
+                    bitmap = lastCapturedBitmap.asImageBitmap(),
+                    contentDescription = "Gallery Thumbnail",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (lastCapturedUri != null) {
+                AsyncImage(
+                    model = lastCapturedUri,
+                    contentDescription = "Gallery Thumbnail",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(if (isRecording) Color.Red else Color.White)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { onShutterTap() },
+                        onLongPress = {
+                            if (cameraMode == CameraMode.PHOTO) {
+                                onBurstStart()
+                            } else {
+                                onShutterTap()
+                            }
+                        },
+                        onPress = {
+                            try {
+                                tryAwaitRelease()
+                            } finally {
+                                onBurstEnd()
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {}
+
+        IconButton(
+            onClick = onSwitchCamera,
+            modifier = Modifier.size(64.dp).background(Color.DarkGray.copy(alpha = 0.5f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Cameraswitch,
+                contentDescription = "Switch Camera",
+                tint = Color.White,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProControlPanel(
+    iso: Float,
+    minIso: Float,
+    maxIso: Float,
+    isIsoAuto: Boolean,
+    onIsoChange: (Float) -> Unit,
+    onIsoAutoToggle: () -> Unit,
+    shutterSpeed: Float,
+    isShutterAuto: Boolean,
+    onShutterChange: (Float) -> Unit,
+    onShutterAutoToggle: () -> Unit,
+    focusDistance: Float,
+    isFocusAuto: Boolean,
+    onFocusChange: (Float) -> Unit,
+    onFocusAutoToggle: () -> Unit,
+    whiteBalance: Int,
+    onWhiteBalanceChange: (Int) -> Unit,
+    manualKelvin: Float,
+    onManualKelvinChange: (Float) -> Unit,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Color.Black.copy(alpha = 0.6f))
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), 
+            horizontalArrangement = Arrangement.SpaceBetween, 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("MANUAL CONTROLS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Icon(
+                imageVector = Icons.Default.Close, 
+                contentDescription = "Close panel", 
+                tint = Color.White,
+                modifier = Modifier.size(20.dp).clickable { onClose() }
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+            Text("ISO", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+            Slider(
+                value = iso.coerceIn(minIso, maxIso), 
+                onValueChange = onIsoChange, 
+                valueRange = minIso..maxIso, 
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+            )
+            Text(
+                text = if (isIsoAuto) "AUTO" else "${iso.toInt()}", 
+                color = if (isIsoAuto) Color.Yellow else Color.White, 
+                modifier = Modifier.width(40.dp).clickable { onIsoAutoToggle() }, 
+                textAlign = TextAlign.End, 
+                fontSize = 12.sp
+            )
+        }
+        
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+            Text("SHT", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+            Slider(value = shutterSpeed, onValueChange = onShutterChange, valueRange = 100000f..1000000000f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+            Text(
+                text = if (isShutterAuto) "AUTO" else "1/${1_000_000_000L / shutterSpeed.toLong().coerceAtLeast(1)}", 
+                color = if (isShutterAuto) Color.Yellow else Color.White, 
+                modifier = Modifier.width(40.dp).clickable { onShutterAutoToggle() }, 
+                textAlign = TextAlign.End, 
+                fontSize = 12.sp
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+            Text("FOC", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+            Slider(value = focusDistance, onValueChange = onFocusChange, valueRange = 0f..10f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+            Text(
+                text = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance), 
+                color = if (isFocusAuto) Color.Yellow else Color.White, 
+                modifier = Modifier.width(40.dp).clickable { onFocusAutoToggle() }, 
+                textAlign = TextAlign.End, 
+                fontSize = 12.sp
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(start = 16.dp)) {
+                Text(
+                    text = "AUTO",
+                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.Transparent)
+                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_AUTO) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "DAY",
+                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Black else Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.Transparent)
+                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "CLD",
+                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Black else Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.Transparent)
+                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "CUS",
+                    color = if (whiteBalance == android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Black else Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (whiteBalance == android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.Transparent)
+                        .clickable { onWhiteBalanceChange(android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    fontSize = 12.sp
+                )
+            }
+            if (whiteBalance == android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) {
+                Slider(
+                    value = manualKelvin,
+                    onValueChange = onManualKelvinChange,
+                    valueRange = 2000f..10000f,
+                    modifier = Modifier.height(30.dp)
+                )
+                Text("${manualKelvin.toInt()}K", color = Color.White, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DisplayOverlaysPanel(
+    gridType: GridType,
+    onGridTypeChange: (GridType) -> Unit,
+    showVirtualHorizon: Boolean,
+    onVirtualHorizonChange: (Boolean) -> Unit,
+    enableHistogram: Boolean,
+    onHistogramChange: (Boolean) -> Unit,
+    enableFocusPeaking: Boolean,
+    onFocusPeakingChange: (Boolean) -> Unit,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .background(Color.Black.copy(alpha = 0.6f))
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("DISPLAY OVERLAYS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp).clickable { onClose() }
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Grid", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                GridType.values().forEach { g ->
+                    val isSelected = gridType == g
+                    Text(
+                        text = g.label,
+                        color = if (isSelected) Color.Black else Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.2f))
+                            .clickable { onGridTypeChange(g) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Level", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Switch(
+                checked = showVirtualHorizon,
+                onCheckedChange = onVirtualHorizonChange,
+                modifier = Modifier.scale(0.8f)
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Histogram", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Switch(
+                checked = enableHistogram,
+                onCheckedChange = onHistogramChange,
+                modifier = Modifier.scale(0.8f)
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Focus Peaking", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Switch(
+                checked = enableFocusPeaking,
+                onCheckedChange = onFocusPeakingChange,
+                modifier = Modifier.scale(0.8f)
+            )
+        }
     }
 }
