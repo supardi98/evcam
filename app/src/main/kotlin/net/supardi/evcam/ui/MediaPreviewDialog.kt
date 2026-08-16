@@ -135,7 +135,7 @@ fun MediaPreviewDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.85f))
+                .background(Color.Black.copy(alpha = 0.5f))
                 .clickable { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
@@ -143,17 +143,14 @@ fun MediaPreviewDialog(
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
                     .wrapContentHeight()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF1E1E1E))
-                    .clickable(enabled = false) {}
-                    .padding(16.dp),
+                    .clickable(enabled = false) {},
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Top Bar: Counter & Close Button (X)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -165,7 +162,7 @@ fun MediaPreviewDialog(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.5f))
+                            .background(Color.Black.copy(alpha = 0.6f))
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     )
 
@@ -174,7 +171,7 @@ fun MediaPreviewDialog(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.5f))
+                            .background(Color.Black.copy(alpha = 0.6f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close, 
@@ -185,11 +182,11 @@ fun MediaPreviewDialog(
                     }
                 }
 
-                // Center Image Pager area: Tightly height-constrained to image content!
+                // Center Image Pager area: Pure floating image / video
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 440.dp)
+                        .heightIn(max = 480.dp)
                         .wrapContentHeight(),
                     contentAlignment = Alignment.Center
                 ) {
@@ -233,7 +230,7 @@ fun MediaPreviewDialog(
                                         contentScale = ContentScale.FillWidth,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(14.dp))
                                             .clickable { openActiveMedia() }
                                     )
                                 } else if (item != null) {
@@ -244,7 +241,7 @@ fun MediaPreviewDialog(
                                         contentScale = ContentScale.FillWidth,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(14.dp))
                                             .clickable { openActiveMedia() }
                                     )
                                 }
@@ -276,9 +273,14 @@ fun MediaPreviewDialog(
                 val isCurrentVideo = mediaList.getOrNull(pagerState.currentPage)?.isVideo == true || (pagerState.currentPage == 0 && cameraMode == CameraMode.VIDEO)
                 Text(
                     text = if (isCurrentVideo) "Ketuk tombol Putar / foto untuk memutar video" else "Ketuk foto untuk membuka di Galeri HP",
-                    color = Color.Gray,
+                    color = Color.White.copy(alpha = 0.8f),
                     fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 )
             }
         }
