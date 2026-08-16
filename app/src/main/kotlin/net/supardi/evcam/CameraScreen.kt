@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Timer10
 import androidx.compose.material.icons.filled.Timer3
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material3.Button
@@ -216,6 +217,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
     
     var showSettings by remember { mutableStateOf(false) }
+    var showLayerPanel by remember { mutableStateOf(false) }
     
     var keepScreenOn by remember { mutableStateOf(prefs.getBoolean("keepScreenOn", false)) }
     var maxBrightness by remember { mutableStateOf(prefs.getBoolean("maxBrightness", false)) }
@@ -1271,11 +1273,114 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
+            if (showLayerPanel && !showSettings) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("DISPLAY OVERLAYS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp).clickable { showLayerPanel = false }
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text("Grid", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+                            GridType.values().forEach { g ->
+                                val isSelected = gridType == g
+                                Text(
+                                    text = g.label,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.2f))
+                                        .clickable {
+                                            gridType = g
+                                            prefs.edit().putString("gridType", g.name).apply()
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text("Level", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+                        Switch(
+                            checked = showVirtualHorizon,
+                            onCheckedChange = {
+                                showVirtualHorizon = it
+                                prefs.edit().putBoolean("showVirtualHorizon", it).apply()
+                            },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text("Histogram", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+                        Switch(
+                            checked = enableHistogram,
+                            onCheckedChange = {
+                                enableHistogram = it
+                                prefs.edit().putBoolean("enableHistogram", it).apply()
+                            },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Text("Focus Peaking", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+                        Switch(
+                            checked = enableFocusPeaking,
+                            onCheckedChange = {
+                                enableFocusPeaking = it
+                                prefs.edit().putBoolean("enableFocusPeaking", it).apply()
+                            },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val isAnyOverlayActive = gridType != GridType.NONE || showVirtualHorizon || enableHistogram || enableFocusPeaking
+                
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (isAnyOverlayActive) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
+                        .clickable { showLayerPanel = !showLayerPanel },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = "Layer Settings",
+                        tint = if (isAnyOverlayActive) Color.Yellow else Color.LightGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
                 Row(
                     modifier = Modifier
                         .height(40.dp)
@@ -1471,24 +1576,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 ) {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         Text("Settings", color = Color.White, fontSize = 20.sp, modifier = Modifier.padding(bottom = 16.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Live Histogram", color = Color.White)
-                            Switch(checked = enableHistogram, onCheckedChange = { enableHistogram = it }, modifier = Modifier.scale(0.8f))
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Focus Peaking", color = Color.White)
-                            Switch(checked = enableFocusPeaking, onCheckedChange = { enableFocusPeaking = it }, modifier = Modifier.scale(0.8f))
-                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1578,15 +1665,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Virtual Horizon", color = Color.White)
-                            Switch(checked = showVirtualHorizon, onCheckedChange = { showVirtualHorizon = it }, modifier = Modifier.scale(0.8f))
-                        }
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
                             Text("Shutter Sound", color = Color.White)
                             Switch(checked = isShutterSoundEnabled, onCheckedChange = { isShutterSoundEnabled = it }, modifier = Modifier.scale(0.8f))
                         }
@@ -1623,25 +1701,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Open Plugin Manager")
-                        }
-                        
-                        Text("Grid Overlay", color = Color.White, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            GridType.values().forEach { type ->
-                                Text(
-                                    text = type.label,
-                                    color = if (gridType == type) Color.Black else Color.White,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (gridType == type) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                                        .clickable { gridType = type }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    fontSize = 12.sp
-                                )
-                            }
                         }
                         
                         Spacer(modifier = Modifier.height(24.dp))
