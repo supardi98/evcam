@@ -1406,8 +1406,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                IconButton(onClick = { showSettings = true }) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                IconButton(onClick = {
+                    showSettings = !showSettings
+                    if (showSettings) {
+                        showProPanel = false
+                        showLayerPanel = false
+                    }
+                }) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = if (showSettings) Color.Yellow else Color.White)
                 }
             }
         }
@@ -1416,11 +1422,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 48.dp),
+                .padding(bottom = 48.dp)
+                .pointerInput(Unit) { /* consume touches so panel clicks don't fall through to camera preview */ },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = showProPanel && !showSettings,
+                visible = showProPanel,
                 enter = androidx.compose.animation.expandVertically(
                     animationSpec = androidx.compose.animation.core.spring(
                         stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
@@ -1456,7 +1463,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
             
             androidx.compose.animation.AnimatedVisibility(
-                visible = showLayerPanel && !showSettings,
+                visible = showLayerPanel,
                 enter = androidx.compose.animation.expandVertically(
                     animationSpec = androidx.compose.animation.core.spring(
                         stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
@@ -1574,7 +1581,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .background(if (isAnyOverlayActive) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
                             showLayerPanel = !showLayerPanel 
-                            if (showLayerPanel) showProPanel = false
+                            if (showLayerPanel) {
+                                showProPanel = false
+                                showSettings = false
+                            }
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1681,7 +1691,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .background(if (hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
                             showProPanel = !showProPanel 
-                            if (showProPanel) showLayerPanel = false
+                            if (showProPanel) {
+                                showLayerPanel = false
+                                showSettings = false
+                            }
                         }
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
