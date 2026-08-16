@@ -290,10 +290,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var volumeShutterEnabled by uiState::volumeShutterEnabled
     
     var showPluginManager by uiState::showPluginManager
-    var isHandTrackingInstalled by uiState::isHandTrackingInstalled
-    var isHandTrackingEnabled by uiState::isHandTrackingEnabled
     var isShutterSoundEnabled by uiState::isShutterSoundEnabled
-    var showRemoveConfirmation by uiState::showRemoveConfirmation
     var showWatermark by uiState::showWatermark
     var watermarkElements by uiState::watermarkElements
     var enableGeotagging by uiState::enableGeotagging
@@ -307,7 +304,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var videoAudioEnabled by uiState::videoAudioEnabled
     var isNightModeEnabled by uiState::isNightModeEnabled
     var selectedFilter by uiState::selectedFilter
-    var showFilterDialog by uiState::showFilterDialog
+
 
     
     var imageCaptureUseCase by uiState::imageCaptureUseCase

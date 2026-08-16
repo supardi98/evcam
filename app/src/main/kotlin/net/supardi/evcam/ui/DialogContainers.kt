@@ -21,8 +21,7 @@ import net.supardi.evcam.CameraMode
 
 @Composable
 fun DialogContainers(
-    uiState: CameraUiState,
-    modifier: Modifier = Modifier
+    uiState: CameraUiState
 ) {
     val context = uiState.context
 
