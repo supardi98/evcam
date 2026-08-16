@@ -427,13 +427,24 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
     
     val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER } }
+
+    LaunchedEffect(previewView) {
+        androidx.compose.runtime.snapshotFlow { previewView.previewStreamState.value }
+            .collect { state ->
+                android.util.Log.d("EvcamTiming", "[StreamState] PreviewView streamState changed to -> $state at ${System.currentTimeMillis()}ms")
+            }
+    }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
+        val t0 = System.currentTimeMillis()
+        android.util.Log.d("EvcamTiming", "[t0 = 0ms] State change trigger -> mode=$cameraMode, ratio=$aspectRatio")
         isTransitioningRatio = true
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
         
         cameraProviderFuture.addListener({
+            val t1 = System.currentTimeMillis() - t0
+            android.util.Log.d("EvcamTiming", "[t1 = ${t1}ms] ProcessCameraProvider listener callback fired")
             val cameraProvider = cameraProviderFuture.get()
             val preview = Preview.Builder().apply {
                 if (cameraMode == CameraMode.VIDEO) {
@@ -470,12 +481,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             
             var boundCamera: androidx.camera.core.Camera? = null
             try {
+                val tUnbindStart = System.currentTimeMillis() - t0
                 cameraProvider.unbindAll()
+                val tUnbindEnd = System.currentTimeMillis() - t0
+                android.util.Log.d("EvcamTiming", "[t2 = ${tUnbindEnd}ms] cameraProvider.unbindAll() took ${tUnbindEnd - tUnbindStart}ms")
+
                 boundCamera = if (cameraMode == CameraMode.VIDEO) {
                     cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, videoCap)
                 } else {
                     cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCap, imageAnalysis)
                 }
+                val tBindEnd = System.currentTimeMillis() - t0
+                android.util.Log.d("EvcamTiming", "[t3 = ${tBindEnd}ms] cameraProvider.bindToLifecycle() took ${tBindEnd - tUnbindEnd}ms")
             } catch (e: Exception) {
                 e.printStackTrace()
                 android.util.Log.e("Evcam", "Use case binding failed, falling back to preview", e)
@@ -521,6 +538,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }, executor)
 
         kotlinx.coroutines.delay(380)
+        val tFinal = System.currentTimeMillis() - t0
+        android.util.Log.d("EvcamTiming", "[t_final = ${tFinal}ms] isTransitioningRatio set to false")
         isTransitioningRatio = false
     }
 
