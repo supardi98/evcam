@@ -231,6 +231,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var timerMode by remember { mutableStateOf(TimerMode.valueOf(prefs.getString("timerMode", TimerMode.OFF.name) ?: TimerMode.OFF.name)) }
     var showVirtualHorizon by remember { mutableStateOf(prefs.getBoolean("showVirtualHorizon", true)) }
     var showZoomSlider by remember { mutableStateOf(false) }
+    var showBrightnessSlider by remember { mutableStateOf(false) }
+    var minExposureIndex by remember { mutableIntStateOf(-6) }
+    var maxExposureIndex by remember { mutableIntStateOf(6) }
+    var exposureStep by remember { mutableFloatStateOf(0.3333f) }
+    var exposureIndex by remember { mutableIntStateOf(0) }
     var isTorchOn by remember { mutableStateOf(false) }
     var volumeShutterEnabled by remember { mutableStateOf(prefs.getBoolean("volumeShutterEnabled", true)) }
     
@@ -420,6 +425,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     cameraControl?.setZoomRatio(currentZoom)
                 }
                 
+                val expState = camera.cameraInfo.exposureState
+                if (expState.isExposureCompensationSupported) {
+                    minExposureIndex = expState.exposureCompensationRange.lower
+                    maxExposureIndex = expState.exposureCompensationRange.upper
+                    exposureStep = expState.exposureCompensationStep.toFloat()
+                }
             } catch (e: Exception) {
                 Log.e("Evcam", "Use case binding failed", e)
             }
@@ -605,6 +616,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                 isFocusAuto = true
                                 focusOffset = Offset(e.x, e.y)
                                 showFocusBox = true
+                                showZoomSlider = true
+                                showBrightnessSlider = true
                                 focusState = FocusState.SEARCHING
                                 val factory = previewView.meteringPointFactory
                                 val point = factory.createPoint(e.x, e.y)
@@ -819,6 +832,43 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 )
             }
         }
+
+        if (showBrightnessSlider && maxExposureIndex > minExposureIndex) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(250.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Slider(
+                        value = exposureIndex.toFloat(),
+                        onValueChange = {
+                            exposureIndex = it.toInt()
+                            cameraControl?.setExposureCompensationIndex(exposureIndex)
+                            isProMode = true
+                        },
+                        valueRange = minExposureIndex.toFloat()..maxExposureIndex.toFloat(),
+                        modifier = Modifier
+                            .requiredWidth(250.dp)
+                            .graphicsLayer { rotationZ = 270f }
+                    )
+                }
+                val evVal = exposureIndex * exposureStep
+                Text(
+                    text = String.format(Locale.US, "%+.1f EV", evVal),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
         
 
         if (showShutterFlash) {
@@ -1005,17 +1055,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("MANUAL CONTROLS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Icon(
-                            imageVector = Icons.Default.Close, 
-                            contentDescription = "Collapse", 
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp).clickable { showProPanel = false }
-                        )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                         Text("ISO", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-                        Slider(value = iso, onValueChange = { isIsoAuto = false; iso = it }, valueRange = 50f..3200f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                        Slider(
+                            value = iso, 
+                            onValueChange = { isIsoAuto = false; iso = it; isProMode = true }, 
+                            valueRange = 50f..12800f, 
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                        )
                         Text(
                             text = if (isIsoAuto) "AUTO" else "${iso.toInt()}", 
                             color = if (isIsoAuto) Color.Yellow else Color.White, 
@@ -1177,36 +1226,59 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 
                 Spacer(modifier = Modifier.width(16.dp))
                 
+                val hasManualPro = !isIsoAuto || !isShutterAuto || !isFocusAuto || whiteBalance != CaptureRequest.CONTROL_AWB_MODE_AUTO || exposureIndex != 0
+                
+                LaunchedEffect(hasManualPro) {
+                    if (hasManualPro) {
+                        isProMode = true
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .height(40.dp)
                         .clip(CircleShape)
-                        .background(if (isProMode) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
+                        .background(if (isProMode || hasManualPro) Color.Yellow.copy(alpha = 0.2f) else Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
-                            isProMode = !isProMode 
-                            if (isProMode) showProPanel = true
+                            showProPanel = !showProPanel 
+                            if (showProPanel) isProMode = true
                         }
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "PRO",
-                        color = if (isProMode) Color.Yellow else Color.LightGray,
-                        fontWeight = if (isProMode) FontWeight.Bold else FontWeight.Normal
+                        color = if (isProMode || hasManualPro) Color.Yellow else Color.LightGray,
+                        fontWeight = if (isProMode || hasManualPro) FontWeight.Bold else FontWeight.Normal
                     )
                 }
 
-                if (isProMode && !showProPanel && !showSettings) {
+                if (hasManualPro || isProMode) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(Color.DarkGray.copy(alpha = 0.5f))
-                            .clickable { showProPanel = true },
+                            .clickable { 
+                                // Auto-kan semua fitur pro (reset to AUTO)
+                                isIsoAuto = true
+                                isShutterAuto = true
+                                isFocusAuto = true
+                                whiteBalance = CaptureRequest.CONTROL_AWB_MODE_AUTO
+                                exposureIndex = 0
+                                cameraControl?.setExposureCompensationIndex(0)
+                                isProMode = false
+                                showProPanel = false
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Adjust Settings", tint = Color.Yellow, modifier = Modifier.size(20.dp))
+                        Icon(
+                            imageVector = Icons.Default.Close, 
+                            contentDescription = "Auto all Pro settings", 
+                            tint = Color.Yellow, 
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
