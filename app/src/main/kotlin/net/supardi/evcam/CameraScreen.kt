@@ -287,6 +287,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var videoFps by remember { mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name)) }
     var imageFormat by remember { mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name)) }
     
+    val targetRatio = if (cameraMode == CameraMode.VIDEO) {
+        9f / 16f
+    } else {
+        when (aspectRatio) {
+            AspectRatioMode.RATIO_16_9 -> 9f / 16f
+            AspectRatioMode.RATIO_4_3 -> 3f / 4f
+            AspectRatioMode.RATIO_1_1 -> 1f
+        }
+    }
+
+    val animatedAspectRatio by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = targetRatio,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "AspectRatioAnimation"
+    )
+    
     var imageCaptureUseCase by remember { mutableStateOf<ImageCapture?>(null) }
     var videoCaptureUseCase by remember { mutableStateOf<androidx.camera.video.VideoCapture<Recorder>?>(null) }
     
@@ -656,17 +672,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .align(Alignment.Center)
             .clipToBounds()
-            .aspectRatio(
-                if (cameraMode == CameraMode.VIDEO) {
-                    9f / 16f
-                } else {
-                    when (aspectRatio) {
-                        AspectRatioMode.RATIO_16_9 -> 9f / 16f
-                        AspectRatioMode.RATIO_4_3 -> 3f / 4f
-                        AspectRatioMode.RATIO_1_1 -> 1f
-                    }
-                }
-            )
+            .aspectRatio(animatedAspectRatio)
         ) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
