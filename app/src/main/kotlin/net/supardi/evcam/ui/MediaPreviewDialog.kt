@@ -83,7 +83,8 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
             MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.WIDTH,
             MediaStore.Images.Media.HEIGHT,
-            MediaStore.Images.Media.MIME_TYPE
+            MediaStore.Images.Media.MIME_TYPE,
+            MediaStore.Images.Media.ORIENTATION
         )
 
         context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
@@ -91,9 +92,36 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                 val name = try { cursor.getString(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.DISPLAY_NAME else MediaStore.Images.Media.DISPLAY_NAME)) ?: "" } catch (e: Exception) { "" }
                 val size = try { cursor.getLong(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.SIZE else MediaStore.Images.Media.SIZE)) } catch (e: Exception) { 0L }
                 val date = try { cursor.getLong(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.DATE_ADDED else MediaStore.Images.Media.DATE_ADDED)) } catch (e: Exception) { 0L }
-                val width = try { cursor.getInt(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.WIDTH else MediaStore.Images.Media.WIDTH)) } catch (e: Exception) { 0 }
-                val height = try { cursor.getInt(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.HEIGHT else MediaStore.Images.Media.HEIGHT)) } catch (e: Exception) { 0 }
+                var width = try { cursor.getInt(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.WIDTH else MediaStore.Images.Media.WIDTH)) } catch (e: Exception) { 0 }
+                var height = try { cursor.getInt(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.HEIGHT else MediaStore.Images.Media.HEIGHT)) } catch (e: Exception) { 0 }
                 val mime = try { cursor.getString(cursor.getColumnIndexOrThrow(if (isVideo) MediaStore.Video.Media.MIME_TYPE else MediaStore.Images.Media.MIME_TYPE)) ?: "" } catch (e: Exception) { "" }
+                
+                // Read rotation to determine if we should swap width and height
+                var rotation = 0
+                try {
+                    if (isVideo) {
+                        val retriever = android.media.MediaMetadataRetriever()
+                        retriever.setDataSource(context, uri)
+                        val rotStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                        if (rotStr != null) {
+                            rotation = rotStr.toInt()
+                        }
+                        retriever.release()
+                    } else {
+                        rotation = try {
+                            cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.ORIENTATION))
+                        } catch (e: Exception) { 0 }
+                    }
+                } catch (e: Exception) {}
+
+
+                // If portrait rotation, swap width and height
+                if (rotation == 90 || rotation == 270) {
+                    val temp = width
+                    width = height
+                    height = temp
+                }
+
                 val duration = if (isVideo) {
                     try {
                         val ms = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION))
@@ -138,6 +166,7 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
         MediaInfo()
     }
 }
+
 
 
 
