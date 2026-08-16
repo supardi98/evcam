@@ -240,6 +240,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var minZoomRatio by remember { mutableFloatStateOf(1f) }
     var maxZoomRatio by remember { mutableFloatStateOf(1f) }
     var currentZoom by remember { mutableFloatStateOf(1f) }
+    val zoomAnim = remember { androidx.compose.animation.core.Animatable(1f) }
     
     var focusOffset by remember { mutableStateOf<Offset?>(null) }
     var showFocusBox by remember { mutableStateOf(false) }
@@ -514,9 +515,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     minZoomRatio = zoomState.minZoomRatio
                     maxZoomRatio = zoomState.maxZoomRatio
                     if (currentZoom < minZoomRatio || currentZoom > maxZoomRatio) {
-                        currentZoom = 1f.coerceIn(minZoomRatio, maxZoomRatio)
+                        coroutineScope.launch { zoomAnim.snapTo(1f.coerceIn(minZoomRatio, maxZoomRatio)) }
                     }
-                    cameraControl?.setZoomRatio(currentZoom)
+                    cameraControl?.setZoomRatio(zoomAnim.value)
                 }
                 
                 val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camera.cameraInfo)
@@ -551,24 +552,23 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         isTransitioningRatio = false
     }
 
-    // Preset zoom target (animated) — only used when user taps 1x/2x/5x buttons
-    var presetZoom by remember { mutableFloatStateOf(1f) }
-    val animatedPresetZoom by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = presetZoom,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 280, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-        label = "PresetLensZoom",
-        finishedListener = { /* animation done, currentZoom is already up-to-date */ }
-    )
+    // Single Animatable for zoom:
+    // - gesture (pinch/drag/slider): zoomAnim.snapTo() — instant, cancels any running animation
+    // - preset button (1x/2x/5x):   zoomAnim.animateTo() — smooth 280ms easing
 
-    // Sync animated preset value into currentZoom so camera follows smoothly
-    LaunchedEffect(animatedPresetZoom) {
-        currentZoom = animatedPresetZoom
+    // Apply zoom to camera whenever zoomAnim.value changes (from animation OR snap)
+    LaunchedEffect(zoomAnim) {
+        androidx.compose.runtime.snapshotFlow { zoomAnim.value }
+            .collect { value ->
+                currentZoom = value
+                cameraControl?.setZoomRatio(value)
+            }
+    }
+    // Also re-apply when cameraControl changes (new camera bound)
+    LaunchedEffect(cameraControl) {
+        cameraControl?.setZoomRatio(zoomAnim.value)
     }
 
-    // Direct camera zoom — always applied immediately (no animation for gesture zoom)
-    LaunchedEffect(currentZoom, cameraControl) {
-        cameraControl?.setZoomRatio(currentZoom)
-    }
     
     val executeCapture = {
         if (cameraMode == CameraMode.PHOTO) {
@@ -732,10 +732,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                             override fun onScale(detector: ScaleGestureDetector): Boolean {
                                 showZoomSlider = true
-                                // Pinch: direct, no animation
-                                val newZoom = (currentZoom * detector.scaleFactor).coerceIn(minZoomRatio, maxZoomRatio)
-                                currentZoom = newZoom
-                                presetZoom = newZoom  // keep preset in sync so next button tap animates from here
+                                // Pinch: snapTo = instant, cancels any running preset animation
+                                val newZoom = (zoomAnim.value * detector.scaleFactor).coerceIn(minZoomRatio, maxZoomRatio)
+                                coroutineScope.launch { zoomAnim.snapTo(newZoom) }
                                 return true
                             }
                         })
@@ -1075,8 +1074,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     contentAlignment = Alignment.Center
                 ) {
                     Slider(
-                        value = currentZoom,
-                        onValueChange = { currentZoom = it },
+                        value = zoomAnim.value,
+                        onValueChange = { coroutineScope.launch { zoomAnim.snapTo(it) } },
                         valueRange = minZoomRatio..maxZoomRatio,
                         modifier = Modifier
                             .requiredWidth(250.dp)
@@ -1563,15 +1562,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(if (presetZoom == zoomVal) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
+                                .background(if (kotlin.math.abs(zoomAnim.value - zoomVal) < 0.05f) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
                                 .clickable {
-                                    presetZoom = zoomVal  // animated transition to preset
+                                    coroutineScope.launch {
+                                        zoomAnim.snapTo(zoomAnim.value) // start from current
+                                        zoomAnim.animateTo(
+                                            targetValue = zoomVal,
+                                            animationSpec = androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                        )
+                                    }
                                 }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = label, 
-                                color = if (presetZoom == zoomVal) Color.Yellow else Color.White,
+                                color = if (kotlin.math.abs(zoomAnim.value - zoomVal) < 0.05f) Color.Yellow else Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
@@ -1785,9 +1790,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 },
                 onDragZoom = { deltaY ->
                     val zoomStep = (deltaY / 300f) * (maxZoomRatio - minZoomRatio)
-                    val newZoom = (currentZoom + zoomStep).coerceIn(minZoomRatio, maxZoomRatio)
-                    currentZoom = newZoom    // drag: direct, no animation
-                    presetZoom = newZoom     // keep preset in sync
+                    val newZoom = (zoomAnim.value + zoomStep).coerceIn(minZoomRatio, maxZoomRatio)
+                    coroutineScope.launch { zoomAnim.snapTo(newZoom) }
                 },
                 onSwitchCamera = {
                     if (!isRecording) {
