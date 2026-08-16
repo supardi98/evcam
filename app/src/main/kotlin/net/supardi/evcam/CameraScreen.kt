@@ -1587,8 +1587,19 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
-                            if (lastCapturedUri != null) {
+                            val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
+                            if (targetUri != null) {
+                                lastCapturedUri = targetUri
                                 showMediaPreviewDialog = true
+                            } else {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -1761,66 +1772,70 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         
         if (showMediaPreviewDialog && lastCapturedUri != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .clickable { showMediaPreviewDialog = false },
-                contentAlignment = Alignment.Center
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showMediaPreviewDialog = false },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                AsyncImage(
-                    model = lastCapturedUri,
-                    contentDescription = "Full Preview",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp, start = 16.dp, end = 16.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center
                 ) {
-                    IconButton(
-                        onClick = { showMediaPreviewDialog = false },
+                    AsyncImage(
+                        model = lastCapturedUri,
+                        contentDescription = "Full Preview",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    Row(
                         modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.5f))
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp, start = 16.dp, end = 16.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp))
+                        IconButton(
+                            onClick = { showMediaPreviewDialog = false },
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.5f))
+                        ) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(24.dp))
+                        }
                     }
-                }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 36.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Button(
-                        onClick = {
-                            lastCapturedUri?.let { uri ->
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(uri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 36.dp),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = {
+                                lastCapturedUri?.let { uri ->
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(uri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
