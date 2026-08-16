@@ -4,6 +4,7 @@ import net.supardi.evcam.ui.*
 import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 
 import android.annotation.SuppressLint
@@ -523,7 +524,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }, executor)
 
-        kotlinx.coroutines.delay(450)
+        var isReady = false
+        val startMs = System.currentTimeMillis()
+        while (!isReady && System.currentTimeMillis() - startMs < 750) {
+            if (previewView.previewStreamState.value == PreviewView.StreamState.STREAMING) {
+                kotlinx.coroutines.delay(80)
+                isReady = true
+            } else {
+                kotlinx.coroutines.delay(30)
+            }
+        }
         transitionFreezeBitmap = null
     }
 
@@ -774,15 +784,24 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = transitionFreezeBitmap != null,
                 enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(100)),
-                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300))
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(350))
             ) {
                 transitionFreezeBitmap?.let { bmp ->
-                    Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = "Freeze Frame Transition",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = "Freeze Frame Transition",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .blur(16.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.35f))
+                        )
+                    }
                 }
             }
             
