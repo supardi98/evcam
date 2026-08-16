@@ -461,22 +461,24 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             val cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
             
-            var finalCameraSelector = cameraSelector
-            try {
-                val extensionsManager = androidx.camera.extensions.ExtensionsManager.getInstanceAsync(context, cameraProvider).get()
-                
-                // Extract supported extensions
-                uiState.hasNightExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
-                uiState.hasHdrExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
-                
-                if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && uiState.hasNightExtension) {
-                    finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
-                } else if (isHdrEnabled && cameraMode == CameraMode.PHOTO && uiState.hasHdrExtension) {
-                    finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
+            val extensionsManagerFuture = androidx.camera.extensions.ExtensionsManager.getInstanceAsync(context, cameraProvider)
+            extensionsManagerFuture.addListener({
+                var finalCameraSelector = cameraSelector
+                try {
+                    val extensionsManager = extensionsManagerFuture.get()
+                    
+                    // Extract supported extensions
+                    uiState.hasNightExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
+                    uiState.hasHdrExtension = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
+                    
+                    if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && uiState.hasNightExtension) {
+                        finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
+                    } else if (isHdrEnabled && cameraMode == CameraMode.PHOTO && uiState.hasHdrExtension) {
+                        finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("Evcam", "Failed to initialize ExtensionsManager", e)
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("Evcam", "Failed to initialize ExtensionsManager", e)
-            }
             
             var boundCamera: androidx.camera.core.Camera? = null
             try {
@@ -548,6 +550,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     exposureStep = expState.exposureCompensationStep.toFloat()
                 }
             }
+            }, executor)
         }, executor)
 
         val startMs = System.currentTimeMillis()

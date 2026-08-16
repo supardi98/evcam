@@ -111,7 +111,7 @@ class CameraUiState(
     var aspectRatio by mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_4_3.name) ?: AspectRatioMode.RATIO_4_3.name))
     var videoQuality by mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name))
     var videoFps by mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name))
-    var videoAudioEnabled by mutableStateOf(prefs.getBoolean("videoAudioEnabled", true))
+    var videoAudioEnabled by mutableStateOf(true)
     var isNightModeEnabled by mutableStateOf(prefs.getBoolean("isNightModeEnabled", false))
     var isHdrEnabled by mutableStateOf(prefs.getBoolean("isHdrEnabled", false))
     var selectedFilter by mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name))
@@ -164,7 +164,6 @@ fun rememberCameraUiState(
     LaunchedEffect(state.aspectRatio) { prefs.edit().putString("aspectRatio", state.aspectRatio.name).apply() }
     LaunchedEffect(state.videoQuality) { prefs.edit().putString("videoQuality", state.videoQuality.name).apply() }
     LaunchedEffect(state.videoFps) { prefs.edit().putString("videoFps", state.videoFps.name).apply() }
-    LaunchedEffect(state.videoAudioEnabled) { prefs.edit().putBoolean("videoAudioEnabled", state.videoAudioEnabled).apply() }
     LaunchedEffect(state.isNightModeEnabled) { prefs.edit().putBoolean("isNightModeEnabled", state.isNightModeEnabled).apply() }
     LaunchedEffect(state.selectedFilter) { prefs.edit().putString("selectedFilter", state.selectedFilter.name).apply() }
     LaunchedEffect(state.imageFormat) { prefs.edit().putString("imageFormat", state.imageFormat.name).apply() }
