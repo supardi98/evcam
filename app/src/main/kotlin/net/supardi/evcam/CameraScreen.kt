@@ -317,7 +317,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var videoQuality by remember { mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name)) }
     var videoFps by remember { mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name)) }
     var videoAudioEnabled by remember { mutableStateOf(prefs.getBoolean("videoAudioEnabled", true)) }
+    var isNightModeEnabled by remember { mutableStateOf(prefs.getBoolean("isNightModeEnabled", false)) }
     var imageFormat by remember { mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name)) }
+
 
     
     val targetRatio = if (cameraMode == CameraMode.VIDEO) {
@@ -409,7 +411,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(videoQuality) { prefs.edit().putString("videoQuality", videoQuality.name).apply() }
     LaunchedEffect(videoFps) { prefs.edit().putString("videoFps", videoFps.name).apply() }
     LaunchedEffect(videoAudioEnabled) { prefs.edit().putBoolean("videoAudioEnabled", videoAudioEnabled).apply() }
+    LaunchedEffect(isNightModeEnabled) { prefs.edit().putBoolean("isNightModeEnabled", isNightModeEnabled).apply() }
     LaunchedEffect(imageFormat) { prefs.edit().putString("imageFormat", imageFormat.name).apply() }
+
 
 
     
@@ -473,7 +477,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
     }
     
-    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality, videoFps) {
+    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality, videoFps, isNightModeEnabled) {
         val t0 = System.currentTimeMillis()
         android.util.Log.d("EvcamTiming", "[t0 = 0ms] State change trigger -> mode=$cameraMode, ratio=$aspectRatio, fps=${videoFps.fps}")
         isTransitioningRatio = true
@@ -505,7 +509,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }.build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
-
             
             @Suppress("DEPRECATION")
             val imageCapBuilder = ImageCapture.Builder().apply {
@@ -518,7 +521,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 android.hardware.camera2.CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON
             )
             val imageCap = imageCapBuilder.build()
-
 
             
             val qualitySelector = QualitySelector.from(
@@ -543,6 +545,17 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             val cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
             
+            var finalCameraSelector = cameraSelector
+            try {
+                val extensionsManager = androidx.camera.extensions.ExtensionsManager.getInstanceAsync(context, cameraProvider).get()
+                if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && 
+                    extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)) {
+                    finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Evcam", "Failed to initialize ExtensionsManager", e)
+            }
+            
             var boundCamera: androidx.camera.core.Camera? = null
             try {
                 val tUnbindStart = System.currentTimeMillis() - t0
@@ -551,10 +564,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 android.util.Log.d("EvcamTiming", "[t2 = ${tUnbindEnd}ms] cameraProvider.unbindAll() took ${tUnbindEnd - tUnbindStart}ms")
 
                 boundCamera = if (cameraMode == CameraMode.VIDEO) {
-                    cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, videoCap)
+                    cameraProvider.bindToLifecycle(lifecycleOwner, finalCameraSelector, preview, videoCap)
                 } else {
-                    cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCap, imageAnalysis)
+                    cameraProvider.bindToLifecycle(lifecycleOwner, finalCameraSelector, preview, imageCap, imageAnalysis)
                 }
+
                 val tBindEnd = System.currentTimeMillis() - t0
                 android.util.Log.d("EvcamTiming", "[t3 = ${tBindEnd}ms] cameraProvider.bindToLifecycle() took ${tBindEnd - tUnbindEnd}ms")
             } catch (e: Exception) {
@@ -1421,8 +1435,28 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
 
                 if (cameraMode == CameraMode.PHOTO) {
-
                     Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { isNightModeEnabled = !isNightModeEnabled },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Display moon emoji as night mode button indicator
+                        val emoji = "🌙"
+                        val backgroundAlpha = if (isNightModeEnabled) 0.3f else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = emoji, fontSize = 20.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+
                     IconButton(onClick = {
                         timerMode = when (timerMode) {
                             TimerMode.OFF -> TimerMode.SEC_3
