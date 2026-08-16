@@ -430,9 +430,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     } }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
-        val lastBmp = try { previewView.bitmap } catch (e: Exception) { null }
-        if (lastBmp != null) {
-            transitionFreezeBitmap = lastBmp
+        val rawBmp = try { previewView.bitmap } catch (e: Exception) { null }
+        if (rawBmp != null) {
+            val w = (rawBmp.width / 6).coerceAtLeast(1)
+            val h = (rawBmp.height / 6).coerceAtLeast(1)
+            transitionFreezeBitmap = android.graphics.Bitmap.createScaledBitmap(rawBmp, w, h, true)
         }
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val executor = ContextCompat.getMainExecutor(context)
@@ -792,9 +794,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             bitmap = bmp.asImageBitmap(),
                             contentDescription = "Freeze Frame Transition",
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .blur(16.dp)
+                            modifier = Modifier.fillMaxSize()
                         )
                         Box(
                             modifier = Modifier
