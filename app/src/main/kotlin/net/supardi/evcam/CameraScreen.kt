@@ -423,7 +423,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER } }
+    val previewView = remember { PreviewView(context).apply { 
+        scaleType = PreviewView.ScaleType.FIT_CENTER
+        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+    } }
     
     LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality) {
         val lastBmp = try { previewView.bitmap } catch (e: Exception) { null }
@@ -520,7 +523,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }, executor)
 
-        kotlinx.coroutines.delay(220)
+        kotlinx.coroutines.delay(450)
         transitionFreezeBitmap = null
     }
 
@@ -768,13 +771,19 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             )
 
-            if (transitionFreezeBitmap != null) {
-                Image(
-                    bitmap = transitionFreezeBitmap!!.asImageBitmap(),
-                    contentDescription = "Freeze Frame Transition",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+            androidx.compose.animation.AnimatedVisibility(
+                visible = transitionFreezeBitmap != null,
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(100)),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300))
+            ) {
+                transitionFreezeBitmap?.let { bmp ->
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "Freeze Frame Transition",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
             
             if (showWatermark && cameraMode == CameraMode.PHOTO) {
