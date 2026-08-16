@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +24,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -610,11 +612,60 @@ fun MediaPreviewDialog(
 
     // Gallery Grid Dialog
     if (showGalleryGrid && mediaList.isNotEmpty()) {
-        val gridState = rememberLazyGridState()
-        LaunchedEffect(Unit) {
-            val target = pagerState.currentPage.coerceAtMost(mediaList.size - 1)
-            gridState.scrollToItem(target)
+        // Filter state
+        var galleryFilter by remember { mutableStateOf(0) } // 0=All, 1=Photos, 2=Videos
+
+        // Filtered flat list: Pair(mediaItem, originalIndexInMediaList)
+        val filteredPairs = remember(galleryFilter, mediaList.size) {
+            mediaList.mapIndexed { i, item -> item to i }
+                .filter { (item, _) ->
+                    when (galleryFilter) {
+                        1 -> !item.isVideo
+                        2 -> item.isVideo
+                        else -> true
+                    }
+                }
         }
+
+        // Group by date label
+        fun dateLabel(epochSec: Long): String {
+            val cal = java.util.Calendar.getInstance()
+            val today = cal.clone() as java.util.Calendar
+            val itemCal = java.util.Calendar.getInstance().apply { timeInMillis = epochSec * 1000 }
+            return when {
+                today.get(java.util.Calendar.DAY_OF_YEAR) == itemCal.get(java.util.Calendar.DAY_OF_YEAR) &&
+                today.get(java.util.Calendar.YEAR) == itemCal.get(java.util.Calendar.YEAR) -> "Today"
+                today.get(java.util.Calendar.DAY_OF_YEAR) - 1 == itemCal.get(java.util.Calendar.DAY_OF_YEAR) &&
+                today.get(java.util.Calendar.YEAR) == itemCal.get(java.util.Calendar.YEAR) -> "Yesterday"
+                else -> java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.ENGLISH)
+                    .format(java.util.Date(epochSec * 1000))
+            }
+        }
+
+        // Build flat list: null = date header string, non-null = Pair<MediaItem, Int>
+        data class GalleryRow(val header: String? = null, val entry: Pair<MediaItem, Int>? = null)
+        val flatRows = remember(filteredPairs) {
+            val result = mutableListOf<GalleryRow>()
+            var lastLabel = ""
+            filteredPairs.forEach { pair ->
+                val label = dateLabel(pair.first.dateAdded)
+                if (label != lastLabel) {
+                    result.add(GalleryRow(header = label))
+                    lastLabel = label
+                }
+                result.add(GalleryRow(entry = pair))
+            }
+            result
+        }
+
+        val gridState = rememberLazyGridState()
+        LaunchedEffect(showGalleryGrid) {
+            // Scroll to current item's approximate position in the flat list
+            val currentUri = mediaList.getOrNull(pagerState.currentPage)?.uri
+            val targetRow = flatRows.indexOfFirst { it.entry?.first?.uri == currentUri }
+            if (targetRow >= 0) gridState.scrollToItem(targetRow)
+        }
+
         Dialog(
             onDismissRequest = { showGalleryGrid = false },
             properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true)
@@ -622,10 +673,10 @@ fun MediaPreviewDialog(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.95f))
+                    .background(Color(0xFF0A0A0A))
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Header
+                    // ── Header ───────────────────────────────────────────────
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -634,76 +685,147 @@ fun MediaPreviewDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Semua Media (${mediaList.size})",
+                            text = "All Media (${filteredPairs.size})",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 17.sp
                         )
                         IconButton(onClick = { showGalleryGrid = false }) {
-                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
                         }
                     }
 
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        state = gridState,
-                        contentPadding = PaddingValues(2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        modifier = Modifier.fillMaxSize()
+                    // ── Filter Tabs ───────────────────────────────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(mediaList.size) { idx ->
-                            val item = mediaList[idx]
-                            val isSelected = idx == pagerState.currentPage
+                        listOf("All", "Photos", "Videos").forEachIndexed { idx, label ->
+                            val selected = galleryFilter == idx
                             Box(
                                 modifier = Modifier
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .then(
-                                        if (isSelected) Modifier.border(2.dp, Color.Yellow, RoundedCornerShape(2.dp))
-                                        else Modifier
-                                    )
-                                    .clickable {
-                                        showGalleryGrid = false
-                                        scope.launch { pagerState.scrollToPage(idx) }
-                                    },
-                                contentAlignment = Alignment.Center
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (selected) Color.White else Color.White.copy(alpha = 0.1f))
+                                    .clickable { galleryFilter = idx }
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
                             ) {
-                                AsyncImage(
-                                    model = item.uri,
-                                    imageLoader = imageLoader,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                Text(
+                                    text = label,
+                                    color = if (selected) Color.Black else Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                 )
-                                // Video badge
-                                if (item.isVideo) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomStart)
-                                            .padding(4.dp)
-                                            .size(20.dp)
-                                            .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.6f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp)
+                            }
+                        }
+                    }
+
+                    // ── Grid with scrollbar ───────────────────────────────────
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            state = gridState,
+                            contentPadding = PaddingValues(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            flatRows.forEachIndexed { rowIdx, row ->
+                                if (row.header != null) {
+                                    // Full-width date header
+                                    item(span = { GridItemSpan(maxLineSpan) }, key = "header_$rowIdx") {
+                                        Text(
+                                            text = row.header,
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 6.dp)
                                         )
                                     }
-                                }
-                                // Selected highlight overlay
-                                if (isSelected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Yellow.copy(alpha = 0.15f))
-                                    )
+                                } else if (row.entry != null) {
+                                    val (item, originalIdx) = row.entry
+                                    item(key = "item_${item.uri}") {
+                                        val isSelected = originalIdx == pagerState.currentPage
+                                        Box(
+                                            modifier = Modifier
+                                                .aspectRatio(1f)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .then(
+                                                    if (isSelected) Modifier.border(2.dp, Color.Yellow, RoundedCornerShape(2.dp))
+                                                    else Modifier
+                                                )
+                                                .clickable {
+                                                    showGalleryGrid = false
+                                                    scope.launch { pagerState.scrollToPage(originalIdx) }
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AsyncImage(
+                                                model = item.uri,
+                                                imageLoader = imageLoader,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                            if (item.isVideo) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.BottomStart)
+                                                        .padding(4.dp)
+                                                        .size(20.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.Black.copy(alpha = 0.6f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                            if (isSelected) {
+                                                Box(modifier = Modifier.fillMaxSize().background(Color.Yellow.copy(alpha = 0.15f)))
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                        }
+
+                        // ── Scrollbar indicator ───────────────────────────────
+                        val totalItems = flatRows.size.coerceAtLeast(1)
+                        val layoutInfo = gridState.layoutInfo
+                        val visibleCount = layoutInfo.visibleItemsInfo.size.coerceAtLeast(1)
+                        val firstIdx = gridState.firstVisibleItemScrollOffset
+                        val thumbHeightFraction = (visibleCount.toFloat() / totalItems.toFloat()).coerceIn(0.05f, 1f)
+                        val scrollFraction = if (totalItems > visibleCount)
+                            (gridState.firstVisibleItemIndex.toFloat() / (totalItems - visibleCount).toFloat()).coerceIn(0f, 1f)
+                        else 0f
+
+                        Canvas(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .width(4.dp)
+                                .padding(vertical = 8.dp)
+                        ) {
+                            val trackH = size.height
+                            val thumbH = trackH * thumbHeightFraction
+                            val thumbTop = (trackH - thumbH) * scrollFraction
+                            // Track
+                            drawRoundRect(
+                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f),
+                                size = size
+                            )
+                            // Thumb
+                            drawRoundRect(
+                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.45f),
+                                topLeft = androidx.compose.ui.geometry.Offset(0f, thumbTop),
+                                size = androidx.compose.ui.geometry.Size(size.width, thumbH),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f)
+                            )
                         }
                     }
                 }

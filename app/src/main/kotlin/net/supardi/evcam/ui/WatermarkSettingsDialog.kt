@@ -3,9 +3,10 @@ package net.supardi.evcam.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 
 import androidx.compose.material3.ButtonDefaults
@@ -64,12 +65,14 @@ fun WatermarkSettingsDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 if (showWatermark) {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
+                    val scrollState = androidx.compose.foundation.rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 320.dp)
+                            .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(watermarkElements.size) { index ->
-                            val element = watermarkElements[index]
+                        watermarkElements.forEachIndexed { index, element ->
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -189,31 +192,29 @@ fun WatermarkSettingsDialog(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
-                            
+
                         }
-                        
-                        item {
-                            Box {
-                                Button(
-                                    onClick = { showAddMenu = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                                ) {
-                                    Text("+ Add Element", color = Color.White)
-                                }
-                                androidx.compose.material3.DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                                    WatermarkElementType.values().forEach { type ->
-                                        androidx.compose.material3.DropdownMenuItem(
-                                            text = { Text(type.name) },
-                                            onClick = {
-                                                val newList = watermarkElements.toMutableList()
-                                                val content = if (type == WatermarkElementType.TEXT) "New Text" else type.name
-                                                newList.add(WatermarkElement(java.util.UUID.randomUUID().toString(), type, content, WatermarkQuadrant.BOTTOM_LEFT))
-                                                onWatermarkElementsChange(newList)
-                                                showAddMenu = false
-                                            }
-                                        )
-                                    }
+
+                        Box {
+                            Button(
+                                onClick = { showAddMenu = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+                            ) {
+                                Text("+ Add Element", color = Color.White)
+                            }
+                            androidx.compose.material3.DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                                WatermarkElementType.values().forEach { type ->
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text(type.name) },
+                                        onClick = {
+                                            val newList = watermarkElements.toMutableList()
+                                            val content = if (type == WatermarkElementType.TEXT) "New Text" else type.name
+                                            newList.add(WatermarkElement(java.util.UUID.randomUUID().toString(), type, content, WatermarkQuadrant.BOTTOM_LEFT))
+                                            onWatermarkElementsChange(newList)
+                                            showAddMenu = false
+                                        }
+                                    )
                                 }
                             }
                         }
