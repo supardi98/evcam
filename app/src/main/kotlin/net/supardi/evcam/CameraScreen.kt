@@ -3,6 +3,7 @@ package net.supardi.evcam
 import net.supardi.evcam.ui.*
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.clipToBounds
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -650,6 +651,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         Box(modifier = Modifier
             .fillMaxWidth()
             .align(Alignment.Center)
+            .clipToBounds()
             .aspectRatio(
                 if (cameraMode == CameraMode.VIDEO) {
                     9f / 16f
