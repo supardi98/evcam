@@ -467,7 +467,7 @@ fun CameraInfoDialog(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.85f)
                 .padding(16.dp)
-                .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(20.dp))
                 .padding(16.dp)
         ) {
             if (selectedCamera != null) {
@@ -625,7 +625,7 @@ private fun VideoCaptureCard(info: CameraHardwareInfo) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .background(Color(0xFF2C2C2C), RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
             .padding(16.dp)
     ) {
         Text(
@@ -719,7 +719,7 @@ private fun DetailSection(label: String, value: String) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(label, color = Color.LightGray, fontSize = 13.sp)
         Box(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp)).padding(12.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp)).padding(12.dp)
         ) {
             Text(value, color = Color.White, fontSize = 14.sp)
         }

@@ -38,8 +38,8 @@ fun ColorFilterDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF1E1E1E).copy(alpha = 0.95f))
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black.copy(alpha = 0.85f))
                 .padding(20.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

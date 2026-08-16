@@ -117,7 +117,7 @@ fun ExifInfoDialog(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.75f)
                 .padding(16.dp)
-                .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(20.dp))
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {

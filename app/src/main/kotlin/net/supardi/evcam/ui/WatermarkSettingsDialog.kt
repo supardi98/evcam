@@ -46,7 +46,7 @@ fun WatermarkSettingsDialog(
                 .fillMaxWidth(0.92f)
                 .wrapContentHeight()
                 .padding(16.dp)
-                .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(20.dp))
                 .padding(20.dp)
         ) {
             Column(modifier = Modifier.wrapContentHeight()) {
@@ -76,7 +76,7 @@ fun WatermarkSettingsDialog(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFF2E2E2E), RoundedCornerShape(8.dp))
+                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
                                     .padding(12.dp)
                             ) {
                                 Row(

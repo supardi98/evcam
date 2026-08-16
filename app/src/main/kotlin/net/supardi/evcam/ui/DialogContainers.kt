@@ -17,8 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import androidx.compose.ui.window.Dialog
 import net.supardi.evcam.logic.*
-
 
 @Composable
 fun DialogContainers(
@@ -78,21 +78,28 @@ fun DialogContainers(
             )
         }
         
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.8f))
-                .clickable { if (!isDownloading) uiState.showPluginManager = false },
-            contentAlignment = Alignment.Center
+        Dialog(
+            onDismissRequest = { if (!isDownloading) uiState.showPluginManager = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFF1E1E1E))
-                    .clickable(enabled = false) {}
-                    .padding(24.dp)
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = { if (!isDownloading) uiState.showPluginManager = false }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.Black.copy(alpha = 0.85f))
+                        .clickable(enabled = false) {}
+                        .padding(24.dp)
+                ) {
                 Text("Plugin Manager", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -124,6 +131,7 @@ fun DialogContainers(
                     Text("Close")
                 }
             }
+        }
         }
     }
 
