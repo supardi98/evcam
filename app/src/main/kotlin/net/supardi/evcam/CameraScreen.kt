@@ -616,6 +616,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
     }
+
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            recordingSeconds = 0
+            while (isRecording) {
+                delay(1000)
+                recordingSeconds++
+            }
+        }
+    }
     
     val initiateCapture = {
         if (countdownValue != null) {
