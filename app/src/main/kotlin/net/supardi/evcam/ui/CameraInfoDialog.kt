@@ -53,12 +53,17 @@ data class CameraHardwareInfo(
     val eisSupport: Boolean,
     val aeLock: Boolean,
     val wbLock: Boolean,
+    val filterColorArrangement: String,
+    val cropFactor: String,
+    val fieldOfView: String,
+    val exposureModes: String,
     val capabilities: String,
     val afModes: String,
     val awbModes: String,
     val sceneModes: String,
     val colorEffects: String,
     val maxFaceCount: String,
+    val faceDetectMode: String,
     val camera2ApiLevel: String,
     val videoProfiles: String,
     val maxFrameRate: String,
@@ -120,23 +125,58 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
             
             var sensorStr = "N/A"
             var eqFocalLenStr = "N/A"
+            var cropFactorStr = "N/A"
+            var fovStr = "N/A"
             val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
             val focalStr = if (focalLengths != null && focalLengths.isNotEmpty()) "ƒ/${chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)?.get(0)} • ${focalLengths[0]} mm" else "N/A"
+            val focalLenOnlyStr = if (focalLengths != null && focalLengths.isNotEmpty()) "${focalLengths[0]} mm" else "N/A"
 
             if (physicalSize != null) {
                 // Calculate diagonal in mm
                 val diagonal = kotlin.math.sqrt((physicalSize.width * physicalSize.width + physicalSize.height * physicalSize.height).toDouble())
                 // Optical format fraction (rule of thumb: 16mm diagonal = 1 inch type)
                 val opticalFormat = 16.0 / diagonal
-                sensorStr = "1/%.1f\"".format(opticalFormat)
+                sensorStr = "1/%.1f\"\n%.2f x %.2f mm".format(opticalFormat, physicalSize.width, physicalSize.height)
+                
+                // Crop factor
+                val cropFactorVal = 43.27 / diagonal
+                cropFactorStr = "%.1fx".format(cropFactorVal).replace(",0", "").replace(".0", "")
                 
                 // 35mm equivalent focal length
                 if (focalLengths != null && focalLengths.isNotEmpty()) {
-                    val cropFactor = 43.27 / diagonal
-                    val eqFocal = focalLengths[0] * cropFactor
+                    val eqFocal = focalLengths[0] * cropFactorVal
                     eqFocalLenStr = "%.0f mm".format(eqFocal)
+                    
+                    val fovRad = 2 * kotlin.math.atan((physicalSize.width / (2 * focalLengths[0])).toDouble())
+                    val fovDeg = Math.toDegrees(fovRad)
+                    fovStr = "%.1f° Horizontal".format(fovDeg)
                 }
             }
+            
+            val colorFilter = chars.get(CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT)
+            val colorFilterStr = when (colorFilter) {
+                CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB -> "RGGB"
+                CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG -> "GRBG"
+                CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GBRG -> "GBRG"
+                CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_BGGR -> "BGGR"
+                CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGB -> "RGB"
+                6 -> "MONO"
+                7 -> "NIR"
+                null -> "N/A"
+                else -> "Unknown ($colorFilter)"
+            }
+            
+            val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+            val aeModesStr = if (aeModes != null) {
+                val names = mutableListOf<String>()
+                if (aeModes.contains(CameraCharacteristics.CONTROL_AE_MODE_OFF)) names.add("Manual")
+                if (aeModes.contains(CameraCharacteristics.CONTROL_AE_MODE_ON)) names.add("Auto")
+                if (aeModes.contains(CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH)) names.add("Auto Flash")
+                if (aeModes.contains(CameraCharacteristics.CONTROL_AE_MODE_ON_ALWAYS_FLASH)) names.add("Always Flash")
+                if (aeModes.contains(CameraCharacteristics.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE)) names.add("Redeye Flash")
+                if (aeModes.contains(CameraCharacteristics.CONTROL_AE_MODE_ON_EXTERNAL_FLASH)) names.add("External Flash")
+                if (names.isNotEmpty()) names.joinToString(", ") else "N/A"
+            } else "N/A"
             
             val exposureRange = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
             val shutterStr = if (exposureRange != null) {
@@ -156,6 +196,15 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
             val aeLock = chars.get(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) ?: false
             val wbLock = chars.get(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE) ?: false
             val maxFaces = chars.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT) ?: 0
+            
+            val faceModes = chars.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES)
+            val faceDetectStr = if (faceModes != null) {
+                val names = mutableListOf<String>()
+                if (faceModes.contains(CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_OFF)) names.add("Off")
+                if (faceModes.contains(CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_SIMPLE)) names.add("simple")
+                if (faceModes.contains(CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_FULL)) names.add("Full")
+                if (names.isNotEmpty()) names.joinToString(", ") else "N/A"
+            } else "N/A"
             
             val apiLevel = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
             val apiLevelStr = when (apiLevel) {
@@ -367,12 +416,17 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                     eisSupport = hasEis,
                     aeLock = aeLock,
                     wbLock = wbLock,
+                    filterColorArrangement = colorFilterStr,
+                    cropFactor = cropFactorStr,
+                    fieldOfView = fovStr,
+                    exposureModes = aeModesStr,
                     capabilities = capsStr,
                     afModes = afModes,
                     awbModes = awbModes,
                     sceneModes = sceneModes,
                     colorEffects = colorEffects,
                     maxFaceCount = maxFaces.toString(),
+                    faceDetectMode = faceDetectStr,
                     camera2ApiLevel = apiLevelStr,
                     videoProfiles = videoProfiles,
                     maxFrameRate = "$maxFps fps",
@@ -618,31 +672,30 @@ private fun CameraDetailsDialog(info: CameraHardwareInfo, onBack: () -> Unit) {
         
         LazyColumn(modifier = Modifier.weight(1f).padding(top = 12.dp)) {
             item { DetailRow("Megapixels", info.megapixels) }
+            item { DetailRow("Effective megapixels", info.effectiveMegapixels) }
             item { DetailRow("Resolution", info.resolution) }
             item { DetailRow("Sensor size", info.sensorSize) }
             item { DetailRow("Pixel size", info.pixelSize) }
+            item { DetailRow("Filter color arrangement", info.filterColorArrangement) }
             item { DetailRow("Aperture", info.aperture) }
-            item { DetailRow("Focal length", info.focalLength) }
+            item { DetailRow("Focal length", info.focalLength.substringAfter("• ").trim()) }
+            item { DetailRow("35mm equivalent focal length", info.equivalentFocalLength) }
+            item { DetailRow("Crop factor", info.cropFactor) }
+            item { DetailRow("Field of view", info.fieldOfView) }
             item { DetailRow("Shutter speed", info.shutterSpeedRange) }
             item { DetailRow("ISO sensitivity range", info.isoRange) }
             
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
-            item { FeatureRow("Flash", info.flashSupport) }
-            item { FeatureRow("Electronic video stabilization", info.eisSupport) }
-            item { FeatureRow("Optical image stabilization", info.oisSupport) }
-            item { FeatureRow("AE lock", info.aeLock) }
-            item { FeatureRow("WB lock", info.wbLock) }
-            
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            
             item { DetailSection("Capabilities", info.capabilities) }
             item { DetailSection("Color effects", info.colorEffects) }
+            item { DetailSection("Exposure modes", info.exposureModes) }
             item { DetailSection("Autofocus modes", info.afModes) }
             item { DetailSection("White balance modes", info.awbModes) }
             item { DetailSection("Scene modes", info.sceneModes) }
             
             item { DetailRow("Max face count", info.maxFaceCount) }
+            item { DetailRow("Face detect mode", info.faceDetectMode) }
             item { DetailRow("Camera2 API support", info.camera2ApiLevel) }
         }
         
@@ -666,9 +719,9 @@ private fun DetailSection(label: String, value: String) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(label, color = Color.LightGray, fontSize = 13.sp)
         Box(
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp)).padding(12.dp)
         ) {
-            Text(value, color = Color.White, fontSize = 13.sp)
+            Text(value, color = Color.White, fontSize = 14.sp)
         }
     }
 }
