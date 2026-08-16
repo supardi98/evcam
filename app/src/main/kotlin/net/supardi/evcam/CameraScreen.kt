@@ -174,14 +174,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         val parsedUri = if (!saved.isNullOrEmpty()) Uri.parse(saved) else null
         mutableStateOf<Uri?>(parsedUri ?: fetchLatestMediaUri(context))
     }
-    var lastCapturedBitmap by remember {
-        mutableStateOf<android.graphics.Bitmap?>(
-            try {
-                val cacheFile = java.io.File(context.cacheDir, "last_photo.jpg")
-                if (cacheFile.exists()) android.graphics.BitmapFactory.decodeFile(cacheFile.absolutePath) else null
-            } catch (e: Exception) { null }
-        )
-    }
+    var lastCapturedBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     
     var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
     var camera2Control by remember { mutableStateOf<Camera2CameraControl?>(null) }
@@ -1795,15 +1788,6 @@ private fun takePhoto(
                                 }
                             }
                         
-                        try {
-                            val cacheFile = java.io.File(context.cacheDir, "last_photo.jpg")
-                            java.io.FileOutputStream(cacheFile).use { out ->
-                                resultBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
                             onPhotoSaved(resultBitmap, uri)
                         }
