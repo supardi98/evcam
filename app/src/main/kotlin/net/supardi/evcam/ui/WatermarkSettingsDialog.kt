@@ -10,6 +10,9 @@ import androidx.compose.material3.Button
 
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,12 +42,13 @@ fun WatermarkSettingsDialog(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight()
                 .padding(16.dp)
                 .background(Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
                 .padding(20.dp)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.wrapContentHeight()) {
                 Text("Advanced Watermark", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -175,7 +179,12 @@ fun WatermarkSettingsDialog(
                                             onWatermarkElementsChange(newList)
                                         }
                                     ) {
-                                        Text("✕", color = Color.Gray, fontSize = 16.sp)
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = "Remove",
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))

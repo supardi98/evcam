@@ -81,8 +81,12 @@ fun TopCameraBar(
                         .clickable { uiState.videoAudioEnabled = !uiState.videoAudioEnabled },
                     contentAlignment = Alignment.Center
                 ) {
-                    val emoji = if (uiState.videoAudioEnabled) "🔊" else "🔇"
-                    Text(text = emoji, fontSize = 20.sp)
+                    Icon(
+                        imageVector = if (uiState.videoAudioEnabled) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                        contentDescription = if (uiState.videoAudioEnabled) "Audio On" else "Audio Off",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
 
@@ -95,7 +99,6 @@ fun TopCameraBar(
                         .clickable { uiState.isNightModeEnabled = !uiState.isNightModeEnabled },
                     contentAlignment = Alignment.Center
                 ) {
-                    val emoji = "🌙"
                     val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
                     Box(
                         modifier = Modifier
@@ -103,7 +106,12 @@ fun TopCameraBar(
                             .background(Color.Yellow.copy(alpha = backgroundAlpha)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = emoji, fontSize = 20.sp)
+                        Icon(
+                            imageVector = Icons.Filled.DarkMode,
+                            contentDescription = "Night Mode",
+                            tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
                 
@@ -115,7 +123,6 @@ fun TopCameraBar(
                         .clickable { uiState.showFilterDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
-                    val emoji = "🎨"
                     val backgroundAlpha = if (uiState.selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
                     Box(
                         modifier = Modifier
@@ -123,7 +130,12 @@ fun TopCameraBar(
                             .background(Color.Yellow.copy(alpha = backgroundAlpha)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = emoji, fontSize = 20.sp)
+                        Icon(
+                            imageVector = Icons.Filled.Palette,
+                            contentDescription = "Color Filter",
+                            tint = if (uiState.selectedFilter != ColorFilterMode.NORMAL) Color.Yellow else Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
                 

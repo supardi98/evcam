@@ -1,6 +1,10 @@
 package net.supardi.evcam.ui
 
 import android.content.Context
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
+import android.os.Build
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -17,14 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -44,26 +43,36 @@ fun CameraViewfinder(
 ) {
     var evScrollAnchorY by remember { mutableFloatStateOf(0f) }
 
+    // Fallback tint overlay for Android < 12 only
+    val fallbackTint: Color? = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        when (uiState.selectedFilter) {
+            ColorFilterMode.NORMAL  -> null
+            ColorFilterMode.MONO    -> Color(0x80808080)
+            ColorFilterMode.WARM    -> Color(0x33FF8800)
+            ColorFilterMode.COLD    -> Color(0x330088FF)
+            ColorFilterMode.VINTAGE -> Color(0x40C8860A)
+        }
+    } else null
+
     Box(modifier = modifier) {
         AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawWithContent {
-                    if (uiState.selectedFilter != ColorFilterMode.NORMAL) {
-                        val paint = Paint().apply {
-                            colorFilter = ColorFilter.colorMatrix(
-                                ColorMatrix(uiState.selectedFilter.matrixValues)
-                            )
-                        }
-                        drawIntoCanvas { canvas ->
-                            canvas.saveLayer(size.toRect(), paint)
-                            drawContent()
-                            canvas.restore()
-                        }
+            modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                // Apply ColorMatrix directly to PreviewView via RenderEffect (Android 12+)
+                // This makes the live preview pixel-perfect with the captured image filter
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val filter = uiState.selectedFilter
+                    if (filter == ColorFilterMode.NORMAL) {
+                        view.setRenderEffect(null)
                     } else {
-                        drawContent()
+                        val cm = ColorMatrix(filter.matrixValues)
+                        val renderEffect = android.graphics.RenderEffect.createColorFilterEffect(
+                            ColorMatrixColorFilter(cm)
+                        )
+                        view.setRenderEffect(renderEffect)
                     }
-                },
+                }
+            },
             factory = { ctx ->
                 previewView.apply {
                     val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -171,6 +180,15 @@ fun CameraViewfinder(
                 }
             }
         )
+
+        // Fallback tint overlay for Android < 12 (approximation only)
+        if (fallbackTint != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color = fallbackTint)
+            )
+        }
 
         AnimatedVisibility(
             visible = uiState.isTransitioningRatio,

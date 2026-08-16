@@ -1,27 +1,40 @@
 package net.supardi.evcam.ui
 
+import android.app.Activity
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -40,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
+
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
@@ -210,7 +224,8 @@ fun MediaPreviewDialog(
     lastCapturedUri: Uri?,
     cameraMode: CameraMode,
     context: Context,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onMediaDeleted: (Uri) -> Unit = {}
 ) {
     val imageLoader = remember(context) {
         ImageLoader.Builder(context).components { add(VideoFrameDecoder.Factory()) }.build()
@@ -221,12 +236,60 @@ fun MediaPreviewDialog(
         if (lastCapturedUri != null && fetched.none { it.uri == lastCapturedUri }) {
             fetched.add(0, MediaItem(uri = lastCapturedUri, isVideo = (cameraMode == CameraMode.VIDEO)))
         }
-        fetched
+        androidx.compose.runtime.mutableStateListOf(*fetched.toTypedArray())
     }
 
     val pageCount = if (mediaList.isNotEmpty()) mediaList.size else if (lastCapturedBitmap != null) 1 else 0
     val pagerState = rememberPagerState(initialPage = 0) { pageCount }
     val scope = rememberCoroutineScope()
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var pendingDeleteItem by remember { mutableStateOf<MediaItem?>(null) }
+
+    // Shared post-delete navigation — called after item is confirmed deleted
+    fun onItemDeleted(item: MediaItem) {
+        val idx = mediaList.indexOf(item)
+        val removeIdx = if (idx >= 0) idx else pagerState.currentPage
+        if (removeIdx < mediaList.size) mediaList.removeAt(removeIdx)
+        onMediaDeleted(item.uri)  // notify parent to refresh thumbnail
+        if (mediaList.isEmpty()) {
+            onDismiss()
+        } else {
+            val next = removeIdx.coerceAtMost(mediaList.size - 1)
+            scope.launch { pagerState.scrollToPage(next) }
+        }
+    }
+
+    // Android 11+ delete permission launcher
+    val deletePermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            pendingDeleteItem?.let { item ->
+                onItemDeleted(item)
+                pendingDeleteItem = null
+            }
+        }
+    }
+
+    fun deleteCurrentItem() {
+        val item = mediaList.getOrNull(pagerState.currentPage) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val pending = MediaStore.createDeleteRequest(context.contentResolver, listOf(item.uri))
+            pendingDeleteItem = item
+            deletePermLauncher.launch(IntentSenderRequest.Builder(pending.intentSender).build())
+        } else {
+            try {
+                context.contentResolver.delete(item.uri, null, null)
+                onItemDeleted(item)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Gagal menghapus file", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
+    var showGalleryGrid by remember { mutableStateOf(false) }
 
     // Fetch info for current page
     val currentItem = mediaList.getOrNull(pagerState.currentPage)
@@ -260,11 +323,9 @@ fun MediaPreviewDialog(
                         onDragStart = { totalDragX = 0f },
                         onDragEnd = {
                             if (kotlin.math.abs(totalDragX) > 80 && pageCount > 1) {
-                                val next = if (totalDragX < 0) {
-                                    (pagerState.currentPage + 1).coerceAtMost(pageCount - 1)
-                                } else {
-                                    (pagerState.currentPage - 1).coerceAtLeast(0)
-                                }
+                                val raw = if (totalDragX < 0) pagerState.currentPage + 1
+                                          else pagerState.currentPage - 1
+                                val next = ((raw % pageCount) + pageCount) % pageCount
                                 scope.launch { pagerState.animateScrollToPage(next) }
                             }
                         },
@@ -297,16 +358,67 @@ fun MediaPreviewDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "${pagerState.currentPage + 1} / $pageCount",
-                            color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 14.dp, vertical = 6.dp)
-                        )
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
+                        var fastJumpDragAccum by remember { mutableFloatStateOf(0f) }
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.Black.copy(alpha = 0.6f))
+                                .clickable { showGalleryGrid = true }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .pointerInput(pageCount) {
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { fastJumpDragAccum = 0f },
+                                        onHorizontalDrag = { _, dragAmount ->
+                                            fastJumpDragAccum += dragAmount
+                                            val steps = (fastJumpDragAccum / 40f).toInt()
+                                            if (steps != 0) {
+                                                fastJumpDragAccum -= steps * 40f
+                                                val raw = pagerState.currentPage - steps * 10
+                                                val next = ((raw % pageCount) + pageCount) % pageCount
+                                                scope.launch { pagerState.animateScrollToPage(next) }
+                                            }
+                                        }
+                                    )
+                                },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(20.dp))
+                            Icon(
+                                imageVector = Icons.Default.GridView,
+                                contentDescription = "Gallery Grid",
+                                tint = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "${pagerState.currentPage + 1} / $pageCount",
+                                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Delete button
+                            if (mediaList.getOrNull(pagerState.currentPage) != null) {
+                                IconButton(
+                                    onClick = {
+                                        // Android 11+: OS shows its own confirm dialog via createDeleteRequest
+                                        // Android <11: show our own confirm dialog
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                            deleteCurrentItem()
+                                        } else {
+                                            showDeleteConfirm = true
+                                        }
+                                    },
+                                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            // Close button
+                            IconButton(
+                                onClick = onDismiss,
+                                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
 
@@ -426,7 +538,26 @@ fun MediaPreviewDialog(
                                 }
 
                                 if (currentInfo.duration.isNotEmpty()) {
-                                    MediaInfoPill(label = "⏱ ${currentInfo.duration}", highlight = true)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.Yellow.copy(alpha = 0.15f))
+                                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Timer,
+                                            contentDescription = null,
+                                            tint = Color.Yellow,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Text(
+                                            text = currentInfo.duration,
+                                            color = Color.Yellow,
+                                            fontSize = 11.sp
+                                        )
+                                    }
                                 }
                                 if (currentInfo.mimeType.isNotEmpty()) {
                                     MediaInfoPill(label = currentInfo.mimeType)
@@ -441,6 +572,140 @@ fun MediaPreviewDialog(
                         color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
+                }
+            }
+        }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = Color(0xFF1E1E1E),
+            title = {
+                Text(
+                    text = "Hapus ${if (mediaList.getOrNull(pagerState.currentPage)?.isVideo == true) "video" else "foto"} ini?",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("File akan dihapus permanen dari perangkat.", color = Color.Gray)
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showDeleteConfirm = false
+                    deleteCurrentItem()
+                }) {
+                    Text("Hapus", color = Color(0xFFFF5252), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Batal", color = Color.White)
+                }
+            }
+        )
+    }
+
+    // Gallery Grid Dialog
+    if (showGalleryGrid && mediaList.isNotEmpty()) {
+        val gridState = rememberLazyGridState()
+        LaunchedEffect(Unit) {
+            val target = pagerState.currentPage.coerceAtMost(mediaList.size - 1)
+            gridState.scrollToItem(target)
+        }
+        Dialog(
+            onDismissRequest = { showGalleryGrid = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.95f))
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Semua Media (${mediaList.size})",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        IconButton(onClick = { showGalleryGrid = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
+                        }
+                    }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        state = gridState,
+                        contentPadding = PaddingValues(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(mediaList.size) { idx ->
+                            val item = mediaList[idx]
+                            val isSelected = idx == pagerState.currentPage
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .then(
+                                        if (isSelected) Modifier.border(2.dp, Color.Yellow, RoundedCornerShape(2.dp))
+                                        else Modifier
+                                    )
+                                    .clickable {
+                                        showGalleryGrid = false
+                                        scope.launch { pagerState.scrollToPage(idx) }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = item.uri,
+                                    imageLoader = imageLoader,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                // Video badge
+                                if (item.isVideo) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomStart)
+                                            .padding(4.dp)
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.6f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                                // Selected highlight overlay
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Yellow.copy(alpha = 0.15f))
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

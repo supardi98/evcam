@@ -33,7 +33,15 @@ fun DialogContainers(
             lastCapturedUri = uiState.lastCapturedUri,
             cameraMode = uiState.cameraMode,
             context = context,
-            onDismiss = { uiState.showMediaPreviewDialog = false }
+            onDismiss = { uiState.showMediaPreviewDialog = false },
+            onMediaDeleted = { deletedUri ->
+                // If the deleted file was the current thumbnail, refresh it
+                if (uiState.lastCapturedUri == deletedUri) {
+                    uiState.lastCapturedBitmap = null
+                    uiState.lastCapturedUri = fetchLatestMediaUri(uiState.context)
+                    uiState.prefs.edit().putString("lastCapturedUri", uiState.lastCapturedUri?.toString()).apply()
+                }
+            }
         )
     }
 
