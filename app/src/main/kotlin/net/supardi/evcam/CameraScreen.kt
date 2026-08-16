@@ -1345,241 +1345,40 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 48.dp, start = 24.dp, end = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = {
-                                    if (isTorchOn) {
-                                        isTorchOn = false
-                                    } else {
-                                        flashMode = when (flashMode) {
-                                            FlashMode.AUTO -> FlashMode.ON
-                                            FlashMode.ON -> FlashMode.OFF
-                                            FlashMode.OFF -> FlashMode.AUTO
-                                        }
-                                    }
-                                },
-                                onLongPress = {
-                                    isTorchOn = !isTorchOn
-                                }
-                            )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    val flashIcon = if (isTorchOn) {
-                        Icons.Default.FlashOn
-                    } else {
-                        when (flashMode) {
-                            FlashMode.AUTO -> Icons.Default.FlashAuto
-                            FlashMode.ON -> Icons.Default.FlashOn
-                            FlashMode.OFF -> Icons.Default.FlashOff
-                        }
-                    }
-                    val iconTint = if (isTorchOn) Color.Yellow else Color.White
-                    Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
-                }
-                if (cameraMode == CameraMode.VIDEO) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable { videoAudioEnabled = !videoAudioEnabled },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val emoji = if (videoAudioEnabled) "🔊" else "🔇"
-                        Text(text = emoji, fontSize = 20.sp)
-                    }
-                }
-
-
-                if (cameraMode == CameraMode.PHOTO) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable { isNightModeEnabled = !isNightModeEnabled },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Display moon emoji as night mode button indicator
-                        val emoji = "🌙"
-                        val backgroundAlpha = if (isNightModeEnabled) 0.3f else 0f
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = emoji, fontSize = 20.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable { showFilterDialog = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val emoji = "🎨"
-                        val backgroundAlpha = if (selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = emoji, fontSize = 20.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-
-
-                    IconButton(onClick = {
-                        timerMode = when (timerMode) {
-                            TimerMode.OFF -> TimerMode.SEC_3
-                            TimerMode.SEC_3 -> TimerMode.SEC_10
-                            TimerMode.SEC_10 -> TimerMode.SEC_15
-                            TimerMode.SEC_15 -> TimerMode.SEC_20
-                            TimerMode.SEC_20 -> if (isHandTrackingInstalled && isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
-                            TimerMode.PEACE -> TimerMode.OFF
-                        }
-                    }) {
-                        val timerTint = if (timerMode == TimerMode.OFF) Color.White else Color.Yellow
-                        Box(contentAlignment = Alignment.Center) {
-                            val icon = if (timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
-                            Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint)
-                            if (timerMode != TimerMode.OFF && timerMode != TimerMode.PEACE) {
-                                Text(
-                                    text = "${timerMode.seconds}",
-                                    color = Color.Black,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.offset(y = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                    
-                    if (timerMode != TimerMode.OFF) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${timerBurstCount}x",
-                            color = Color.Yellow,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .clickable {
-                                    timerBurstCount = when (timerBurstCount) {
-                                        1 -> 3
-                                        3 -> 5
-                                        5 -> 10
-                                        else -> 1
-                                    }
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+        TopCameraBar(
+            cameraMode = cameraMode,
+            flashMode = flashMode,
+            isTorchOn = isTorchOn,
+            onFlashModeChange = { flashMode = it },
+            onTorchToggle = { isTorchOn = !isTorchOn },
+            videoAudioEnabled = videoAudioEnabled,
+            onVideoAudioToggle = { videoAudioEnabled = !videoAudioEnabled },
+            isNightModeEnabled = isNightModeEnabled,
+            onNightModeToggle = { isNightModeEnabled = !isNightModeEnabled },
+            selectedFilter = selectedFilter,
+            onFilterClick = { showFilterDialog = true },
+            timerMode = timerMode,
+            onTimerModeChange = { timerMode = it },
+            isHandTrackingInstalled = isHandTrackingInstalled,
+            isHandTrackingEnabled = isHandTrackingEnabled,
+            timerBurstCount = timerBurstCount,
+            onTimerBurstCountChange = { timerBurstCount = it },
+            aspectRatio = aspectRatio,
+            onAspectRatioChange = { aspectRatio = it },
+            videoQuality = videoQuality,
+            onVideoQualityChange = { videoQuality = it },
+            videoFps = videoFps,
+            onVideoFpsChange = { videoFps = it },
+            showSettings = showSettings,
+            onSettingsClick = {
+                showSettings = !showSettings
+                if (showSettings) {
+                    showProPanel = false
+                    showLayerPanel = false
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (cameraMode == CameraMode.PHOTO) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.4f))
-                            .clickable {
-                                aspectRatio = when (aspectRatio) {
-                                    AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
-                                    AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
-                                    AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
-                                }
-                                prefs.edit().putString("aspectRatio", aspectRatio.name).apply()
-                            }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = aspectRatio.label,
-                            color = Color.Yellow,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.4f))
-                            .clickable {
-                                videoQuality = when (videoQuality) {
-                                    VideoQualityMode.HD -> VideoQualityMode.FHD
-                                    VideoQualityMode.FHD -> VideoQualityMode.UHD
-                                    VideoQualityMode.UHD -> VideoQualityMode.HD
-                                }
-                                prefs.edit().putString("videoQuality", videoQuality.name).apply()
-                            }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = videoQuality.label,
-                            color = Color.Yellow,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
+        )
 
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.4f))
-                            .clickable {
-                                videoFps = when (videoFps) {
-                                    VideoFpsMode.FPS_30 -> VideoFpsMode.FPS_60
-                                    VideoFpsMode.FPS_60 -> VideoFpsMode.FPS_30
-                                }
-                                prefs.edit().putString("videoFps", videoFps.name).apply()
-                            }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = videoFps.label,
-                            color = Color.Yellow,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(8.dp))
-
-                IconButton(onClick = {
-                    showSettings = !showSettings
-                    if (showSettings) {
-                        showProPanel = false
-                        showLayerPanel = false
-                    }
-                }) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = if (showSettings) Color.Yellow else Color.White)
-                }
-            }
-        }
         
         Column(
             modifier = Modifier
