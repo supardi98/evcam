@@ -2140,6 +2140,26 @@ fun formatDateElement(format: String): String {
     }
 }
 
+private fun fetchRecentMediaList(context: android.content.Context, limit: Int = 30): List<Uri> {
+    val list = mutableListOf<Uri>()
+    try {
+        val projection = arrayOf(android.provider.MediaStore.Images.Media._ID)
+        val sortOrder = "${android.provider.MediaStore.Images.Media.DATE_ADDED} DESC"
+        val queryUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        context.contentResolver.query(queryUri, projection, null, null, sortOrder)?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media._ID)
+            while (cursor.moveToNext() && list.size < limit) {
+                val id = cursor.getLong(idColumn)
+                list.add(android.content.ContentUris.withAppendedId(queryUri, id))
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return list
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MediaPreviewDialog(
     lastCapturedBitmap: android.graphics.Bitmap?,
@@ -2148,6 +2168,17 @@ private fun MediaPreviewDialog(
     context: android.content.Context,
     onDismiss: () -> Unit
 ) {
+    val mediaList = remember(lastCapturedUri, lastCapturedBitmap) {
+        val fetched = fetchRecentMediaList(context, limit = 30).toMutableList()
+        if (lastCapturedUri != null && !fetched.contains(lastCapturedUri)) {
+            fetched.add(0, lastCapturedUri)
+        }
+        fetched
+    }
+
+    val pageCount = if (mediaList.isNotEmpty()) mediaList.size else if (lastCapturedBitmap != null) 1 else 0
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(initialPage = 0) { pageCount }
+
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(
@@ -2159,81 +2190,117 @@ private fun MediaPreviewDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.75f))
+                .background(Color.Black.copy(alpha = 0.85f))
                 .clickable { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.88f)
-                    .fillMaxHeight(0.75f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.DarkGray.copy(alpha = 0.95f))
-                    .clickable(enabled = false) {}
-                    .padding(16.dp)
+                    .fillMaxSize()
+                    .clickable(enabled = false) {},
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (lastCapturedBitmap != null) {
-                    androidx.compose.foundation.Image(
-                        bitmap = lastCapturedBitmap.asImageBitmap(),
-                        contentDescription = "Preview",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 56.dp)
-                    )
-                } else if (lastCapturedUri != null) {
-                    AsyncImage(
-                        model = lastCapturedUri,
-                        contentDescription = "Preview",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 56.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = onDismiss,
+                // Top Bar: Counter & Close Button (X) completely outside image area
+                Row(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.6f))
+                        .fillMaxWidth()
+                        .padding(top = 40.dp, start = 24.dp, end = 24.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Close, 
-                        contentDescription = "Close", 
-                        tint = Color.White, 
-                        modifier = Modifier.size(20.dp)
+                    val currentCountText = if (pageCount > 0) "${pagerState.currentPage + 1} / $pageCount" else "1 / 1"
+                    Text(
+                        text = currentCountText,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
                     )
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close, 
+                            contentDescription = "Close", 
+                            tint = Color.White, 
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
 
-                Button(
-                    onClick = {
-                        val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
-                        if (targetUri != null) {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(targetUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                // Center Image Pager area: Pure borderless floating images
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (pageCount > 0) {
+                        androidx.compose.foundation.pager.HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            val itemUri = mediaList.getOrNull(page)
+                            if (page == 0 && lastCapturedBitmap != null) {
+                                androidx.compose.foundation.Image(
+                                    bitmap = lastCapturedBitmap.asImageBitmap(),
+                                    contentDescription = "Preview $page",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else if (itemUri != null) {
+                                AsyncImage(
+                                    model = itemUri,
+                                    contentDescription = "Preview $page",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
-                        } else {
-                            Toast.makeText(context, "No Gallery item found", Toast.LENGTH_SHORT).show()
                         }
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
-                    shape = RoundedCornerShape(24.dp),
+                    }
+                }
+
+                // Bottom Bar: Open in Gallery Button cleanly below image
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp)
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 40.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Button(
+                        onClick = {
+                            val activeUri = mediaList.getOrNull(pagerState.currentPage) ?: lastCapturedUri ?: fetchLatestMediaUri(context)
+                            if (activeUri != null) {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(activeUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "No Gallery item found", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open in Gallery", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
         }
