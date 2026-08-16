@@ -174,6 +174,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         val parsedUri = if (!saved.isNullOrEmpty()) Uri.parse(saved) else null
         mutableStateOf<Uri?>(parsedUri ?: fetchLatestMediaUri(context))
     }
+    var lastCapturedBitmap by remember {
+        mutableStateOf<android.graphics.Bitmap?>(
+            try {
+                val cacheFile = java.io.File(context.cacheDir, "last_photo.jpg")
+                if (cacheFile.exists()) android.graphics.BitmapFactory.decodeFile(cacheFile.absolutePath) else null
+            } catch (e: Exception) { null }
+        )
+    }
     
     var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
     var camera2Control by remember { mutableStateOf<Camera2CameraControl?>(null) }
@@ -475,7 +483,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, 0, 0)
             }
             imageCaptureUseCase?.let { cap ->
-                takePhoto(cap, context, ContextCompat.getMainExecutor(context), showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { uri ->
+                takePhoto(cap, context, ContextCompat.getMainExecutor(context), showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { bitmap, uri ->
+                    lastCapturedBitmap = bitmap
                     lastCapturedUri = uri 
                     prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
                     if (!isShutterSoundEnabled) {
@@ -1587,9 +1596,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.DarkGray.copy(alpha = 0.5f))
                         .clickable { 
-                            val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
-                            if (targetUri != null) {
-                                lastCapturedUri = targetUri
+                            if (lastCapturedBitmap != null || lastCapturedUri != null) {
                                 showMediaPreviewDialog = true
                             } else {
                                 Toast.makeText(context, "Belum ada foto atau video yang diambil", Toast.LENGTH_SHORT).show()
@@ -1597,7 +1604,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (lastCapturedUri != null) {
+                    if (lastCapturedBitmap != null) {
+                        androidx.compose.foundation.Image(
+                            bitmap = lastCapturedBitmap!!.asImageBitmap(),
+                            contentDescription = "Gallery Thumbnail",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (lastCapturedUri != null) {
                         AsyncImage(
                             model = lastCapturedUri,
                             contentDescription = "Gallery Thumbnail",
@@ -1764,7 +1778,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
         
-        if (showMediaPreviewDialog && lastCapturedUri != null) {
+        if (showMediaPreviewDialog && (lastCapturedBitmap != null || lastCapturedUri != null)) {
             androidx.compose.ui.window.Dialog(
                 onDismissRequest = { showMediaPreviewDialog = false },
                 properties = androidx.compose.ui.window.DialogProperties(
@@ -1781,12 +1795,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        AsyncImage(
-                            model = lastCapturedUri,
-                            contentDescription = "Full Preview",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        if (lastCapturedBitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = lastCapturedBitmap!!.asImageBitmap(),
+                                contentDescription = "Full Preview",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else if (lastCapturedUri != null) {
+                            AsyncImage(
+                                model = lastCapturedUri,
+                                contentDescription = "Full Preview",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
                         Row(
                             modifier = Modifier
@@ -1815,16 +1838,19 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         ) {
                             Button(
                                 onClick = {
-                                    lastCapturedUri?.let { uri ->
+                                    val targetUri = lastCapturedUri ?: fetchLatestMediaUri(context)
+                                    if (targetUri != null) {
                                         try {
                                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
+                                                setDataAndType(targetUri, if (cameraMode == CameraMode.VIDEO) "video/*" else "image/*")
                                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                             }
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
                                             Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
                                         }
+                                    } else {
+                                        Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow),
@@ -2028,7 +2054,7 @@ private fun takePhoto(
     enableGeotagging: Boolean,
     enableRawCapture: Boolean,
     aspectRatioMode: AspectRatioMode,
-    onPhotoSaved: (android.net.Uri) -> Unit
+    onPhotoSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit
 ) {
     if (enableRawCapture) {
         android.widget.Toast.makeText(context, "RAW Capture is enabled (Saving as DNG is experimental)", android.widget.Toast.LENGTH_SHORT).show()
@@ -2159,8 +2185,17 @@ private fun takePhoto(
                                 }
                             }
                         
+                        try {
+                            val cacheFile = java.io.File(context.cacheDir, "last_photo.jpg")
+                            java.io.FileOutputStream(cacheFile).use { out ->
+                                resultBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+
                         android.os.Handler(android.os.Looper.getMainLooper()).post {
-                            onPhotoSaved(uri)
+                            onPhotoSaved(resultBitmap, uri)
                         }
                     }
                 } catch (e: Exception) {
