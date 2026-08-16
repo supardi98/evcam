@@ -537,9 +537,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }, executor)
 
-        kotlinx.coroutines.delay(380)
+        val startMs = System.currentTimeMillis()
+        while (System.currentTimeMillis() - startMs < 550) {
+            if (previewView.previewStreamState.value == androidx.camera.view.PreviewView.StreamState.STREAMING) {
+                kotlinx.coroutines.delay(60)
+                break
+            }
+            kotlinx.coroutines.delay(20)
+        }
         val tFinal = System.currentTimeMillis() - t0
-        android.util.Log.d("EvcamTiming", "[t_final = ${tFinal}ms] isTransitioningRatio set to false")
+        android.util.Log.d("EvcamTiming", "[t_final = ${tFinal}ms] Hardware STREAMING confirmed, releasing transition mask")
         isTransitioningRatio = false
     }
 
