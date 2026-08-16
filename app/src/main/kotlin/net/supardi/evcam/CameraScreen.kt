@@ -324,7 +324,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(videoQuality) { prefs.edit().putString("videoQuality", videoQuality.name).apply() }
     LaunchedEffect(imageFormat) { prefs.edit().putString("imageFormat", imageFormat.name).apply() }
     
-    val deviceRotation = rememberDeviceRotation()
+    val deviceOrientation = rememberDeviceOrientation()
+    val deviceRotation = deviceOrientation.roll
     val focusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
     var countdownValue by remember { mutableStateOf<Int?>(null) }
@@ -858,9 +859,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     Slider(
                         value = exposureIndex.toFloat(),
                         onValueChange = {
-                            exposureIndex = it.toInt()
-                            cameraControl?.setExposureCompensationIndex(exposureIndex)
-                            isProMode = true
+                            val newIdx = it.toInt()
+                            exposureIndex = newIdx
+                            cameraControl?.setExposureCompensationIndex(newIdx)
+                            if (newIdx != 0) {
+                                isProMode = true
+                            }
                         },
                         valueRange = minExposureIndex.toFloat()..maxExposureIndex.toFloat(),
                         modifier = Modifier
@@ -869,13 +873,35 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     )
                 }
                 val evVal = exposureIndex * exposureStep
-                Text(
-                    text = String.format(Locale.US, "%+.1f EV", evVal),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable {
+                            exposureIndex = 0
+                            cameraControl?.setExposureCompensationIndex(0)
+                            showBrightnessSlider = false
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = String.format(Locale.US, "%+.1f EV", evVal),
+                        color = if (exposureIndex == 0) Color.White else Color.Yellow,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    if (exposureIndex != 0) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Reset EV to 0.0",
+                            tint = Color.Yellow,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
         }
         
@@ -911,36 +937,79 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
         
-        val currentDeviceRotation = deviceRotation
-        if (showVirtualHorizon && !isRecording && currentDeviceRotation != null) {
-            val normalizedRotation = (currentDeviceRotation % 90f + 90f) % 90f
-            val isLevel = normalizedRotation < 2f || normalizedRotation > 88f
-            val horizonColor = if (isLevel) Color.Green else Color.White.copy(alpha = 0.6f)
+        if (showVirtualHorizon) {
+            val roll = deviceOrientation.roll
+            val pitch = deviceOrientation.pitch
+            val normalizedRoll = (roll % 90f + 90f) % 90f
+            val isRollLevel = normalizedRoll < 2f || normalizedRoll > 88f
+            val isPitchLevel = kotlin.math.abs(pitch) < 3f
+            val isLevel = isRollLevel && isPitchLevel
+            val levelColor = if (isLevel) Color(0xFF00FF00) else Color.White.copy(alpha = 0.6f)
+            
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2, size.height / 2)
-                val lineLength = 100.dp.toPx()
+                
+                // Fixed horizontal reference ticks
+                val tickLength = 25.dp.toPx()
+                val tickGap = 35.dp.toPx()
+                drawLine(
+                    color = Color.White.copy(alpha = 0.4f),
+                    start = Offset(center.x - tickGap - tickLength, center.y),
+                    end = Offset(center.x - tickGap, center.y),
+                    strokeWidth = 2.dp.toPx()
+                )
+                drawLine(
+                    color = Color.White.copy(alpha = 0.4f),
+                    start = Offset(center.x + tickGap, center.y),
+                    end = Offset(center.x + tickGap + tickLength, center.y),
+                    strokeWidth = 2.dp.toPx()
+                )
+                
+                // Rotating 4-spoke circle (Center Reticle)
+                val circleRadius = 14.dp.toPx()
+                val spokeInner = 14.dp.toPx()
+                val spokeOuter = 40.dp.toPx()
                 
                 withTransform({
-                    rotate(degrees = -currentDeviceRotation, pivot = center)
+                    rotate(degrees = -roll, pivot = center)
                 }) {
-                    drawLine(
-                        color = horizonColor,
-                        start = Offset(center.x - lineLength / 2, center.y),
-                        end = Offset(center.x + lineLength / 2, center.y),
-                        strokeWidth = 2.dp.toPx()
+                    drawCircle(
+                        color = levelColor,
+                        radius = circleRadius,
+                        center = center,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
                     )
+                    drawLine(levelColor, Offset(center.x - spokeOuter, center.y), Offset(center.x - spokeInner, center.y), 2.dp.toPx())
+                    drawLine(levelColor, Offset(center.x + spokeInner, center.y), Offset(center.x + spokeOuter, center.y), 2.dp.toPx())
+                    drawLine(levelColor, Offset(center.x, center.y - spokeOuter), Offset(center.x, center.y - spokeInner), 2.dp.toPx())
+                    drawLine(levelColor, Offset(center.x, center.y + spokeInner), Offset(center.x, center.y + spokeOuter), 2.dp.toPx())
                 }
+                
+                // Pitch bubble (Floating secondary circle for forward/backward tilt)
+                val pitchFactor = (pitch / 45f).coerceIn(-1f, 1f)
+                val bubbleOffset = Offset(
+                    x = center.x,
+                    y = center.y + pitchFactor * 80.dp.toPx()
+                )
+                
+                drawCircle(
+                    color = if (isLevel) Color(0xFF00FF00) else Color.White.copy(alpha = 0.5f),
+                    radius = 10.dp.toPx(),
+                    center = bubbleOffset,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
+                )
             }
+            
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "${kotlin.math.abs(currentDeviceRotation).toInt()}°",
-                    color = horizonColor,
-                    fontSize = 12.sp,
+                    text = "${kotlin.math.abs(roll).toInt()}°",
+                    color = levelColor,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.offset(y = (-20).dp)
+                    modifier = Modifier.offset(y = (-30).dp)
                 )
             }
         }
@@ -1681,10 +1750,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
 }
 
+data class DeviceOrientationData(
+    val roll: Float = 0f,
+    val pitch: Float = 0f,
+    val isFlat: Boolean = false
+)
+
 @Composable
-fun rememberDeviceRotation(): Float? {
+fun rememberDeviceOrientation(): DeviceOrientationData {
     val context = LocalContext.current
-    var rotation by remember { mutableStateOf<Float?>(0f) }
+    var data by remember { mutableStateOf(DeviceOrientationData()) }
     
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -1696,12 +1771,16 @@ fun rememberDeviceRotation(): Float? {
                 val y = event.values[1]
                 val z = event.values[2]
                 
-                if (kotlin.math.abs(z) > 8.0f) {
-                    rotation = null
-                } else {
-                    val angle = Math.toDegrees(kotlin.math.atan2(x.toDouble(), y.toDouble())).toFloat()
-                    rotation = kotlin.math.round(angle)
-                }
+                val roll = Math.toDegrees(kotlin.math.atan2(x.toDouble(), y.toDouble())).toFloat()
+                val isFlat = kotlin.math.abs(z) > 8.5f
+                val norm = kotlin.math.sqrt((x * x + y * y).toDouble()).toFloat()
+                val pitch = Math.toDegrees(kotlin.math.atan2(-z.toDouble(), norm.coerceAtLeast(0.001f).toDouble())).toFloat()
+                
+                data = DeviceOrientationData(
+                    roll = kotlin.math.round(roll),
+                    pitch = kotlin.math.round(pitch),
+                    isFlat = isFlat
+                )
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
@@ -1714,7 +1793,7 @@ fun rememberDeviceRotation(): Float? {
             sensorManager.unregisterListener(listener)
         }
     }
-    return rotation
+    return data
 }
 
 private fun takePhoto(
