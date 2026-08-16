@@ -688,12 +688,12 @@ private fun CameraDetailsDialog(info: CameraHardwareInfo, onBack: () -> Unit) {
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             item { DetailSection("Capabilities", info.capabilities) }
-            item { DetailSection("Color effects", info.colorEffects) }
             item { DetailSection("Exposure modes", info.exposureModes) }
             item { DetailSection("Autofocus modes", info.afModes) }
             item { DetailSection("White balance modes", info.awbModes) }
             item { DetailSection("Scene modes", info.sceneModes) }
             
+            item { DetailRow("Color effects", info.colorEffects) }
             item { DetailRow("Max face count", info.maxFaceCount) }
             item { DetailRow("Face detect mode", info.faceDetectMode) }
             item { DetailRow("Camera2 API support", info.camera2ApiLevel) }
