@@ -145,23 +145,24 @@ fun CameraBottomBar(
 
                         // Track touch movements for drag-zoom and wait for release
                         while (true) {
-                            val event = awaitPointerEvent()
+                            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Main)
                             val change = event.changes.firstOrNull() ?: break
                             
-                            if (change.changedToUp()) {
+                            if (change.pressed) {
+                                // If we are in long-press mode and drag vertically, trigger zoom
+                                if (isLongPress && cameraMode == CameraMode.VIDEO) {
+                                    val dragY = -(change.position.y - (change.previousPosition?.y ?: change.position.y))
+                                    onDragZoom(dragY)
+                                }
                                 change.consume()
+                            } else {
+                                // Release detected
                                 break
                             }
-                            
-                            // If we are in long-press mode and drag vertically, trigger zoom
-                            if (isLongPress && cameraMode == CameraMode.VIDEO) {
-                                val dragY = -(change.position.y - (change.previousPosition?.y ?: change.position.y))
-                                onDragZoom(dragY)
-                            }
-                            change.consume()
                         }
                         
                         longPressJob.cancel()
+
                         
                         if (isLongPress) {
                             isLongPressActive = false
