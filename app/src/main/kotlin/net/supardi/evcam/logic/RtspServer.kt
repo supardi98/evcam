@@ -80,6 +80,15 @@ class RtspServer(
         }
     }
 
+    private fun stopH264Encoder() {
+        isEncoderRunning = false
+        try {
+            mediaCodec?.stop()
+            mediaCodec?.release()
+            mediaCodec = null
+        } catch (e: Exception) {}
+    }
+
     fun requestKeyFrame() {
         try {
             val params = android.os.Bundle()
@@ -90,6 +99,7 @@ class RtspServer(
             Log.e("EVCAM_RTSP", "Failed to request sync keyframe", e)
         }
     }
+
 
 
     fun pushYuvFrame(image: Image) {
