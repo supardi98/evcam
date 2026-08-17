@@ -27,20 +27,25 @@ fun TopCameraBar(
     uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 44.dp)
+    ) {
+        // Baris Atas Utama: Flash, Mute (Video), Filter, Timer | Aspect Ratio / Quality, Settings
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 48.dp, start = 24.dp, end = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Actions Group
+            // Group Kiri Utama
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (uiState.hasFlashSupport) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(44.dp)
                             .pointerInput(uiState.cameraMode) {
                                 detectTapGestures(
                                     onTap = {
@@ -89,7 +94,7 @@ fun TopCameraBar(
                     Spacer(modifier = Modifier.width(4.dp))
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
                             .clickable { uiState.videoAudioEnabled = !uiState.videoAudioEnabled },
                         contentAlignment = Alignment.Center
@@ -103,78 +108,10 @@ fun TopCameraBar(
                     }
                 }
 
-                if (uiState.cameraMode == CameraMode.PHOTO) {
-                    if (uiState.hasNightExtension) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    uiState.isNightModeEnabled = !uiState.isNightModeEnabled
-                                    if (uiState.isNightModeEnabled) {
-                                        uiState.isHdrEnabled = false
-                                        uiState.isIsoAuto = true
-                                        uiState.isShutterAuto = true
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Yellow.copy(alpha = backgroundAlpha)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.DarkMode,
-                                    contentDescription = "Night Mode",
-                                    tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                    }
-                    
-                    if (uiState.hasHdrExtension) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    uiState.isHdrEnabled = !uiState.isHdrEnabled
-                                    if (uiState.isHdrEnabled) {
-                                        uiState.isNightModeEnabled = false
-                                        uiState.isIsoAuto = true
-                                        uiState.isShutterAuto = true
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val backgroundAlpha = if (uiState.isHdrEnabled) 0.3f else 0f
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.Yellow.copy(alpha = backgroundAlpha)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.HdrOn,
-                                    contentDescription = "HDR Mode",
-                                    tint = if (uiState.isHdrEnabled) Color.Yellow else Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
                         .clickable { uiState.showFilterDialog = true },
                     contentAlignment = Alignment.Center
@@ -196,16 +133,19 @@ fun TopCameraBar(
                 }
                 
                 Spacer(modifier = Modifier.width(4.dp))
-                IconButton(onClick = {
-                    uiState.timerMode = when (uiState.timerMode) {
-                        TimerMode.OFF -> TimerMode.SEC_3
-                        TimerMode.SEC_3 -> TimerMode.SEC_10
-                        TimerMode.SEC_10 -> TimerMode.SEC_15
-                        TimerMode.SEC_15 -> TimerMode.SEC_20
-                        TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
-                        TimerMode.PEACE -> TimerMode.OFF
-                    }
-                }) {
+                IconButton(
+                    onClick = {
+                        uiState.timerMode = when (uiState.timerMode) {
+                            TimerMode.OFF -> TimerMode.SEC_3
+                            TimerMode.SEC_3 -> TimerMode.SEC_10
+                            TimerMode.SEC_10 -> TimerMode.SEC_15
+                            TimerMode.SEC_15 -> TimerMode.SEC_20
+                            TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
+                            TimerMode.PEACE -> TimerMode.OFF
+                        }
+                    },
+                    modifier = Modifier.size(44.dp)
+                ) {
                     val timerTint = if (uiState.timerMode == TimerMode.OFF) Color.White else Color.Yellow
                     Box(contentAlignment = Alignment.Center) {
                         val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
@@ -244,7 +184,7 @@ fun TopCameraBar(
                 }
             }
             
-            // Right Actions Group
+            // Group Kanan Utama
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (uiState.cameraMode == CameraMode.PHOTO) {
                     Box(
@@ -316,20 +256,110 @@ fun TopCameraBar(
                     }
                 }
                 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
-                IconButton(onClick = {
-                    uiState.showSettings = !uiState.showSettings
-                    if (uiState.showSettings) {
-                        uiState.showProPanel = false
-                        uiState.showLayerPanel = false
-                    }
-                }) {
+                IconButton(
+                    onClick = {
+                        uiState.showSettings = !uiState.showSettings
+                        if (uiState.showSettings) {
+                            uiState.showProPanel = false
+                            uiState.showLayerPanel = false
+                        }
+                    },
+                    modifier = Modifier.size(44.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Settings, 
                         contentDescription = "Settings", 
                         tint = if (uiState.showSettings) Color.Yellow else Color.White
                     )
+                }
+            }
+        }
+
+        // ── Baris Kedua (Sub-Bar Dedicated) khusus Night & HDR Mode ──
+        if (uiState.cameraMode == CameraMode.PHOTO && (uiState.hasNightExtension || uiState.hasHdrExtension)) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Tombol Night Mode di Baris Kedua
+                if (uiState.hasNightExtension) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (uiState.isNightModeEnabled) Color.Yellow.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                uiState.isNightModeEnabled = !uiState.isNightModeEnabled
+                                if (uiState.isNightModeEnabled) {
+                                    uiState.isHdrEnabled = false
+                                    uiState.isIsoAuto = true
+                                    uiState.isShutterAuto = true
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DarkMode,
+                                contentDescription = "Night Mode",
+                                tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "NIGHT",
+                                color = if (uiState.isNightModeEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+
+                // Tombol HDR Mode di Baris Kedua
+                if (uiState.hasHdrExtension) {
+                    if (uiState.hasNightExtension) Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (uiState.isHdrEnabled) Color.Yellow.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                uiState.isHdrEnabled = !uiState.isHdrEnabled
+                                if (uiState.isHdrEnabled) {
+                                    uiState.isNightModeEnabled = false
+                                    uiState.isIsoAuto = true
+                                    uiState.isShutterAuto = true
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.HdrOn,
+                                contentDescription = "HDR Mode",
+                                tint = if (uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "HDR",
+                                color = if (uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
                 }
             }
         }
