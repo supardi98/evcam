@@ -94,7 +94,7 @@ fun CameraViewfinder(
                             uiState.showFocusBox = true
                             uiState.showZoomSlider = true
                             uiState.showBrightnessSlider = true
-                            uiState.focusState = FocusState.SEARCHING
+                            uiState.focusState = FocusState.TAP_INITIAL
                             camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
                             return true
                         }

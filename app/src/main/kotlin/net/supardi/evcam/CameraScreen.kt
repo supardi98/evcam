@@ -800,6 +800,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             if (showFocusBox && focusOffset != null) {
                 val focusColor = when (focusState) {
+                    FocusState.TAP_INITIAL -> Color.White
                     FocusState.SEARCHING -> Color.Yellow
                     FocusState.SUCCESS -> Color.Green
                     FocusState.FAILED -> Color.Red
@@ -817,7 +818,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     if (focusState == FocusState.SUCCESS || focusState == FocusState.FAILED) {
                         delay(1200)
                         showFocusBox = false
-                        focusState = FocusState.SEARCHING
+                        focusState = FocusState.TAP_INITIAL
                     }
                 }
             }

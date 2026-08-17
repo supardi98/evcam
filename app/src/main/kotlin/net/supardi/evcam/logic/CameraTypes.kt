@@ -1,7 +1,7 @@
 package net.supardi.evcam.logic
 
 enum class CameraMode { PHOTO, VIDEO }
-enum class FocusState { SEARCHING, SUCCESS, FAILED }
+enum class FocusState { TAP_INITIAL, SEARCHING, SUCCESS, FAILED }
 enum class GridType(val label: String) { NONE("Off"), THIRDS("3x3"), FOURTHS("4x4"), GOLDEN_RATIO("Phi"), CROSSHAIR("Center") }
 enum class FlashMode { AUTO, ON, OFF }
 enum class TimerMode(val seconds: Int) { OFF(0), SEC_3(3), SEC_10(10), SEC_15(15), SEC_20(20), PEACE(3) }
