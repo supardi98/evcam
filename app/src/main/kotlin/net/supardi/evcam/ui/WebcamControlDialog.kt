@@ -119,7 +119,9 @@ fun WebcamControlDialog(
                         Text("Connected Clients: $connectedClients", color = Color.LightGray, fontSize = 12.sp)
                     }
                 }
+            }
             Spacer(modifier = Modifier.height(14.dp))
+
 
             // Protocol Toggle Section
             Text("ENABLED PROTOCOLS", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
