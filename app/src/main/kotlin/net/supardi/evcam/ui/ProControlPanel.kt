@@ -251,12 +251,13 @@ private fun ProSliderRow(
     minLabel: String,
     maxLabel: String,
     value: Float,
-    valueRange: ClosedRange<Float>,
+    valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
     isAuto: Boolean,
     displayValueText: String,
     onAutoToggle: () -> Unit
 ) {
+
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
         Text(label, color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
         Text(minLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
