@@ -831,17 +831,28 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             focusState = FocusState.SEARCHING // Turn yellow while focusing
                         }
                         
-                        // Safety timeout: if focus takes more than 2.5s without hardware callback
-                        delay(2500)
-                        if (showFocusBox && (focusState == FocusState.SEARCHING || focusState == FocusState.TAP_INITIAL)) {
-                            if (uiState.isPendingAfLock) {
-                                uiState.isAeAfLocked = false
-                                uiState.isPendingAfLock = false
-                            }
-                            focusState = FocusState.FAILED
+                        if (cameraMode == CameraMode.VIDEO || isRecording) {
                             delay(1000)
-                            showFocusBox = false
-                            focusState = FocusState.TAP_INITIAL
+                            if (showFocusBox && focusState == FocusState.SEARCHING) {
+                                focusState = FocusState.SUCCESS
+                                if (uiState.isPendingAfLock) {
+                                    uiState.isAeAfLocked = true
+                                    uiState.isPendingAfLock = false
+                                }
+                            }
+                        } else {
+                            // Safety timeout for photo mode
+                            delay(2500)
+                            if (showFocusBox && (focusState == FocusState.SEARCHING || focusState == FocusState.TAP_INITIAL)) {
+                                if (uiState.isPendingAfLock) {
+                                    uiState.isAeAfLocked = false
+                                    uiState.isPendingAfLock = false
+                                }
+                                focusState = FocusState.FAILED
+                                delay(1000)
+                                showFocusBox = false
+                                focusState = FocusState.TAP_INITIAL
+                            }
                         }
                     }
                 }
