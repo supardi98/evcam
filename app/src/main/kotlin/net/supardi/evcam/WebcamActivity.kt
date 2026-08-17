@@ -120,6 +120,7 @@ fun WebcamDedicatedScreen(
     var width by remember { mutableIntStateOf(1280) }
     var height by remember { mutableIntStateOf(720) }
     var orientation by remember { mutableStateOf("LANDSCAPE") }
+    var selectedAspectRatio by remember { mutableStateOf("ALL") }
     var lensFacing by remember { mutableIntStateOf(android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) }
 
     var transferSpeedText by remember { mutableStateOf("0.0 KB/s") }
@@ -301,9 +302,40 @@ fun WebcamDedicatedScreen(
                         Text("Stream Video Configuration", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // 1. Resolution Selection (Hardware-backed dynamically queried resolutions)
-                        val supportedResolutions = remember { camera2Engine.getSupportedStreamResolutions() }
-                        Text("Resolution Quality (${supportedResolutions.firstOrNull()?.first ?: "Max"} Supported)", color = Color.LightGray, fontSize = 11.sp)
+                        // Aspect Ratio Filter Chips (ALL, 16:9, 4:3, 1:1)
+                        Text("Aspect Ratio Filter", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val aspectRatios = listOf("ALL" to "All Ratios", "16:9" to "16:9 Widescreen", "4:3" to "4:3 Full Sensor", "1:1" to "1:1 Square")
+                            aspectRatios.forEach { (ratioKey, ratioLabel) ->
+                                val isSelected = selectedAspectRatio == ratioKey
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color(0xFF00E676) else Color.DarkGray,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedAspectRatio = ratioKey }
+                                ) {
+                                    Text(
+                                        text = ratioLabel,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // 1. Resolution Selection (Filtered by Aspect Ratio)
+                        val supportedResolutions = remember(selectedAspectRatio) { camera2Engine.getSupportedStreamResolutions(aspectRatio = selectedAspectRatio) }
+                        Text("Resolution Quality (${supportedResolutions.size} Available)", color = Color.LightGray, fontSize = 11.sp)
                         Spacer(modifier = Modifier.height(6.dp))
 
                         // Multi-row flow of hardware resolution chips

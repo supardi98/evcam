@@ -267,7 +267,7 @@ class Camera2Engine(private val context: Context) {
         analysisImageReader = ImageReader.newInstance(streamWidth, streamHeight, ImageFormat.YUV_420_888, 2)
     }
 
-    fun getSupportedStreamResolutions(cameraId: String = "0"): List<Triple<String, Int, Int>> {
+    fun getSupportedStreamResolutions(cameraId: String = "0", aspectRatio: String = "ALL"): List<Triple<String, Int, Int>> {
         try {
             val chars = cameraManager.getCameraCharacteristics(cameraId)
             val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return defaultResolutions()
@@ -276,31 +276,32 @@ class Camera2Engine(private val context: Context) {
             val list = mutableListOf<Triple<String, Int, Int>>()
             val sortedSizes = sizes.sortedByDescending { it.width * it.height }
 
-            // Find absolute max size for camera sensor
-            val maxResolution = sortedSizes.firstOrNull()
-            if (maxResolution != null) {
-                val maxW = maxOf(maxResolution.width, maxResolution.height)
-                val maxH = minOf(maxResolution.width, maxResolution.height)
-                list.add(Triple("Max (${maxW}x${maxH})", maxW, maxH))
-            }
+            sortedSizes.forEach { s ->
+                val w = maxOf(s.width, s.height)
+                val h = minOf(s.width, s.height)
+                val ratio = w.toFloat() / h.toFloat()
 
-            // Standard clean streaming resolutions to avoid UI clutter
-            val targetPresets = listOf(
-                Triple("4K (3840x2160)", 3840, 2160),
-                Triple("2.5K (2560x1440)", 2560, 1440),
-                Triple("1080p (1920x1080)", 1920, 1080),
-                Triple("720p (1280x720)", 1280, 720),
-                Triple("480p (640x480)", 640, 480)
-            )
-
-            targetPresets.forEach { preset ->
-                val match = sortedSizes.find { s ->
-                    val w = maxOf(s.width, s.height)
-                    val h = minOf(s.width, s.height)
-                    w == preset.second && h == preset.third
+                val matchesRatio = when (aspectRatio) {
+                    "16:9" -> kotlin.math.abs(ratio - (16f / 9f)) < 0.05f
+                    "4:3" -> kotlin.math.abs(ratio - (4f / 3f)) < 0.05f
+                    "1:1" -> kotlin.math.abs(ratio - 1.0f) < 0.05f
+                    else -> true
                 }
-                if (match != null && list.none { it.second == preset.second && it.third == preset.third }) {
-                    list.add(preset)
+
+                if (matchesRatio) {
+                    val label = when {
+                        w == 3840 && h == 2160 -> "4K (16:9)"
+                        w == 2560 && h == 1440 -> "2.5K (16:9)"
+                        w == 1920 && h == 1080 -> "1080p (16:9)"
+                        w == 1280 && h == 720 -> "720p (16:9)"
+                        w == 1440 && h == 1080 -> "1080p (4:3)"
+                        w == 1080 && h == 1080 -> "1080p (1:1)"
+                        w == 640 && h == 480 -> "480p (4:3)"
+                        else -> "${w}x${h}"
+                    }
+                    if (list.none { it.second == w && it.third == h }) {
+                        list.add(Triple(label, w, h))
+                    }
                 }
             }
 
