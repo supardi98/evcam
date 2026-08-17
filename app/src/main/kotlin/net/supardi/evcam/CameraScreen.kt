@@ -249,6 +249,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
     
     val webcamServer = remember { WebcamStreamServer(context) }
+    val rtspServer = remember { RtspServer(8554) }
 
     LaunchedEffect(uiState.isWebcamStreaming) {
         if (uiState.isWebcamStreaming) {
@@ -266,12 +267,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    LaunchedEffect(uiState.enableRtspStream) {
+        if (uiState.enableRtspStream) {
+            rtspServer.start()
+        } else {
+            rtspServer.stop()
+        }
+    }
+
     LaunchedEffect(uiState.enableHttpMjpeg, uiState.enableHttpSnapshot, uiState.enableRtspStream, uiState.enableWebRtc) {
         webcamServer.enableHttpMjpeg = uiState.enableHttpMjpeg
         webcamServer.enableHttpSnapshot = uiState.enableHttpSnapshot
         webcamServer.enableRtspStream = uiState.enableRtspStream
         webcamServer.enableWebRtc = uiState.enableWebRtc
     }
+
 
 
     LaunchedEffect(enableHistogram, enableFocusPeaking) {
