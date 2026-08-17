@@ -795,19 +795,20 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             scale(scaleX = -1f, scaleY = 1f, pivot = center)
                         }
                     }) {
-                        val targetW = size.height.toInt()
-                        val targetH = size.width.toInt()
-                        val leftOffset = (size.width.toInt() - targetW) / 2
-                        val topOffset = (size.height.toInt() - targetH) / 2
-                        
+                        // Drawing centered in rotated canvas matching container size
                         drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
-                            dstOffset = androidx.compose.ui.unit.IntOffset(leftOffset, topOffset),
-                            dstSize = androidx.compose.ui.unit.IntSize(targetW, targetH)
+                            dstOffset = androidx.compose.ui.unit.IntOffset(
+                                x = (center.x - size.height / 2f).toInt(),
+                                y = (center.y - size.width / 2f).toInt()
+                            ),
+                            dstSize = androidx.compose.ui.unit.IntSize(size.height.toInt(), size.width.toInt())
                         )
                     }
                 }
             }
+
+
 
 
 
