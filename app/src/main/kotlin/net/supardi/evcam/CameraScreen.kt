@@ -853,11 +853,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Canvas(
 
                     modifier = Modifier
-                        .padding(top = 100.dp, start = 16.dp)
+                        .padding(top = 100.dp, end = 16.dp)
                         .size(100.dp, 60.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.Black.copy(alpha = 0.6f))
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopEnd)
+
 
                 ) {
                     val data = histogramData!!
