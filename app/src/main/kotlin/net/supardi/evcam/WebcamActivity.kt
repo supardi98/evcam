@@ -131,8 +131,8 @@ fun WebcamDedicatedScreen(
             camera2Engine.setupImageReader(1920, 1080, width, height)
 
             camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
-                val image = reader.acquireLatestImage()
-                if (image != null) {
+                try {
+                    val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
                     try {
                         webcamServer.pushYuvFrame(image)
                         rtspServer.pushYuvFrame(image)
@@ -140,6 +140,8 @@ fun WebcamDedicatedScreen(
                     } finally {
                         image.close()
                     }
+                } catch (e: Exception) {
+                    // Buffer closed or camera reconfiguring safely ignored
                 }
             }, camera2Engine.backgroundHandler)
 
