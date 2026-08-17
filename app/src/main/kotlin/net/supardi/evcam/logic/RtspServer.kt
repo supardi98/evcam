@@ -64,10 +64,11 @@ class RtspServer(
 
     private fun startH264Encoder() {
         try {
-            val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 640, 480)
+            val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 1280, 720)
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar)
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 1500000)
+            format.setInteger(MediaFormat.KEY_BIT_RATE, 2500000)
             format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
+
             format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1) // Keyframe every 1s
 
 
