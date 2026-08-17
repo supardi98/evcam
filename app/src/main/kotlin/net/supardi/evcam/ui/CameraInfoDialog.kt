@@ -51,6 +51,8 @@ data class CameraHardwareInfo(
     val flashSupport: Boolean,
     val oisSupport: Boolean,
     val eisSupport: Boolean,
+    val oisNote: String? = null,
+    val eisNote: String? = null,
     val aeLock: Boolean,
     val wbLock: Boolean,
     val filterColorArrangement: String,
@@ -195,11 +197,35 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
             val hasStdEis = eisModes?.any { it != CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_OFF } ?: false
 
             val vendorKeys = chars.keys.map { it.name }
-            val hasVendorOis = vendorKeys.any { k -> k.contains("ois", ignoreCase = true) || k.contains("optical", ignoreCase = true) }
-            val hasVendorEis = vendorKeys.any { k -> k.contains("eis", ignoreCase = true) || k.contains("ais", ignoreCase = true) || k.contains("stabiliz", ignoreCase = true) }
+            val oisVendorKey = vendorKeys.find { k -> k.contains("ois", ignoreCase = true) || k.contains("optical", ignoreCase = true) }
+            val eisVendorKey = vendorKeys.find { k -> k.contains("eis", ignoreCase = true) || k.contains("ais", ignoreCase = true) || k.contains("stabiliz", ignoreCase = true) }
+
+            val hasVendorOis = oisVendorKey != null
+            val hasVendorEis = eisVendorKey != null
 
             val hasOis = hasStdOis || (hasVendorOis && facingStr.startsWith("Rear"))
             val hasEis = hasStdEis || (hasVendorEis && facingStr.startsWith("Rear"))
+
+            fun extractVendorName(key: String?): String? {
+                if (key == null) return null
+                val lowerKey = key.lowercase()
+                return when {
+                    lowerKey.contains("transsion") -> "Transsion/Infinix Vendor"
+                    lowerKey.contains("mediatek") -> "MediaTek Vendor"
+                    lowerKey.contains("qcom") || lowerKey.contains("qualcomm") -> "Qualcomm Vendor"
+                    lowerKey.contains("xiaomi") -> "Xiaomi Vendor"
+                    lowerKey.contains("samsung") -> "Samsung Vendor"
+                    else -> "${key.substringBefore(".")} Vendor"
+                }
+            }
+
+            val oisNote = if (hasOis) {
+                if (hasStdOis) "Standard Android API" else extractVendorName(oisVendorKey)
+            } else null
+
+            val eisNote = if (hasEis) {
+                if (hasStdEis) "Standard Android API" else extractVendorName(eisVendorKey)
+            } else null
             
             val aeLock = chars.get(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) ?: false
             val wbLock = chars.get(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE) ?: false
@@ -422,6 +448,8 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                     flashSupport = hasFlash,
                     oisSupport = hasOis,
                     eisSupport = hasEis,
+                    oisNote = oisNote,
+                    eisNote = eisNote,
                     aeLock = aeLock,
                     wbLock = wbLock,
                     filterColorArrangement = colorFilterStr,
@@ -702,8 +730,8 @@ private fun CameraDetailsDialog(info: CameraHardwareInfo, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     FeatureRow("Flash", info.flashSupport)
-                    FeatureRow("Electronic video stabilization", info.eisSupport)
-                    FeatureRow("Optical image stabilization", info.oisSupport)
+                    FeatureRow("Electronic video stabilization", info.eisSupport, info.eisNote)
+                    FeatureRow("Optical image stabilization", info.oisSupport, info.oisNote)
                     FeatureRow("AE lock", info.aeLock)
                     FeatureRow("WB lock", info.wbLock)
                 }
@@ -759,7 +787,7 @@ private fun InfoLabel(label: String, value: String) {
 }
 
 @Composable
-private fun FeatureRow(label: String, isSupported: Boolean) {
+private fun FeatureRow(label: String, isSupported: Boolean, note: String? = null) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
         Icon(
             imageVector = if (isSupported) Icons.Default.CheckCircle else Icons.Default.Cancel,
@@ -769,5 +797,9 @@ private fun FeatureRow(label: String, isSupported: Boolean) {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = label, color = Color.White, fontSize = 14.sp)
+        if (note != null) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "($note)", color = Color(0xFFFFD700), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        }
     }
 }
