@@ -36,6 +36,8 @@ class Camera2Engine(private val context: Context) {
         } catch (e: Exception) {}
         return "0"
     }
+    var cameraDevice: CameraDevice? = null
+        private set
     var captureSession: CameraCaptureSession? = null
         private set
     
