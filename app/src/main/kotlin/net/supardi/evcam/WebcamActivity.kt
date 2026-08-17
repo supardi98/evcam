@@ -299,42 +299,48 @@ fun WebcamDedicatedScreen(
                         Text("Stream Video Configuration", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // 1. Resolution Selection
-                        Text("Resolution Quality", color = Color.LightGray, fontSize = 11.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val resolutions = listOf(
-                                Triple("1080p (FHD)", 1920, 1080),
-                                Triple("720p (HD)", 1280, 720),
-                                Triple("480p (SD)", 640, 480)
-                            )
-                            resolutions.forEach { (label, w, h) ->
-                                val isSelected = width == w && height == h
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) Color.Yellow else Color.DarkGray,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            width = w
-                                            height = h
-                                            camera2Engine.setupImageReader(1920, 1080, w, h)
-                                            val surfaces = mutableListOf<android.view.Surface>()
-                                            camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
-                                            camera2Engine.createPreviewSession(surfaces) { _ -> }
-                                        }
+                        // 1. Resolution Selection (Hardware-backed dynamically queried resolutions)
+                        val supportedResolutions = remember { camera2Engine.getSupportedStreamResolutions() }
+                        Text("Resolution Quality (${supportedResolutions.firstOrNull()?.first ?: "Max"} Supported)", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Multi-row flow of hardware resolution chips
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            supportedResolutions.chunked(3).forEach { rowChunk ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Text(
-                                        text = label,
-                                        color = if (isSelected) Color.Black else Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 10.sp,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(vertical = 6.dp)
-                                    )
+                                    rowChunk.forEach { (label, w, h) ->
+                                        val isSelected = width == w && height == h
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isSelected) Color.Yellow else Color.DarkGray,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable {
+                                                    width = w
+                                                    height = h
+                                                    camera2Engine.setupImageReader(1920, 1080, w, h)
+                                                    val surfaces = mutableListOf<android.view.Surface>()
+                                                    camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
+                                                    camera2Engine.createPreviewSession(surfaces) { _ -> }
+                                                }
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                color = if (isSelected) Color.Black else Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.padding(vertical = 6.dp)
+                                            )
+                                        }
+                                    }
+                                    // Fill remaining columns if chunk < 3
+                                    repeat(3 - rowChunk.size) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
                                 }
                             }
                         }

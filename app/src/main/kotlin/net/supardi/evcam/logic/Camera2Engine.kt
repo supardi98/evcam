@@ -255,6 +255,46 @@ class Camera2Engine(private val context: Context) {
         analysisImageReader = ImageReader.newInstance(streamWidth, streamHeight, ImageFormat.YUV_420_888, 2)
     }
 
+    fun getSupportedStreamResolutions(cameraId: String = "0"): List<Triple<String, Int, Int>> {
+        try {
+            val chars = cameraManager.getCameraCharacteristics(cameraId)
+            val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return defaultResolutions()
+            val sizes = map.getOutputSizes(ImageFormat.YUV_420_888) ?: map.getOutputSizes(ImageFormat.JPEG) ?: return defaultResolutions()
+
+            val list = mutableListOf<Triple<String, Int, Int>>()
+            val sortedSizes = sizes.sortedByDescending { it.width * it.height }
+
+            sortedSizes.forEach { s ->
+                val w = maxOf(s.width, s.height)
+                val h = minOf(s.width, s.height)
+                val label = when {
+                    w >= 3840 -> "4K (2160p)"
+                    w >= 2560 -> "2.5K (1440p)"
+                    w >= 1920 -> "1080p (FHD)"
+                    w >= 1280 -> "720p (HD)"
+                    w >= 640 -> "480p (SD)"
+                    else -> "${w}x${h}"
+                }
+                if (list.none { it.second == w && it.third == h }) {
+                    list.add(Triple(label, w, h))
+                }
+            }
+            return if (list.isNotEmpty()) list else defaultResolutions()
+        } catch (e: Exception) {
+            return defaultResolutions()
+        }
+    }
+
+    private fun defaultResolutions(): List<Triple<String, Int, Int>> {
+        return listOf(
+            Triple("4K (2160p)", 3840, 2160),
+            Triple("2.5K (1440p)", 2560, 1440),
+            Triple("1080p (FHD)", 1920, 1080),
+            Triple("720p (HD)", 1280, 720),
+            Triple("480p (SD)", 640, 480)
+        )
+    }
+
     private var lastRecordedWidth = 1920
     private var lastRecordedHeight = 1080
     private var lastRecordedFps = 30
