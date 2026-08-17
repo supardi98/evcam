@@ -788,37 +788,28 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                     val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
                     val sensorRotation = if (isFront) 270f else 90f
-                    
-                    // Replicate AutoFitTextureView configureTransform Matrix 100% identically:
-                    // AutoFitTextureView has a 16:9 preview stream buffer (targetHeight = w * 16 / 9).
-                    // In 4:3 and 1:1 mode, AutoFitTextureView applies matrix scaleY = targetHeight / h to UNDO FIT_XY compression.
-                    val w = size.width
-                    val h = size.height
-                    val targetHeight = w * 16f / 9f
-                    val scaleYFactor = if (kotlin.math.abs(h - targetHeight) < 10f) 1f else (targetHeight / h)
 
                     withTransform({
-                        scale(scaleX = 1f, scaleY = scaleYFactor, pivot = center)
                         rotate(sensorRotation, pivot = center)
                         if (isFront) {
                             scale(scaleX = -1f, scaleY = 1f, pivot = center)
                         }
                     }) {
-                        // Drawing centered in rotated canvas space matching 16:9 buffer aspect ratio (w x targetHeight)
-                        val targetW = w.toInt()
-                        val targetH = targetHeight.toInt()
-                        
+                        // In rotated canvas space, draw bitmap fitting the exact container dimensions (swapping w & h)
+                        val drawW = size.height.toInt()
+                        val drawH = size.width.toInt()
                         drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
                             dstOffset = androidx.compose.ui.unit.IntOffset(
-                                x = (center.x - targetH / 2f).toInt(),
-                                y = (center.y - targetW / 2f).toInt()
+                                x = (center.x - drawW / 2f).toInt(),
+                                y = (center.y - drawH / 2f).toInt()
                             ),
-                            dstSize = androidx.compose.ui.unit.IntSize(targetH, targetW)
+                            dstSize = androidx.compose.ui.unit.IntSize(drawW, drawH)
                         )
                     }
                 }
             }
+
 
 
 
