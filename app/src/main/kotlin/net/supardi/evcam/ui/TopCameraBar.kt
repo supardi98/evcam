@@ -74,7 +74,7 @@ fun TopCameraBar(
                 }
             }
             
-            if (uiState.cameraMode == CameraMode.VIDEO) {
+            if (uiState.cameraMode == CameraMode.VIDEO && !uiState.isRecording) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
@@ -91,6 +91,7 @@ fun TopCameraBar(
                     )
                 }
             }
+
 
             if (uiState.cameraMode == CameraMode.PHOTO) {
                 if (uiState.hasNightExtension) {
