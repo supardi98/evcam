@@ -44,8 +44,8 @@ class MainActivity : ComponentActivity() {
             window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.show(WindowInsetsCompat.Type.statusBars())
+            controller.isAppearanceLightStatusBars = false
         }
 
         checkCameraPermission()
