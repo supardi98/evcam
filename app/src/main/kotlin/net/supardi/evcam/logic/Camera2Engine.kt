@@ -276,21 +276,34 @@ class Camera2Engine(private val context: Context) {
             val list = mutableListOf<Triple<String, Int, Int>>()
             val sortedSizes = sizes.sortedByDescending { it.width * it.height }
 
-            sortedSizes.forEach { s ->
-                val w = maxOf(s.width, s.height)
-                val h = minOf(s.width, s.height)
-                val label = when {
-                    w == 3840 && h == 2160 -> "4K (3840x2160)"
-                    w == 2560 && h == 1440 -> "2.5K (2560x1440)"
-                    w == 1920 && h == 1080 -> "1080p (1920x1080)"
-                    w == 1280 && h == 720 -> "720p (1280x720)"
-                    w == 640 && h == 480 -> "480p (640x480)"
-                    else -> "${w}x${h}"
+            // Find absolute max size for camera sensor
+            val maxResolution = sortedSizes.firstOrNull()
+            if (maxResolution != null) {
+                val maxW = maxOf(maxResolution.width, maxResolution.height)
+                val maxH = minOf(maxResolution.width, maxResolution.height)
+                list.add(Triple("Max (${maxW}x${maxH})", maxW, maxH))
+            }
+
+            // Standard clean streaming resolutions to avoid UI clutter
+            val targetPresets = listOf(
+                Triple("4K (3840x2160)", 3840, 2160),
+                Triple("2.5K (2560x1440)", 2560, 1440),
+                Triple("1080p (1920x1080)", 1920, 1080),
+                Triple("720p (1280x720)", 1280, 720),
+                Triple("480p (640x480)", 640, 480)
+            )
+
+            targetPresets.forEach { preset ->
+                val match = sortedSizes.find { s ->
+                    val w = maxOf(s.width, s.height)
+                    val h = minOf(s.width, s.height)
+                    w == preset.second && h == preset.third
                 }
-                if (list.none { it.second == w && it.third == h }) {
-                    list.add(Triple(label, w, h))
+                if (match != null && list.none { it.second == preset.second && it.third == preset.third }) {
+                    list.add(preset)
                 }
             }
+
             return if (list.isNotEmpty()) list else defaultResolutions()
         } catch (e: Exception) {
             return defaultResolutions()
