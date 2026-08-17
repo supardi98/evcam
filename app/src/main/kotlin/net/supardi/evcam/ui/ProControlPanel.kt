@@ -122,31 +122,32 @@ fun ProControlPanel(
             val minLog = kotlin.math.ln(minShutterSpeed.toDouble())
             val maxLog = kotlin.math.ln(maxShutterSpeed.toDouble())
             val currentLog = kotlin.math.ln(shutterSpeed.coerceIn(minShutterSpeed, maxShutterSpeed).toDouble())
-            val sliderPos = ((currentLog - minLog) / (maxLog - minLog)).toFloat().coerceIn(0f, 1f)
+            // Inverted slider position: 0f (left) = maxShutterSpeed (30s), 1f (right) = minShutterSpeed (1/10000)
+            val sliderPos = (1f - ((currentLog - minLog) / (maxLog - minLog))).toFloat().coerceIn(0f, 1f)
 
-            val minLabel = run {
-                val sec = minShutterSpeed / 1_000_000_000f
-                if (sec >= 0.95f) "${sec.toInt()}s" else "1/${(1_000_000_000L / minShutterSpeed.toLong().coerceAtLeast(1))}"
-            }
-            val maxLabel = run {
+            val leftLabel = run {
                 val sec = maxShutterSpeed / 1_000_000_000f
                 if (sec >= 0.95f) "${sec.toInt()}s" else "1/${(1_000_000_000L / maxShutterSpeed.toLong().coerceAtLeast(1))}"
+            }
+            val rightLabel = run {
+                val sec = minShutterSpeed / 1_000_000_000f
+                if (sec >= 0.95f) "${sec.toInt()}s" else "1/${(1_000_000_000L / minShutterSpeed.toLong().coerceAtLeast(1))}"
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                 Text("SHT", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-                Text(minLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
+                Text(leftLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
                 Slider(
                     value = sliderPos,
                     onValueChange = { pos ->
-                        val logVal = minLog + pos * (maxLog - minLog)
+                        val logVal = minLog + (1f - pos) * (maxLog - minLog)
                         val valNs = kotlin.math.exp(logVal).toFloat()
                         onShutterChange(valNs)
                     },
                     valueRange = 0f..1f,
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                 )
-                Text(maxLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
+                Text(rightLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
                 Text(
                     text = if (isShutterAuto) "AUTO" else {
                         val seconds = shutterSpeed / 1_000_000_000f
@@ -164,6 +165,7 @@ fun ProControlPanel(
                 )
             }
         }
+
 
 
 
