@@ -61,8 +61,9 @@ fun SettingsPopupPanels(
                     minShutterSpeed = uiState.minShutterSpeed,
                     maxShutterSpeed = uiState.maxShutterSpeed,
                     isShutterAuto = uiState.isShutterAuto,
-                    onShutterChange = { uiState.isShutterAuto = false; uiState.shutterSpeed = it },
+                    onShutterChange = { uiState.isShutterAuto = false; uiState.shutterSpeed = it; uiState.isProMode = true },
                     onShutterAutoToggle = { uiState.isShutterAuto = !uiState.isShutterAuto },
+
                     focusDistance = uiState.focusDistance,
                     maxFocusDistance = uiState.maxFocusDistance,
                     isFocusAuto = uiState.isFocusAuto,

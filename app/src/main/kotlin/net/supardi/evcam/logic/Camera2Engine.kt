@@ -556,13 +556,10 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             } else {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                if (!isIsoAuto) {
-                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
-                }
-                if (!isShutterAuto) {
-                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterSpeed)
-                }
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterSpeed)
             }
+
 
 
             if (isFocusAuto) {

@@ -126,13 +126,14 @@ fun ProControlPanel(
                 Text(
                     text = if (isShutterAuto) "AUTO" else {
                         val seconds = shutterSpeed / 1_000_000_000f
-                        if (seconds >= 1f) {
-                            String.format(Locale.US, "%.1fs", seconds)
+                        if (seconds >= 0.95f) {
+                            String.format(Locale.US, "%.0fs", seconds)
                         } else {
                             val denominator = (1_000_000_000L / shutterSpeed.toLong().coerceAtLeast(1)).coerceAtLeast(1)
                             "1/$denominator"
                         }
                     },
+
                     color = if (isShutterAuto) Color.Yellow else Color.White,
                     modifier = Modifier.width(55.dp).clickable { onShutterAutoToggle() },
                     textAlign = TextAlign.End,
