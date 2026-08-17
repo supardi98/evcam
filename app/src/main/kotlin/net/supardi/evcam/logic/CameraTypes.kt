@@ -22,7 +22,8 @@ enum class CustomSceneMode(val label: String, val description: String) {
     FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails"),
     BACKLIGHT("HDR Backlight", "Balances exposure for subjects against strong light sources"),
     CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes"),
-    SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes")
+    SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes"),
+    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography")
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {

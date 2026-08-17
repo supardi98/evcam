@@ -785,6 +785,14 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 3) // +1.0 EV compensation
             }
+            CustomSceneMode.ASTRO_LONG_EXP -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 800) // Optimal Astro ISO
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 500_000_000L) // 0.5s for live preview, 10s-30s on capture
+                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.0f) // Lock to infinity focus for night sky
+            }
         }
         updatePreview()
     }
