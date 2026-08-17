@@ -425,6 +425,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
     val activeCamId = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) "1" else "0"
 
+    LaunchedEffect(uiState.aspectRatio) {
+        when (uiState.aspectRatio) {
+            AspectRatioMode.RATIO_16_9 -> textureView.setAspectRatio(1080, 1920)
+            AspectRatioMode.RATIO_4_3 -> textureView.setAspectRatio(1080, 1440)
+            AspectRatioMode.RATIO_1_1 -> textureView.setAspectRatio(1080, 1080)
+        }
+    }
+
     LaunchedEffect(uiState.videoQuality, lensFacing) {
         val fpsList = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
         uiState.supportedFpsModes = fpsList
