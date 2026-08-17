@@ -465,8 +465,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
                 Camera2Helper.getShutterRange(chars)?.let { (min, max) ->
                     uiState.minShutterSpeed = min
-                    uiState.maxShutterSpeed = max
+                    // Cap shutter speed to max 0.5s (500,000,000 ns) for live preview to avoid severe lag/freezing
+                    uiState.maxShutterSpeed = minOf(max, 500_000_000f)
                 }
+
 
                 val minFocusDist = Camera2Helper.getMinimumFocusDistance(chars)
                 if (minFocusDist > 0f) {
