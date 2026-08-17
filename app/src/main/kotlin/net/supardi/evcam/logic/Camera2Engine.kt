@@ -461,8 +461,14 @@ class Camera2Engine(private val context: Context) {
         if (isRecordingVideo) {
             previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRectangle))
             previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRectangle))
-            previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
-            updatePreview()
+            previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+            previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+            try {
+                captureSession?.capture(previewRequestBuilder!!.build(), repeatingCaptureCallback, backgroundHandler)
+                previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         } else {
             previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRectangle))
             previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRectangle))
@@ -481,7 +487,7 @@ class Camera2Engine(private val context: Context) {
                 previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_REGIONS, null)
                 previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_REGIONS, null)
                 previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
-                updatePreview()
+                captureSession?.capture(previewRequestBuilder!!.build(), null, backgroundHandler)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
