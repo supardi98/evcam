@@ -31,8 +31,12 @@ fun ColorFilterPanel(
             .padding(horizontal = 12.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color.Black.copy(alpha = 0.85f))
+            .androidx.compose.ui.input.pointer.pointerInput(Unit) {
+                androidx.compose.foundation.gestures.detectTapGestures { }
+            }
             .padding(16.dp)
     ) {
+
         // Header
         Row(
             modifier = Modifier
