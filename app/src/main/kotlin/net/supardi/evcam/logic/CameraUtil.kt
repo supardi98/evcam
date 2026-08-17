@@ -260,10 +260,12 @@ fun startVideoRecord(
     onMediaSaved: (Bitmap, Uri) -> Unit,
     onEvent: (Any) -> Unit
 ): Any? {
-    val tempFile = File(context.cacheDir, "temp_vid_${System.currentTimeMillis()}.mp4").absolutePath
-    camera2Engine.setupMediaRecorder(width = width, height = height, fps = fps, audioEnabled = audioEnabled, outputFile = tempFile)
-    
-    Log.d("EVCAM", "startVideoRecord called with file=$tempFile")
+    // Use the output file already configured by CameraScreen's setupMediaRecorder call.
+    val tempFile = camera2Engine.lastOutputFile
+        ?: File(context.cacheDir, "temp_vid_${System.currentTimeMillis()}.mp4").absolutePath
+
+    Log.d("EVCAM", "startVideoRecord called with file=$tempFile w=$width h=$height")
+
     camera2Engine.startRecording {
         Log.d("EVCAM", "Video recording started event received")
         onEvent("Start")

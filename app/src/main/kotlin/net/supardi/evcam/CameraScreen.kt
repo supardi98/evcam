@@ -454,19 +454,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
 
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
-            val startPreview = {
+
+            // Encapsulate preview session creation so it can be re-called with different
+            // video dimensions when the user starts recording at a different quality.
+            fun startPreviewSession(recW: Int = 1920, recH: Int = 1080, recFps: Int = 30) {
                 textureView.surfaceTexture?.setDefaultBufferSize(1920, 1080)
                 val surface = android.view.Surface(textureView.surfaceTexture)
                 camera2Engine.setupImageReader(1920, 1080)
                 val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
-                camera2Engine.setupMediaRecorder(width = 1920, height = 1080, fps = 30, audioEnabled = true, outputFile = tempVideoFile)
-                
+                camera2Engine.setupMediaRecorder(width = recW, height = recH, fps = recFps, audioEnabled = true, outputFile = tempVideoFile)
+
                 val targets = mutableListOf<android.view.Surface>(surface)
                 val persistentSurface = camera2Engine.getOrCreatePersistentSurface()
                 targets.add(persistentSurface)
                 camera2Engine.imageReader?.surface?.let { targets.add(it) }
                 camera2Engine.analysisImageReader?.surface?.let { targets.add(it) }
-                
+
                 camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
                     if (image != null) {
@@ -477,17 +480,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 }, camera2Engine.backgroundHandler)
-                
+
                 camera2Engine.createPreviewSession(targets) { _ ->
                     isTransitioningRatio = false
                 }
             }
+
             if (textureView.isAvailable) {
-                startPreview()
+                startPreviewSession()
             } else {
                 textureView.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
                     override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, w: Int, h: Int) {
-                        startPreview()
+                        startPreviewSession()
                     }
                     override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) {}
                     override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
@@ -555,24 +559,38 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
                 val vFps = uiState.videoFps.fps
 
-                activeRecording = startVideoRecord(
-                    context = context,
-                    camera2Engine = camera2Engine,
-                    width = vWidth,
-                    height = vHeight,
-                    fps = vFps,
-                    audioEnabled = videoAudioEnabled,
-                    onMediaSaved = { bitmap, uri ->
-                        lastCapturedUri = uri
-                        prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
-                    },
-                    onEvent = { event ->
-                        if (event == "Start") isRecording = true
-                        else if (event == "Finalize") {
-                            isRecording = false
-                        }
-                    }
+                // Restart camera session with the correct video dimensions so the persistent
+                // surface is bound at the right size before recording starts.
+                val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
+                camera2Engine.setupMediaRecorder(
+                    width = vWidth, height = vHeight, fps = vFps,
+                    audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
                 )
+                val texSurface = android.view.Surface(textureView.surfaceTexture)
+                val newTargets = mutableListOf<android.view.Surface>(texSurface)
+                camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
+                camera2Engine.imageReader?.surface?.let { newTargets.add(it) }
+                camera2Engine.analysisImageReader?.surface?.let { newTargets.add(it) }
+                camera2Engine.createPreviewSession(newTargets) { _ ->
+                    activeRecording = startVideoRecord(
+                        context = context,
+                        camera2Engine = camera2Engine,
+                        width = vWidth,
+                        height = vHeight,
+                        fps = vFps,
+                        audioEnabled = videoAudioEnabled,
+                        onMediaSaved = { bitmap, uri ->
+                            lastCapturedUri = uri
+                            prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                        },
+                        onEvent = { event ->
+                            if (event == "Start") isRecording = true
+                            else if (event == "Finalize") {
+                                isRecording = false
+                            }
+                        }
+                    )
+                }
             }
         }
     }
