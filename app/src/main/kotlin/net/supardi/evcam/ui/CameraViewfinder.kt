@@ -66,6 +66,7 @@ fun CameraViewfinder(
                 previewView.apply {
                     val scaleGestureDetector = ScaleGestureDetector(ctx, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                         override fun onScale(detector: ScaleGestureDetector): Boolean {
+                            isMultiTouch = true
                             uiState.showZoomSlider = true
                             val newZoom = (uiState.zoomAnim.value * detector.scaleFactor).coerceIn(uiState.minZoomRatio, uiState.maxZoomRatio)
                             coroutineScope.launch { uiState.zoomAnim.snapTo(newZoom) }
@@ -76,6 +77,10 @@ fun CameraViewfinder(
 
                     val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
                         override fun onSingleTapUp(e: MotionEvent): Boolean {
+                            if (isMultiTouch || scaleGestureDetector.isInProgress) {
+                                return false
+                            }
+
                             if (uiState.isAeAfLocked) {
                                 uiState.isAeAfLocked = false
                             }
@@ -95,6 +100,10 @@ fun CameraViewfinder(
                         }
 
                         override fun onLongPress(e: MotionEvent) {
+                            if (isMultiTouch || scaleGestureDetector.isInProgress) {
+                                return
+                            }
+
                             uiState.isAeAfLocked = true
                             uiState.focusOffset = Offset(e.x, e.y)
                             uiState.showFocusBox = true
@@ -102,7 +111,7 @@ fun CameraViewfinder(
                         }
 
                         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                            if (e1 == null) return false
+                            if (e1 == null || isMultiTouch || scaleGestureDetector.isInProgress) return false
                             val diffX = e2.x - e1.x
                             val diffY = e2.y - e1.y
                             if (kotlin.math.abs(diffX) > kotlin.math.abs(diffY) && kotlin.math.abs(diffX) > 100 && kotlin.math.abs(velocityX) > 100) {
@@ -119,7 +128,7 @@ fun CameraViewfinder(
                     })
 
                     setOnTouchListener { _, event ->
-                        if (event.pointerCount > 1) {
+                        if (event.pointerCount > 1 || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
                             isMultiTouch = true
                         }
                         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
