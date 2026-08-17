@@ -54,8 +54,10 @@ fun ProControlPanel(
     onWhiteBalanceChange: (Int) -> Unit,
     onClose: () -> Unit,
     isHdrEnabled: Boolean = false,
-    isNightModeEnabled: Boolean = false
+    isNightModeEnabled: Boolean = false,
+    hasManualFocusSupport: Boolean = true
 ) {
+
 
 
     val isSceneLocked = isHdrEnabled || isNightModeEnabled
@@ -197,17 +199,25 @@ fun ProControlPanel(
             }
         }
 
-        ProSliderRow(
-            label = "FOC",
-            minLabel = "0.0",
-            maxLabel = String.format(Locale.US, "%.1f", maxFocusDistance),
-            value = focusDistance,
-            valueRange = 0f..maxFocusDistance,
-            onValueChange = onFocusChange,
-            isAuto = isFocusAuto,
-            displayValueText = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance),
-            onAutoToggle = onFocusAutoToggle
-        )
+        // ── Focus row: hidden when hardware lacks manual focus support ───────
+        AnimatedVisibility(
+            visible = hasManualFocusSupport,
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            ProSliderRow(
+                label = "FOC",
+                minLabel = "0.0",
+                maxLabel = String.format(Locale.US, "%.1f", maxFocusDistance),
+                value = focusDistance,
+                valueRange = 0f..maxFocusDistance,
+                onValueChange = onFocusChange,
+                isAuto = isFocusAuto,
+                displayValueText = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance),
+                onAutoToggle = onFocusAutoToggle
+            )
+        }
+
 
 
 

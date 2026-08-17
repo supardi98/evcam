@@ -420,14 +420,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 maxExposureIndex = aeRange.upper
             }
 
-            // Dynamically check if active camera (Front or Back) has hardware LED Flash unit
+            // Dynamically check if active camera (Front or Back) has hardware LED Flash unit & Manual Focus support
             uiState.hasFlashSupport = net.supardi.evcam.logic.Camera2Helper.hasFlashSupport(chars)
             if (!uiState.hasFlashSupport) {
                 uiState.isTorchOn = false
             }
             
+            val minFocusDistance = chars.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+            uiState.hasManualFocusSupport = minFocusDistance > 0f
+            if (!uiState.hasManualFocusSupport) {
+                uiState.isFocusAuto = true
+            }
+
             camera2Engine.closeCamera()
             camera2Engine.openCamera(camId)
+
         }
     }
     
