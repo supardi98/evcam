@@ -2,7 +2,10 @@ package net.supardi.evcam.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
+
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -60,10 +63,11 @@ fun SettingsPanel(
             .padding(horizontal = 12.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color.Black.copy(alpha = 0.85f))
-            .androidx.compose.ui.input.pointer.pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectTapGestures { }
+            .pointerInput(Unit) {
+                detectTapGestures { }
             }
             .padding(16.dp)
+
     ) {
 
         Row(

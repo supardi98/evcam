@@ -12,7 +12,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.input.pointer.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
+
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -73,10 +77,11 @@ fun ProControlPanel(
             .padding(horizontal = 12.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color.Black.copy(alpha = 0.85f))
-            .androidx.compose.ui.input.pointer.pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectTapGestures { }
+            .pointerInput(Unit) {
+                detectTapGestures { }
             }
             .padding(16.dp)
+
     ) {
 
         Row(
