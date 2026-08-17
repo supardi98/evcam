@@ -840,12 +840,30 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 @Suppress("UNUSED_VARIABLE")
                 val count = peakingUpdateCount // trigger recomposition
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawImage(
-                        image = peakingBitmap!!.asImageBitmap(),
-                        dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())
-                    )
+                    val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
+                    val sensorRotation = if (isFront) 270f else 90f
+                    
+                    withTransform({
+                        rotate(sensorRotation, pivot = center)
+                        if (isFront) {
+                            scale(scaleX = -1f, scaleY = 1f, pivot = center)
+                        }
+                    }) {
+                        // Swap width and height for 90/270 rotated bounds to cover full screen aspect ratio
+                        val targetW = size.height.toInt()
+                        val targetH = size.width.toInt()
+                        val leftOffset = (size.width.toInt() - targetW) / 2
+                        val topOffset = (size.height.toInt() - targetH) / 2
+                        
+                        drawImage(
+                            image = peakingBitmap!!.asImageBitmap(),
+                            dstOffset = androidx.compose.ui.unit.IntOffset(leftOffset, topOffset),
+                            dstSize = androidx.compose.ui.unit.IntSize(targetW, targetH)
+                        )
+                    }
                 }
             }
+
             
             if (showFocusBox && focusOffset != null) {
                 val focusColor = when (focusState) {
