@@ -588,10 +588,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             if (uiState.isWebcamStreaming) {
                                 webcamServer.pushYuvFrame(image)
                             }
+                            if (uiState.enableRtspStream) {
+                                rtspServer.pushYuvFrame(image)
+                            }
                             if (enableHistogram || enableFocusPeaking) {
                                 proAnalyzer.analyze(image, 0)
                             }
                         } catch (e: Exception) {
+
                             android.util.Log.e("EVCAM", "Error processing analysis image", e)
                         } finally {
                             image.close()
