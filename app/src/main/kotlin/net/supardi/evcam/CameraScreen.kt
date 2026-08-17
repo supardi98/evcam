@@ -454,8 +454,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
             val startPreview = {
-                textureView.setAspectRatio(1080, 1920)
-                textureView.surfaceTexture?.setDefaultBufferSize(1080, 1920)
+                textureView.setAspectRatio(1920, 1080)
+                textureView.surfaceTexture?.setDefaultBufferSize(1920, 1080)
                 val surface = android.view.Surface(textureView.surfaceTexture)
                 camera2Engine.setupImageReader(1920, 1080)
                 val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
@@ -665,20 +665,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .clipToBounds()
             .aspectRatio(animatedAspectRatio)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(9f / 16f)
-                    .align(Alignment.Center)
-            ) {
-                CameraViewfinder(
-                    previewView = textureView,
-                    uiState = uiState,
-                    coroutineScope = coroutineScope,
-                    camera2Engine = camera2Engine,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            CameraViewfinder(
+                previewView = textureView,
+                uiState = uiState,
+                coroutineScope = coroutineScope,
+                camera2Engine = camera2Engine,
+                modifier = Modifier.fillMaxSize()
+            )
 
 
             
