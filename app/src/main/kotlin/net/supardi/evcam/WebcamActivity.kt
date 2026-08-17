@@ -105,6 +105,10 @@ fun WebcamDedicatedScreen(
         camera2Engine.openCamera("0")
         camera2Engine.setupImageReader(1920, 1080, width, height)
 
+        val surfaces = mutableListOf<android.view.Surface>()
+        camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
+        camera2Engine.createPreviewSession(surfaces) { _ -> }
+
         onDispose {
             camera2Engine.closeCamera()
             camera2Engine.stopBackgroundThread()
