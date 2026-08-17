@@ -118,6 +118,10 @@ fun SettingsPopupPanels(
                 SettingsPanel(
                     enableRawCapture = uiState.enableRawCapture,
                     onEnableRawCaptureChange = { uiState.enableRawCapture = it },
+                    enableOis = uiState.enableOis,
+                    onEnableOisChange = { uiState.enableOis = it },
+                    enableEis = uiState.enableEis,
+                    onEnableEisChange = { uiState.enableEis = it },
                     keepScreenOn = uiState.keepScreenOn,
                     onKeepScreenOnChange = { uiState.keepScreenOn = it },
                     maxBrightness = uiState.maxBrightness,
