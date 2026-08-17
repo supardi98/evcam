@@ -143,9 +143,13 @@ class CameraUiState(
     var enableRtspStream by mutableStateOf(false)
     var enableWebRtc by mutableStateOf(false)
     var enableBlackScreenPowerSaving by mutableStateOf(false)
+    var webcamResolutionWidth by mutableIntStateOf(1280)
+    var webcamResolutionHeight by mutableIntStateOf(720)
+    var webcamOrientation by mutableStateOf("LANDSCAPE") // LANDSCAPE or PORTRAIT
     var connectedWebcamClients by mutableIntStateOf(0)
     var showWebcamDialog by mutableStateOf(false)
     var webcamServerIp by mutableStateOf("127.0.0.1")
+
 
 
 
