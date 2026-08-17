@@ -668,10 +668,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 uiState = uiState,
                 coroutineScope = coroutineScope,
                 camera2Engine = camera2Engine,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(9f / 16f)
-                    .align(Alignment.Center)
+                modifier = Modifier.fillMaxSize()
             )
 
 
