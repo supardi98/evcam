@@ -99,6 +99,44 @@ fun ProControlPanel(
             )
         }
 
+        val lockedParams = mutableListOf<String>()
+        if (isIsoLocked) lockedParams.add("ISO")
+        if (isShutterLocked) lockedParams.add("Shutter")
+        if (isFocusLocked) lockedParams.add("Focus")
+        if (isWbLocked) lockedParams.add("WB")
+        val lockedParamsText = if (lockedParams.isNotEmpty()) lockedParams.joinToString(" & ") else "Parameters"
+
+        // ── Info banner when any parameter is locked by scene mode ────────────────
+        AnimatedVisibility(
+            visible = isSceneLocked && lockedParams.isNotEmpty(),
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFFF9800).copy(alpha = 0.15f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = Color(0xFFFF9800),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "$lockedParamsText are automatically controlled by $sceneName mode",
+                    color = Color(0xFFFF9800),
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
+                )
+            }
+        }
+
         // ── ISO row: hidden when locked by active scene ───────────────────────
         AnimatedVisibility(
             visible = !isIsoLocked,
@@ -177,44 +215,6 @@ fun ProControlPanel(
 
 
 
-
-        val lockedParams = mutableListOf<String>()
-        if (isIsoLocked) lockedParams.add("ISO")
-        if (isShutterLocked) lockedParams.add("Shutter")
-        if (isFocusLocked) lockedParams.add("Focus")
-        if (isWbLocked) lockedParams.add("WB")
-        val lockedParamsText = if (lockedParams.isNotEmpty()) lockedParams.joinToString(" & ") else "Parameters"
-
-        // ── Info banner when any parameter is locked by scene mode ────────────────
-        AnimatedVisibility(
-            visible = isSceneLocked && lockedParams.isNotEmpty(),
-            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
-            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFFF9800).copy(alpha = 0.15f))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = Color(0xFFFF9800),
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "$lockedParamsText are automatically controlled by $sceneName mode",
-                    color = Color(0xFFFF9800),
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp
-                )
-            }
-        }
 
         // ── Focus row: hidden when hardware lacks manual focus or locked by scene ───────
         AnimatedVisibility(
