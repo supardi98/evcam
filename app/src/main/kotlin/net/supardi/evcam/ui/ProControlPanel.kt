@@ -227,7 +227,15 @@ fun ProControlPanel(
         // ── AWB Presets Row ──────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
             Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(start = 8.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)
+                    .androidx.compose.foundation.rememberScrollState().let { scrollState ->
+                        Modifier.androidx.compose.foundation.horizontalScroll(scrollState)
+                    }
+            ) {
                 Text(
                     text = "AUTO",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
@@ -235,7 +243,7 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_AUTO) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) FontWeight.Bold else FontWeight.Normal
                 )
@@ -246,7 +254,7 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
                 )
@@ -257,9 +265,31 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
+                )
+                Text(
+                    text = "INC",
+                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) Color.Black else Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) Color.Yellow else Color.White.copy(alpha = 0.2f))
+                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    fontSize = 12.sp,
+                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) FontWeight.Bold else FontWeight.Normal
+                )
+                Text(
+                    text = "FLU",
+                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) Color.Black else Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) Color.Yellow else Color.White.copy(alpha = 0.2f))
+                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    fontSize = 12.sp,
+                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) FontWeight.Bold else FontWeight.Normal
                 )
                 Text(
                     text = "CUS",
@@ -268,12 +298,13 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_OFF) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) FontWeight.Bold else FontWeight.Normal
                 )
             }
         }
+
 
         // ── Custom Kelvin Slider Row (appears below when CUS is selected) ──
         AnimatedVisibility(
