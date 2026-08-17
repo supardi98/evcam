@@ -638,54 +638,14 @@ class Camera2Engine(private val context: Context) {
         isIsoAuto: Boolean, iso: Int,
         isShutterAuto: Boolean, shutterSpeed: Long,
         isFocusAuto: Boolean, focusDistance: Float,
-        whiteBalance: Int, manualKelvin: Int
+        whiteBalance: Int, manualKelvin: Int,
+        activeCustomScene: CustomSceneMode
     ) {
         val builder = previewRequestBuilder ?: return
-        if (isProMode) {
-            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
 
-            if (isIsoAuto && isShutterAuto) {
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            } else {
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
-                // Cap preview shutter speed to max 0.5s (500ms) for smooth live viewfinder
-                val previewShutter = minOf(shutterSpeed, 500_000_000L)
-                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, previewShutter)
-            }
-
-
-
-
-            if (isFocusAuto) {
-                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-            } else {
-                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance)
-            }
-
-            builder.set(CaptureRequest.CONTROL_AWB_MODE, whiteBalance)
-            if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
-                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-                // Use exact gain ratio multiplier from hardware sensor
-                val baseGains = lastLiveGains
-                val baseR = baseGains?.red ?: 1.8f
-                val baseB = baseGains?.blue ?: 1.8f
-                val baseG1 = baseGains?.greenEven ?: 1.0f
-                val baseG2 = baseGains?.greenOdd ?: 1.0f
-
-                // Scale gains around center 5500K
-                val factor = (manualKelvin / 5500f).coerceIn(0.4f, 2.2f)
-                val rGain = (baseR / factor).coerceIn(1.0f, 4.0f)
-                val bGain = (baseB * factor).coerceIn(1.0f, 4.0f)
-
-                builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, android.hardware.camera2.params.RggbChannelVector(rGain, baseG1, baseG2, bGain))
-            } else {
-                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
-            }
-
-
-
+        // 1. First, apply the Custom Scene Mode base template
+        if (activeCustomScene != CustomSceneMode.AUTO) {
+            applyCustomSceneModeInternal(activeCustomScene, update = false)
         } else {
             builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
@@ -693,10 +653,56 @@ class Camera2Engine(private val context: Context) {
             builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
             builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
         }
+
+        // 2. Then, override with manual Pro Mode settings if explicitly set and not locked by scene
+        if (isProMode) {
+            // Override Exposure
+            if (!isIsoAuto || !isShutterAuto) {
+                if (!activeCustomScene.lockIso && !activeCustomScene.lockShutter) {
+                    builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    if (!isIsoAuto) builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+                    if (!isShutterAuto) {
+                        val previewShutter = minOf(shutterSpeed, 500_000_000L)
+                        builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, previewShutter)
+                    }
+                }
+            }
+
+            // Override Focus
+            if (!isFocusAuto) {
+                if (!activeCustomScene.lockFocus) {
+                    builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                    builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance)
+                }
+            }
+
+            // Override White Balance
+            if (whiteBalance != CaptureRequest.CONTROL_AWB_MODE_AUTO) {
+                if (!activeCustomScene.lockWhiteBalance) {
+                    builder.set(CaptureRequest.CONTROL_AWB_MODE, whiteBalance)
+                    if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
+                        builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                        val baseGains = lastLiveGains
+                        val baseR = baseGains?.red ?: 1.8f
+                        val baseB = baseGains?.blue ?: 1.8f
+                        val baseG1 = baseGains?.greenEven ?: 1.0f
+                        val baseG2 = baseGains?.greenOdd ?: 1.0f
+
+                        val factor = (manualKelvin / 5500f).coerceIn(0.4f, 2.2f)
+                        val rGain = (baseR / factor).coerceIn(1.0f, 4.0f)
+                        val bGain = (baseB * factor).coerceIn(1.0f, 4.0f)
+                        builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, android.hardware.camera2.params.RggbChannelVector(rGain, baseG1, baseG2, bGain))
+                    } else {
+                        builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
+                    }
+                }
+            }
+        }
         updatePreview()
     }
 
-    
     fun setTorchState(enabled: Boolean) {
         val builder = previewRequestBuilder ?: return
         if (enabled) {
@@ -707,8 +713,12 @@ class Camera2Engine(private val context: Context) {
         }
         updatePreview()
     }
-    
+
     fun applyCustomSceneMode(sceneMode: CustomSceneMode) {
+        applyCustomSceneModeInternal(sceneMode, update = true)
+    }
+
+    private fun applyCustomSceneModeInternal(sceneMode: CustomSceneMode, update: Boolean) {
         val builder = previewRequestBuilder ?: return
         when (sceneMode) {
             CustomSceneMode.AUTO -> {
@@ -794,7 +804,7 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.0f) // Lock to infinity focus for night sky
             }
         }
-        updatePreview()
+        if (update) updatePreview()
     }
 
 

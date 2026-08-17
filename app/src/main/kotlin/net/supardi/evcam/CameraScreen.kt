@@ -742,21 +742,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
 
     LaunchedEffect(isProMode, iso, shutterSpeed, focusDistance, whiteBalance, manualKelvin, isIsoAuto, isShutterAuto, isFocusAuto, uiState.selectedCustomScene) {
-        if (uiState.selectedCustomScene == CustomSceneMode.AUTO) {
-            camera2Engine.setProSettings(
-                isProMode = isProMode,
-                isIsoAuto = isIsoAuto,
-                iso = iso.toInt(),
-                isShutterAuto = isShutterAuto,
-                shutterSpeed = shutterSpeed.toLong(),
-                isFocusAuto = isFocusAuto,
-                focusDistance = focusDistance,
-                whiteBalance = whiteBalance.toInt(),
-                manualKelvin = manualKelvin.toInt()
-            )
-        } else {
-            camera2Engine.applyCustomSceneMode(uiState.selectedCustomScene)
-        }
+        camera2Engine.setProSettings(
+            isProMode = isProMode,
+            isIsoAuto = isIsoAuto,
+            iso = iso.toInt(),
+            isShutterAuto = isShutterAuto,
+            shutterSpeed = shutterSpeed.toLong(),
+            isFocusAuto = isFocusAuto,
+            focusDistance = focusDistance,
+            whiteBalance = whiteBalance.toInt(),
+            manualKelvin = manualKelvin.toInt(),
+            activeCustomScene = uiState.selectedCustomScene
+        )
     }
 
     LaunchedEffect(cameraState) {
