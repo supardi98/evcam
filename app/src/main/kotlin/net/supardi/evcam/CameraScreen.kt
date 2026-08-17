@@ -266,6 +266,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    LaunchedEffect(uiState.enableHttpMjpeg, uiState.enableHttpSnapshot, uiState.enableRtspStream, uiState.enableWebRtc) {
+        webcamServer.enableHttpMjpeg = uiState.enableHttpMjpeg
+        webcamServer.enableHttpSnapshot = uiState.enableHttpSnapshot
+        webcamServer.enableRtspStream = uiState.enableRtspStream
+        webcamServer.enableWebRtc = uiState.enableWebRtc
+    }
+
+
     LaunchedEffect(enableHistogram, enableFocusPeaking) {
 
         proAnalyzer.enableHistogram = enableHistogram
