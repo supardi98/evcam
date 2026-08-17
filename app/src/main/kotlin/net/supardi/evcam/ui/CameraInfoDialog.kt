@@ -206,8 +206,11 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
             val hasOis = hasStdOis || (hasVendorOis && facingStr.startsWith("Rear"))
             val hasEis = hasStdEis || (hasVendorEis && facingStr.startsWith("Rear"))
 
-            fun extractVendorName(key: String?): String? {
-                if (key == null) return null
+            val isTranssionDevice = vendorKeys.any { it.contains("transsion", ignoreCase = true) }
+
+            fun extractVendorName(key: String?): String {
+                if (isTranssionDevice) return "Transsion/Infinix Vendor"
+                if (key == null) return "Hardware Vendor"
                 val lowerKey = key.lowercase()
                 return when {
                     lowerKey.contains("transsion") -> "Transsion/Infinix Vendor"
@@ -215,16 +218,16 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
                     lowerKey.contains("qcom") || lowerKey.contains("qualcomm") -> "Qualcomm Vendor"
                     lowerKey.contains("xiaomi") -> "Xiaomi Vendor"
                     lowerKey.contains("samsung") -> "Samsung Vendor"
-                    else -> "${key.substringBefore(".")} Vendor"
+                    else -> "Hardware Vendor"
                 }
             }
 
             val oisNote = if (hasOis) {
-                if (hasStdOis) "Standard Android API" else extractVendorName(oisVendorKey)
+                if (hasStdOis && !isTranssionDevice) "Standard Android API" else extractVendorName(oisVendorKey)
             } else null
 
             val eisNote = if (hasEis) {
-                if (hasStdEis) "Standard Android API" else extractVendorName(eisVendorKey)
+                if (hasStdEis && !isTranssionDevice) "Standard Android API" else extractVendorName(eisVendorKey)
             } else null
             
             val aeLock = chars.get(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) ?: false
