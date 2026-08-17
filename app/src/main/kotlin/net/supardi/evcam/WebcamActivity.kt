@@ -113,6 +113,7 @@ fun WebcamDedicatedScreen(
     var orientation by remember { mutableStateOf("LANDSCAPE") }
 
     val isAnyActive = isHttpMjpeg || isHttpSnapshot || isRtsp || isWebRtc
+    val cameraState by camera2Engine.cameraState.collectAsState()
 
     // Lazy Camera Engine start/stop: Open camera ONLY when at least one streaming protocol is ON
     LaunchedEffect(isAnyActive) {
