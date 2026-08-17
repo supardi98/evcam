@@ -345,8 +345,8 @@ class Camera2Engine(private val context: Context) {
             }
             
             val videoStabModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)
-            if (videoStabModes?.contains(CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON) == true) {
-                builder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON)
+            if (videoStabModes?.contains(CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF) == true) {
+                builder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
             }
         } catch (e: Exception) {
             e.printStackTrace()
