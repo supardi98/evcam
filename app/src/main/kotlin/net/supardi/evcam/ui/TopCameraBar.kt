@@ -1,5 +1,11 @@
 package net.supardi.evcam.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -11,7 +17,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,12 +33,14 @@ fun TopCameraBar(
     uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
+    var isSceneOptionsExpanded by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(top = 44.dp)
     ) {
-        // Baris Atas Utama: Flash, Mute (Video), Filter, Timer | Aspect Ratio / Quality, Settings
+        // Baris Atas Utama
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -277,9 +285,9 @@ fun TopCameraBar(
             }
         }
 
-        // ── Baris Kedua (Sub-Bar Dedicated) khusus Night & HDR Mode ──
+        // ── Baris Kedua: Expandable Scene Selector Pill (Diklik muncul OFF, NIGHT, HDR) ──
         if (uiState.cameraMode == CameraMode.PHOTO && (uiState.hasNightExtension || uiState.hasHdrExtension)) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -287,21 +295,32 @@ fun TopCameraBar(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Tombol Night Mode di Baris Kedua
-                if (uiState.hasNightExtension) {
+                val currentLabel = when {
+                    uiState.isNightModeEnabled -> "NIGHT"
+                    uiState.isHdrEnabled -> "HDR"
+                    else -> "SCENE"
+                }
+                val currentIcon = when {
+                    uiState.isNightModeEnabled -> Icons.Filled.DarkMode
+                    uiState.isHdrEnabled -> Icons.Filled.HdrOn
+                    else -> Icons.Filled.AutoAwesome
+                }
+                val isActive = uiState.isNightModeEnabled || uiState.isHdrEnabled
+
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Main Trigger Button
                     Box(
                         modifier = Modifier
                             .clip(CircleShape)
-                            .background(if (uiState.isNightModeEnabled) Color.Yellow.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.4f))
-                            .clickable {
-                                uiState.isNightModeEnabled = !uiState.isNightModeEnabled
-                                if (uiState.isNightModeEnabled) {
-                                    uiState.isHdrEnabled = false
-                                    uiState.isIsoAuto = true
-                                    uiState.isShutterAuto = true
-                                }
-                            }
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                            .background(if (isActive) Color.Yellow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.15f))
+                            .clickable { isSceneOptionsExpanded = !isSceneOptionsExpanded }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -309,55 +328,98 @@ fun TopCameraBar(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.DarkMode,
-                                contentDescription = "Night Mode",
-                                tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                                imageVector = currentIcon,
+                                contentDescription = "Scene Mode",
+                                tint = if (isActive) Color.Yellow else Color.White,
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "NIGHT",
-                                color = if (uiState.isNightModeEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                                text = currentLabel,
+                                color = if (isActive) Color.Yellow else Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
                         }
                     }
-                }
 
-                // Tombol HDR Mode di Baris Kedua
-                if (uiState.hasHdrExtension) {
-                    if (uiState.hasNightExtension) Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (uiState.isHdrEnabled) Color.Yellow.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.4f))
-                            .clickable {
-                                uiState.isHdrEnabled = !uiState.isHdrEnabled
-                                if (uiState.isHdrEnabled) {
-                                    uiState.isNightModeEnabled = false
-                                    uiState.isIsoAuto = true
-                                    uiState.isShutterAuto = true
-                                }
-                            }
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center
+                    // Expanded Options (OFF, NIGHT, HDR)
+                    AnimatedVisibility(
+                        visible = isSceneOptionsExpanded,
+                        enter = expandHorizontally(tween(200)) + fadeIn(tween(200)),
+                        exit = shrinkHorizontally(tween(200)) + fadeOut(tween(200))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(start = 6.dp, end = 4.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.HdrOn,
-                                contentDescription = "HDR Mode",
-                                tint = if (uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "HDR",
-                                color = if (uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.8f),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
+                            // OFF Option
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(if (!uiState.isNightModeEnabled && !uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                    .clickable {
+                                        uiState.isNightModeEnabled = false
+                                        uiState.isHdrEnabled = false
+                                        isSceneOptionsExpanded = false
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = "OFF",
+                                    color = if (!uiState.isNightModeEnabled && !uiState.isHdrEnabled) Color.Black else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
+
+                            // NIGHT Option
+                            if (uiState.hasNightExtension) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(if (uiState.isNightModeEnabled) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                        .clickable {
+                                            uiState.isNightModeEnabled = true
+                                            uiState.isHdrEnabled = false
+                                            uiState.isIsoAuto = true
+                                            uiState.isShutterAuto = true
+                                            isSceneOptionsExpanded = false
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = "NIGHT",
+                                        color = if (uiState.isNightModeEnabled) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            // HDR Option
+                            if (uiState.hasHdrExtension) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(if (uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                        .clickable {
+                                            uiState.isHdrEnabled = true
+                                            uiState.isNightModeEnabled = false
+                                            uiState.isIsoAuto = true
+                                            uiState.isShutterAuto = true
+                                            isSceneOptionsExpanded = false
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = "HDR",
+                                        color = if (uiState.isHdrEnabled) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
