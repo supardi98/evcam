@@ -791,18 +791,19 @@ private fun InfoLabel(label: String, value: String) {
 
 @Composable
 private fun FeatureRow(label: String, isSupported: Boolean, note: String? = null) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(bottom = 8.dp)) {
         Icon(
             imageVector = if (isSupported) Icons.Default.CheckCircle else Icons.Default.Cancel,
             contentDescription = null,
             tint = if (isSupported) Color.Green else Color.Gray,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(16.dp).padding(top = 2.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = label, color = Color.White, fontSize = 14.sp)
-        if (note != null) {
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "($note)", color = Color(0xFFFFD700), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Column {
+            Text(text = label, color = Color.White, fontSize = 14.sp)
+            if (note != null) {
+                Text(text = "($note)", color = Color(0xFFFFD700), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
