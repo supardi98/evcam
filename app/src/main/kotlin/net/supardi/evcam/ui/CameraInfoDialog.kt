@@ -600,6 +600,16 @@ private fun CameraHardwareCard(info: CameraHardwareInfo, onMoreClick: () -> Unit
                     Text(info.isoRange, color = Color.White, fontSize = 14.sp)
                 }
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FeatureRow("Flash", info.flashSupport)
+                FeatureRow("Electronic video stabilization", info.eisSupport)
+                FeatureRow("Optical image stabilization", info.oisSupport)
+                FeatureRow("AE lock", info.aeLock)
+                FeatureRow("WB lock", info.wbLock)
+            }
         }
         
         Divider(color = Color.White.copy(alpha = 0.1f))
