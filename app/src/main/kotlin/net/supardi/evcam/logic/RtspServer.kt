@@ -80,14 +80,17 @@ class RtspServer(
         }
     }
 
-    private fun stopH264Encoder() {
-        isEncoderRunning = false
+    fun requestKeyFrame() {
         try {
-            mediaCodec?.stop()
-            mediaCodec?.release()
-            mediaCodec = null
-        } catch (e: Exception) {}
+            val params = android.os.Bundle()
+            params.putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0)
+            mediaCodec?.setParameters(params)
+            Log.d("EVCAM_RTSP", "Requested instant H.264 I-Frame keyframe from MediaCodec")
+        } catch (e: Exception) {
+            Log.e("EVCAM_RTSP", "Failed to request sync keyframe", e)
+        }
     }
+
 
     fun pushYuvFrame(image: Image) {
         if (!isEncoderRunning || clients.isEmpty()) return
@@ -240,6 +243,7 @@ class RtspServer(
                                     "Range: npt=0.000-\r\n\r\n"
                             outputStream?.write(response.toByteArray())
                             outputStream?.flush()
+                            requestKeyFrame()
                         }
                         "TEARDOWN" -> {
                             val response = "RTSP/1.0 200 OK\r\n" +
