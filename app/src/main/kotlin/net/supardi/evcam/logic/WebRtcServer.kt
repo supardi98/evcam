@@ -57,10 +57,10 @@ class WebRtcServer(
         clients.clear()
     }
 
-    fun pushYuvFrame(image: Image) {
+    fun pushYuvFrame(image: Image, rotationDegrees: Int = 0) {
         if (!isRunning || clients.isEmpty()) return
         try {
-            val jpeg = YuvToJpegConverter.convertYuvToJpeg(image, quality = 75)
+            val jpeg = YuvToJpegConverter.convertYuvToJpeg(image, quality = 75, rotationDegrees = rotationDegrees)
             latestJpegFrame = jpeg
 
             clients.forEach { client ->

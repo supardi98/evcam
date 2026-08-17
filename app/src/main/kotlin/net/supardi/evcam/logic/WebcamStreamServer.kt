@@ -73,9 +73,9 @@ class WebcamStreamServer(
         onClientCountChanged?.invoke(0)
     }
 
-    fun pushYuvFrame(image: Image) {
+    fun pushYuvFrame(image: Image, rotationDegrees: Int = 0) {
         try {
-            val jpegBytes = YuvToJpegConverter.convertYuvToJpeg(image, quality = 75)
+            val jpegBytes = YuvToJpegConverter.convertYuvToJpeg(image, quality = 75, rotationDegrees = rotationDegrees)
             latestFrameJpeg = jpegBytes
 
             clients.forEach { client ->

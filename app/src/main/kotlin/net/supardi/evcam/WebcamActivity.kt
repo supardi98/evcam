@@ -143,10 +143,11 @@ fun WebcamDedicatedScreen(
             camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
                 try {
                     val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
+                    val rot = if (orientation == "PORTRAIT") 90 else 0
                     try {
-                        webcamServer.pushYuvFrame(image)
+                        webcamServer.pushYuvFrame(image, rot)
                         rtspServer.pushYuvFrame(image)
-                        webRtcServer.pushYuvFrame(image)
+                        webRtcServer.pushYuvFrame(image, rot)
                     } finally {
                         image.close()
                     }

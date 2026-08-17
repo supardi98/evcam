@@ -66,11 +66,26 @@ object YuvToJpegConverter {
         return nv21
     }
 
-    fun convertYuvToJpeg(image: Image, quality: Int = 75): ByteArray {
+    fun convertYuvToJpeg(image: Image, quality: Int = 75, rotationDegrees: Int = 0): ByteArray {
         val nv21 = yuv420ToNv21(image)
         val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
         val out = ByteArrayOutputStream()
         yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), quality, out)
-        return out.toByteArray()
+        val jpegBytes = out.toByteArray()
+
+        if (rotationDegrees != 0) {
+            val bitmap = android.graphics.BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
+            if (bitmap != null) {
+                val matrix = android.graphics.Matrix()
+                matrix.postRotate(rotationDegrees.toFloat())
+                val rotatedBitmap = android.graphics.Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                val rotatedOut = ByteArrayOutputStream()
+                rotatedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, rotatedOut)
+                bitmap.recycle()
+                rotatedBitmap.recycle()
+                return rotatedOut.toByteArray()
+            }
+        }
+        return jpegBytes
     }
 }
