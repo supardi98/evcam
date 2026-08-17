@@ -69,10 +69,7 @@ class RtspServer(
             format.setInteger(MediaFormat.KEY_BIT_RATE, 1500000)
             format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
             format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1) // Keyframe every 1s
-            format.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR) // Constant bitrate low latency
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                format.setInteger(MediaFormat.KEY_LATENCY, 0) // Ultra low latency
-            }
+
 
             mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
             mediaCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
@@ -243,11 +240,15 @@ class RtspServer(
                     val requestLine = reader.readLine() ?: break
                     if (requestLine.trim().isEmpty()) continue
 
+                    // Ignore binary RTP interleaved packets ($ symbol)
+                    if (requestLine.startsWith("$")) continue
+
                     Log.d("EVCAM_RTSP", "RTSP Request Line: $requestLine")
 
                     val tokens = requestLine.split(" ")
                     if (tokens.size < 3) continue
                     val method = tokens[0]
+
 
                     var cseq = "1"
                     var transportLine = ""
