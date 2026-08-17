@@ -401,6 +401,9 @@ class Camera2Engine(private val context: Context) {
             super.onCaptureCompleted(session, request, result)
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             if (afState != null) {
+                if (isAfTriggered) {
+                    Log.d("EVCAM_AF", "AF State: $afState")
+                }
                 onAfStateCallback?.invoke(afState)
             }
         }

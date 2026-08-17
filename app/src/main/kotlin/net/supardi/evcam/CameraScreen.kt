@@ -651,7 +651,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         uiState.focusState = FocusState.SEARCHING
                     }
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_INACTIVE -> {
                         uiState.focusState = FocusState.SUCCESS
                         camera2Engine.isAfTriggered = false
                         if (uiState.isPendingAfLock) {
