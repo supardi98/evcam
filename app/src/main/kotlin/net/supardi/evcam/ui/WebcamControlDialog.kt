@@ -232,13 +232,14 @@ fun WebcamControlDialog(
 
             // 4. WebRTC Protocol Card
             ProtocolCard(
-                title = "WebRTC PeerConnection",
-                subtitle = "Real-time stream sub-100ms ultra low-latency",
-                url = "webrtc://$serverIp:9090",
-                dashboardUrl = null,
+                title = "WebRTC Sub-100ms Stream",
+                subtitle = "Stream HTML5 real-time sub-100ms ultra low-latency (Buka di browser)",
+                url = "http://$serverIp:9090/stream",
+                dashboardUrl = "http://$serverIp:9090",
                 isEnabled = enableWebRtc,
                 isLoading = webRtcLoading,
                 context = context,
+
                 onToggle = { isChecked ->
                     if (isChecked) {
                         webRtcLoading = true
