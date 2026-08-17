@@ -435,13 +435,14 @@ class Camera2Engine(private val context: Context) {
             }
             // Read active AWB color correction gains from sensor metadata to calculate live Kelvin
             val gains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
-            if (gains != null && gains.r > 0f && gains.b > 0f) {
+            if (gains != null && gains.red > 0f && gains.blue > 0f) {
                 // Approximate color temperature from red/blue channel gains ratio
-                val ratio = gains.r / gains.b
+                val ratio = gains.red / gains.blue
                 // Empirical Kelvin curve estimation: ratio ~ 0.5 -> 7500K, ratio ~ 1.0 -> 5500K, ratio ~ 2.0 -> 3000K
                 val estimatedKelvin = (5500f / (ratio.toDouble().pow(0.8))).toFloat().coerceIn(2000f, 10000f)
                 onAwbGainsCallback?.invoke(estimatedKelvin)
             }
+
 
         }
     }
