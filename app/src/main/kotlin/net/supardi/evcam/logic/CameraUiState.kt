@@ -134,6 +134,21 @@ class CameraUiState(
     var supportedSceneModes by mutableStateOf<List<Int>>(emptyList())
     var selectedSceneMode by mutableIntStateOf(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
 
+    // Webcam & Streaming server properties (In-memory state only)
+    var isWebcamStreaming by mutableStateOf(false)
+    var webcamHttpPort by mutableIntStateOf(8080)
+    var webcamRtspPort by mutableIntStateOf(8554)
+    var enableHttpMjpeg by mutableStateOf(true)
+    var enableHttpSnapshot by mutableStateOf(true)
+    var enableRtspStream by mutableStateOf(false)
+    var enableWebRtc by mutableStateOf(false)
+    var connectedWebcamClients by mutableIntStateOf(0)
+    var showWebcamDialog by mutableStateOf(false)
+    var webcamServerIp by mutableStateOf("127.0.0.1")
+
+
+
+
 
     var supportedVideoQualities by mutableStateOf<List<VideoQualityMode>>(VideoQualityMode.values().toList())
     var supportedFpsModes by mutableStateOf<List<VideoFpsMode>>(VideoFpsMode.values().toList())

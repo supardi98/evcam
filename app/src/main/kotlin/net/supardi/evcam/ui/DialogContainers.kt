@@ -153,4 +153,26 @@ fun DialogContainers(
     if (uiState.showCameraInfoDialog) {
         CameraInfoDialog(onDismiss = { uiState.showCameraInfoDialog = false })
     }
+
+    if (uiState.showWebcamDialog) {
+        WebcamControlDialog(
+            isStreaming = uiState.isWebcamStreaming,
+            serverIp = uiState.webcamServerIp,
+            port = uiState.webcamHttpPort,
+            connectedClients = uiState.connectedWebcamClients,
+            enableHttpMjpeg = uiState.enableHttpMjpeg,
+            onEnableHttpMjpegChange = { uiState.enableHttpMjpeg = it },
+            enableHttpSnapshot = uiState.enableHttpSnapshot,
+            onEnableHttpSnapshotChange = { uiState.enableHttpSnapshot = it },
+            enableRtspStream = uiState.enableRtspStream,
+            onEnableRtspStreamChange = { uiState.enableRtspStream = it },
+            enableWebRtc = uiState.enableWebRtc,
+            onEnableWebRtcChange = { uiState.enableWebRtc = it },
+            onToggleStreaming = {
+                uiState.isWebcamStreaming = !uiState.isWebcamStreaming
+            },
+            onClose = { uiState.showWebcamDialog = false }
+        )
+    }
+
 }

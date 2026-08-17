@@ -55,8 +55,10 @@ fun SettingsPanel(
     onOpenWatermarkSettings: () -> Unit,
     onOpenPluginManager: () -> Unit,
     onOpenCameraInfo: () -> Unit,
+    onOpenWebcamSettings: () -> Unit = {},
     onClose: () -> Unit
 ) {
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,12 +240,21 @@ fun SettingsPanel(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Button(
+                onClick = onOpenWebcamSettings,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow)
+            ) {
+                Text("IP Webcam & Live Stream", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Button(
                 onClick = onOpenCameraInfo,
                 modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
             ) {
                 Text("Hardware Camera Info", color = Color.White, fontSize = 12.sp)
             }
+
             Spacer(modifier = Modifier.height(4.dp))
         }
     }

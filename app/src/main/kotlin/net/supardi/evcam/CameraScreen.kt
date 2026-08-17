@@ -248,7 +248,26 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         )
     }
     
+    val webcamServer = remember { WebcamStreamServer(context) }
+
+    LaunchedEffect(uiState.isWebcamStreaming) {
+        if (uiState.isWebcamStreaming) {
+            webcamServer.enableHttpMjpeg = uiState.enableHttpMjpeg
+            webcamServer.enableHttpSnapshot = uiState.enableHttpSnapshot
+            webcamServer.enableRtspStream = uiState.enableRtspStream
+            webcamServer.enableWebRtc = uiState.enableWebRtc
+            webcamServer.onClientCountChanged = { count ->
+                uiState.connectedWebcamClients = count
+            }
+            uiState.webcamServerIp = WebcamStreamServer.getLocalIpAddress(context)
+            webcamServer.start()
+        } else {
+            webcamServer.stop()
+        }
+    }
+
     LaunchedEffect(enableHistogram, enableFocusPeaking) {
+
         proAnalyzer.enableHistogram = enableHistogram
         proAnalyzer.enableFocusPeaking = enableFocusPeaking
     }
@@ -544,6 +563,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
                     if (image != null) {
+                        if (uiState.isWebcamStreaming) {
+                            webcamServer.pushYuvFrame(image)
+                        }
                         if (enableHistogram || enableFocusPeaking) {
                             proAnalyzer.analyze(image, 0)
                         } else {
@@ -551,6 +573,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 }, camera2Engine.backgroundHandler)
+
 
                 camera2Engine.createPreviewSession(targets) { _ ->
                     isTransitioningRatio = false
@@ -834,63 +857,26 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                     val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
                     val sensorRotation = if (isFront) 270f else 90f
-                    val full169Height = size.width * (16f / 9f)
-
+                    val nativeSensorH = size.width * (4f / 3f)
                     
-                    withTransform(
-                        transformBlock = {
-                            rotate(sensorRotation, pivot = center)
-                            if (isFront) {
-                                scale(scaleX = 1f, scaleY = -1f, pivot = center)
-                            }
-                        },
-                        drawBlock = {
-                            // In rotated canvas space (90°):
-                            // bitmapW = YUV frame width (360), bitmapH = YUV frame height (640).
-                            // Screen container portrait dimensions: size.width (e.g. 1080), size.height (e.g. 1440 for 4:3, 1080 for 16:9, 1080 for 1:1).
-                            // In rotated space, the container height is size.width and container width is size.height.
-                            // Container aspect ratio in rotated bitmap space (H/W) = size.height / size.width.
-                            val bitmapW = peakingBitmap!!.width.toFloat()
-                            val bitmapH = peakingBitmap!!.height.toFloat()
-                            val targetBitmapAspect = size.height / size.width // 1440/1080 = 1.333 (4:3), 1920/1080 = 1.777 (16:9), 1080/1080 = 1.0 (1:1)
-                            val currentBitmapAspect = bitmapH / bitmapW       // 640/360 = 1.777 (16:9)
-
-                            var srcX = 0
-                            var srcY = 0
-                            var srcW = bitmapW.toInt()
-                            var srcH = bitmapH.toInt()
-
-                            if (currentBitmapAspect > targetBitmapAspect) {
-                                // 16:9 bitmap (1.777) is taller than target (1.333 for 4:3 or 1.0 for 1:1)
-                                // Crop top and bottom of rotated YUV frame matching AutoFitTextureView
-                                srcH = (bitmapW * targetBitmapAspect).toInt()
-                                srcY = ((bitmapH - srcH) / 2f).toInt()
-                            } else if (currentBitmapAspect < targetBitmapAspect) {
-                                srcW = (bitmapH / targetBitmapAspect).toInt()
-                                srcX = ((bitmapW - srcW) / 2f).toInt()
-                            }
-
-
-                            val drawW = size.height.toInt()
-                            val drawH = size.width.toInt()
-
-                            drawImage(
-                                image = peakingBitmap!!.asImageBitmap(),
-                                srcOffset = androidx.compose.ui.unit.IntOffset(srcX, srcY),
-                                srcSize = androidx.compose.ui.unit.IntSize(srcW, srcH),
-                                dstOffset = androidx.compose.ui.unit.IntOffset(
-                                    x = (center.x - drawW / 2f).toInt(),
-                                    y = (center.y - drawH / 2f).toInt()
-                                ),
-                                dstSize = androidx.compose.ui.unit.IntSize(drawW, drawH)
-                            )
+                    withTransform({
+                        rotate(sensorRotation, pivot = center)
+                        if (isFront) {
+                            scale(scaleX = 1f, scaleY = -1f, pivot = center)
                         }
-                    )
+                    }) {
 
-
-
-
-
+                        val drawW = size.width.toInt()
+                        val drawH = nativeSensorH.toInt()
+                        drawImage(
+                            image = peakingBitmap!!.asImageBitmap(),
+                            dstOffset = androidx.compose.ui.unit.IntOffset(
+                                x = (center.x - drawH / 2f).toInt(),
+                                y = (center.y - drawW / 2f).toInt()
+                            ),
+                            dstSize = androidx.compose.ui.unit.IntSize(drawH, drawW)
+                        )
+                    }
                 }
             }
 

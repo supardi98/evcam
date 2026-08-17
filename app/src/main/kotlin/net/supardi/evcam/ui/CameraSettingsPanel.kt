@@ -163,8 +163,10 @@ fun SettingsPopupPanels(
                     onOpenWatermarkSettings = onOpenWatermarkSettings,
                     onOpenPluginManager = onOpenPluginManager,
                     onOpenCameraInfo = { uiState.showCameraInfoDialog = true },
+                    onOpenWebcamSettings = { uiState.showWebcamDialog = true; uiState.showSettings = false },
                     onClose = { uiState.showSettings = false }
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
