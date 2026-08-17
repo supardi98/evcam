@@ -89,26 +89,25 @@ fun takePhoto(
         var bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         image.close()
 
-        val chars = camera2Engine.cameraManager.getCameraCharacteristics(camera2Engine.cameraDevice!!.id)
-        val sensorOrientation = chars.get(android.hardware.camera2.CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
-        
-        val normalizedRotation = (deviceRotation % 360 + 360) % 360
-        val surfaceRotation = when {
-            normalizedRotation < 45 || normalizedRotation >= 315 -> 0
-            normalizedRotation < 135 -> 90
-            normalizedRotation < 225 -> 180
-            else -> 270
-        }
-        val facing = chars.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)
-        val rotation = if (facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) {
-            (sensorOrientation + surfaceRotation) % 360
-        } else {
-            (sensorOrientation - surfaceRotation + 360) % 360
+        val exifInterface = try {
+            android.media.ExifInterface(bytes.inputStream())
+        } catch (e: Exception) { null }
+
+        val exifOrientation = exifInterface?.getAttributeInt(
+            android.media.ExifInterface.TAG_ORIENTATION,
+            android.media.ExifInterface.ORIENTATION_NORMAL
+        ) ?: android.media.ExifInterface.ORIENTATION_NORMAL
+
+        val rotationDegrees = when (exifOrientation) {
+            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90
+            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+            else -> 0
         }
 
-        if (rotation != 0) {
+        if (rotationDegrees != 0) {
             val matrix = android.graphics.Matrix()
-            matrix.postRotate(rotation.toFloat())
+            matrix.postRotate(rotationDegrees.toFloat())
             bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         }
 

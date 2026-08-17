@@ -40,6 +40,8 @@ class Camera2Engine(private val context: Context) {
     var currentPreviewSurface: Surface? = null
     var persistentSurface: Surface? = null
         private set
+    private var persistentSurfaceWidth: Int = 0
+    private var persistentSurfaceHeight: Int = 0
 
     fun getOrCreatePersistentSurface(): Surface {
         if (persistentSurface == null) {
@@ -288,6 +290,26 @@ class Camera2Engine(private val context: Context) {
         lastAudioEnabled = audioEnabled
         lastOutputFile = outputFile
 
+        // Determine actual encoder dimensions based on orientation hint
+        // When recording portrait (hint=90 or 270), the sensor rotates frames, so we need
+        // to encode at swapped dimensions (tall frame) rather than landscape (wide frame).
+        val hint = getOrientationHint()
+        val isPortrait = hint == 90 || hint == 270
+        val encWidth = if (isPortrait) minOf(width, height) else maxOf(width, height)
+        val encHeight = if (isPortrait) maxOf(width, height) else minOf(width, height)
+        Log.d("EVCAM", "setupMediaRecorder: hint=$hint isPortrait=$isPortrait encSize=${encWidth}x${encHeight}")
+
+        // Release persistent surface if its dimensions changed, so it will be recreated
+        // by getOrCreatePersistentSurface() with the correct new size.
+        if (persistentSurface != null &&
+            (persistentSurfaceWidth != encWidth || persistentSurfaceHeight != encHeight)) {
+            Log.d("EVCAM", "Releasing persistent surface (size changed: ${persistentSurfaceWidth}x${persistentSurfaceHeight} -> ${encWidth}x${encHeight})")
+            persistentSurface?.release()
+            persistentSurface = null
+        }
+        persistentSurfaceWidth = encWidth
+        persistentSurfaceHeight = encHeight
+
         try {
             val pSurface = getOrCreatePersistentSurface()
             mediaRecorder?.release()
@@ -302,19 +324,23 @@ class Camera2Engine(private val context: Context) {
                 if (fps > 30) {
                     setCaptureRate(fps.toDouble())
                 }
-                setVideoSize(width, height)
+                setVideoSize(encWidth, encHeight)
                 setVideoEncoder(MediaRecorder.VideoEncoder.H264)
                 if (audioEnabled) setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                val hint = getOrientationHint()
-                setOrientationHint(hint)
-                Log.d("EVCAM", "MediaRecorder orientationHint set to $hint (device: $currentDeviceOrientationDegrees)")
+                // orientationHint=0: encoder frames are already correctly oriented,
+                // so no rotation metadata needed by the player.
+                setOrientationHint(0)
+                Log.d("EVCAM", "MediaRecorder prepared ${encWidth}x${encHeight} @ ${fps}fps (orientationHint=0, original hint=$hint)")
                 setInputSurface(pSurface)
                 prepare()
             }
-            Log.d("EVCAM", "MediaRecorder with persistent surface successfully prepared: ${width}x${height} @ ${fps}fps")
+            Log.d("EVCAM", "MediaRecorder with persistent surface successfully prepared: ${encWidth}x${encHeight} @ ${fps}fps")
         } catch (e: Exception) {
-            Log.e("EVCAM", "Failed setupMediaRecorder (${width}x${height} @ ${fps}fps), attempting fallback 1080p 30fps", e)
+            Log.e("EVCAM", "Failed setupMediaRecorder (${encWidth}x${encHeight} @ ${fps}fps), attempting fallback 1080p 30fps", e)
             try {
+                // Fallback: use portrait 1080x1920 if portrait, else landscape 1920x1080
+                val fbW = if (isPortrait) 1080 else 1920
+                val fbH = if (isPortrait) 1920 else 1080
                 val pSurface = getOrCreatePersistentSurface()
                 mediaRecorder?.release()
                 @Suppress("DEPRECATION")
@@ -325,13 +351,14 @@ class Camera2Engine(private val context: Context) {
                     setOutputFile(outputFile)
                     setVideoEncodingBitRate(8000000)
                     setVideoFrameRate(30)
-                    setVideoSize(1920, 1080)
+                    setVideoSize(fbW, fbH)
                     setVideoEncoder(MediaRecorder.VideoEncoder.H264)
                     if (audioEnabled) setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                    setOrientationHint(0)
                     setInputSurface(pSurface)
                     prepare()
                 }
-                Log.d("EVCAM", "Fallback MediaRecorder 1080p 30fps successfully prepared")
+                Log.d("EVCAM", "Fallback MediaRecorder ${fbW}x${fbH} 30fps successfully prepared")
             } catch (e2: Exception) {
                 Log.e("EVCAM", "Fallback MediaRecorder setup failed completely", e2)
             }
@@ -625,6 +652,7 @@ class Camera2Engine(private val context: Context) {
             captureBuilder.addTarget(reader.surface)
             currentPreviewSurface?.let { captureBuilder.addTarget(it) }
             captureBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte())
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientationHint())
             
             // Copy settings from previewRequestBuilder
             val cropRegion = previewRequestBuilder?.get(CaptureRequest.SCALER_CROP_REGION)
@@ -696,6 +724,7 @@ class Camera2Engine(private val context: Context) {
             for (i in 0 until burstCount) {
                 val captureBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 captureBuilder.addTarget(reader.surface)
+                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientationHint())
                 
                 val cropRegion = previewRequestBuilder?.get(CaptureRequest.SCALER_CROP_REGION)
                 if (cropRegion != null) captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, cropRegion)
