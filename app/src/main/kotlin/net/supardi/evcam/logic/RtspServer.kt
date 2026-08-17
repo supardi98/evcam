@@ -148,6 +148,7 @@ class RtspServer(
                 val uvWidth = width / 2
                 var pos = ySize
 
+                val vPixelStride = vPlane.pixelStride
                 for (row in 0 until uvHeight) {
                     val uRowPos = row * uvRowStride
                     val vRowPos = row * vPlane.rowStride
