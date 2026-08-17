@@ -153,6 +153,8 @@ class CameraUiState(
 
 
 
+
+
     var supportedVideoQualities by mutableStateOf<List<VideoQualityMode>>(VideoQualityMode.values().toList())
     var supportedFpsModes by mutableStateOf<List<VideoFpsMode>>(VideoFpsMode.values().toList())
     var supportedVideoProfiles by mutableStateOf<List<String>>(emptyList())
