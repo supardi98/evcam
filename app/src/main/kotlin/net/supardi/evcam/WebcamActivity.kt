@@ -112,22 +112,22 @@ fun WebcamDedicatedScreen(
     var height by remember { mutableIntStateOf(720) }
     var orientation by remember { mutableStateOf("LANDSCAPE") }
 
-    // Dedicated Camera Engine start/stop & session creation
-    val cameraState by camera2Engine.cameraState.collectAsState()
+    val isAnyActive = isHttpMjpeg || isHttpSnapshot || isRtsp || isWebRtc
 
-    DisposableEffect(Unit) {
-        camera2Engine.startBackgroundThread()
-        camera2Engine.openCamera("0")
-        camera2Engine.setupImageReader(1920, 1080, width, height)
-
-        onDispose {
+    // Lazy Camera Engine start/stop: Open camera ONLY when at least one streaming protocol is ON
+    LaunchedEffect(isAnyActive) {
+        if (isAnyActive) {
+            camera2Engine.startBackgroundThread()
+            camera2Engine.openCamera("0")
+            camera2Engine.setupImageReader(1920, 1080, width, height)
+        } else {
             camera2Engine.closeCamera()
             camera2Engine.stopBackgroundThread()
         }
     }
 
-    LaunchedEffect(cameraState, width, height) {
-        if (cameraState is Camera2Engine.CameraState.Opened) {
+    LaunchedEffect(cameraState, width, height, isAnyActive) {
+        if (isAnyActive && cameraState is Camera2Engine.CameraState.Opened) {
             camera2Engine.setupImageReader(1920, 1080, width, height)
 
             camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
