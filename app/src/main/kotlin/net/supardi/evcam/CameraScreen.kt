@@ -1324,6 +1324,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
         DialogContainers(uiState = uiState)
     }
+}
 
 
 
