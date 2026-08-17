@@ -600,16 +600,6 @@ private fun CameraHardwareCard(info: CameraHardwareInfo, onMoreClick: () -> Unit
                     Text(info.isoRange, color = Color.White, fontSize = 14.sp)
                 }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                FeatureRow("Flash", info.flashSupport)
-                FeatureRow("Electronic video stabilization", info.eisSupport)
-                FeatureRow("Optical image stabilization", info.oisSupport)
-                FeatureRow("AE lock", info.aeLock)
-                FeatureRow("WB lock", info.wbLock)
-            }
         }
         
         Divider(color = Color.White.copy(alpha = 0.1f))
@@ -694,6 +684,22 @@ private fun CameraDetailsDialog(info: CameraHardwareInfo, onBack: () -> Unit) {
             item { DetailRow("Field of view", info.fieldOfView) }
             item { DetailRow("Shutter speed", info.shutterSpeedRange) }
             item { DetailRow("ISO sensitivity range", info.isoRange) }
+            
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    FeatureRow("Flash", info.flashSupport)
+                    FeatureRow("Electronic video stabilization", info.eisSupport)
+                    FeatureRow("Optical image stabilization", info.oisSupport)
+                    FeatureRow("AE lock", info.aeLock)
+                    FeatureRow("WB lock", info.wbLock)
+                }
+            }
             
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
