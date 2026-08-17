@@ -607,7 +607,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             } else {
                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, 0, 0)
             }
-            takePhoto(context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt()) { bitmap, uri ->
+            val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
+            takePhoto(
+                context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
+                liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
+                isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie
+            ) { bitmap, uri ->
                 lastCapturedBitmap = bitmap
                 lastCapturedUri = uri
                 prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
@@ -615,6 +620,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
                 }
             }
+
 
         } else {
             triggerVibe() // Vibrate both at the start and end of video recording

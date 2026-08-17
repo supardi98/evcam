@@ -80,8 +80,11 @@ fun takePhoto(
     enableRawCapture: Boolean,
     aspectRatioMode: AspectRatioMode,
     deviceRotation: Int,
+    isFrontCamera: Boolean = false,
+    mirrorSelfie: Boolean = true,
     onPhotoSaved: (Bitmap, Uri) -> Unit
 ) {
+
     camera2Engine.takePhoto(flashMode) { image ->
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
@@ -111,7 +114,15 @@ fun takePhoto(
             bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         }
 
+        // Apply Mirror Selfie Flip for Front Camera
+        if (isFrontCamera && mirrorSelfie) {
+            val matrix = android.graphics.Matrix()
+            matrix.postScale(-1f, 1f, bitmap.width / 2f, bitmap.height / 2f)
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }
+
         // Apply Aspect Ratio Crop
+
         val currentAspect = bitmap.width.toFloat() / bitmap.height.toFloat()
         val targetAspect = when (aspectRatioMode) {
             AspectRatioMode.RATIO_1_1 -> 1f

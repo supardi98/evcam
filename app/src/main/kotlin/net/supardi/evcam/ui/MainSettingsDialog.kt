@@ -42,7 +42,10 @@ fun SettingsPanel(
     onMaxBrightnessChange: (Boolean) -> Unit,
     volumeShutterEnabled: Boolean,
     onVolumeShutterEnabledChange: (Boolean) -> Unit,
+    mirrorSelfie: Boolean = true,
+    onMirrorSelfieChange: (Boolean) -> Unit = {},
     isShutterSoundEnabled: Boolean,
+
     onIsShutterSoundEnabledChange: (Boolean) -> Unit,
     enableGeotagging: Boolean,
     onEnableGeotaggingChange: (Boolean) -> Unit,
@@ -158,6 +161,18 @@ fun SettingsPanel(
                 Text("Volume Key Shutter", color = Color.White, fontSize = 13.sp)
                 Switch(checked = volumeShutterEnabled, onCheckedChange = onVolumeShutterEnabledChange, modifier = Modifier.scale(0.8f))
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Mirror Front Selfie Photo", color = Color.White, fontSize = 13.sp)
+                Switch(checked = mirrorSelfie, onCheckedChange = {
+                    onMirrorSelfieChange(it)
+                }, modifier = Modifier.scale(0.8f))
+            }
+
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

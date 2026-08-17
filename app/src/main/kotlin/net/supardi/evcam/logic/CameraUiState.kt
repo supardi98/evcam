@@ -100,6 +100,8 @@ class CameraUiState(
     var exposureIndex by mutableIntStateOf(0)
     var isTorchOn by mutableStateOf(false)
     var volumeShutterEnabled by mutableStateOf(prefs.getBoolean("volumeShutterEnabled", true))
+    var mirrorSelfie by mutableStateOf(prefs.getBoolean("mirrorSelfie", true))
+
     
     var showPluginManager by mutableStateOf(false)
     var showCameraInfoDialog by mutableStateOf(false)

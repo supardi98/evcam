@@ -153,7 +153,10 @@ fun SettingsPopupPanels(
                     onMaxBrightnessChange = { uiState.maxBrightness = it },
                     volumeShutterEnabled = uiState.volumeShutterEnabled,
                     onVolumeShutterEnabledChange = { uiState.volumeShutterEnabled = it },
+                    mirrorSelfie = uiState.mirrorSelfie,
+                    onMirrorSelfieChange = { uiState.mirrorSelfie = it },
                     isShutterSoundEnabled = uiState.isShutterSoundEnabled,
+
                     onIsShutterSoundEnabledChange = { uiState.isShutterSoundEnabled = it },
                     enableGeotagging = uiState.enableGeotagging,
                     onEnableGeotaggingChange = { uiState.enableGeotagging = it },
