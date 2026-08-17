@@ -665,13 +665,20 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .clipToBounds()
             .aspectRatio(animatedAspectRatio)
         ) {
-            CameraViewfinder(
-                previewView = textureView,
-                uiState = uiState,
-                coroutineScope = coroutineScope,
-                camera2Engine = camera2Engine,
-                modifier = Modifier.fillMaxSize()
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(9f / 16f)
+                    .align(Alignment.Center)
+            ) {
+                CameraViewfinder(
+                    previewView = textureView,
+                    uiState = uiState,
+                    coroutineScope = coroutineScope,
+                    camera2Engine = camera2Engine,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
 
             
