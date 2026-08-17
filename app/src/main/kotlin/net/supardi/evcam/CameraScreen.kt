@@ -425,6 +425,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
     val activeCamId = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) "1" else "0"
 
+    val cameraState by camera2Engine.cameraState.collectAsState()
+
     LaunchedEffect(uiState.aspectRatio) {
         when (uiState.aspectRatio) {
             AspectRatioMode.RATIO_16_9 -> textureView.setAspectRatio(1080, 1920)
@@ -433,28 +435,29 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(uiState.videoQuality, lensFacing) {
-        val fpsList = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
-        uiState.supportedFpsModes = fpsList
-        if (!fpsList.contains(uiState.videoFps)) {
-            uiState.videoFps = fpsList.firstOrNull() ?: VideoFpsMode.FPS_30
+    LaunchedEffect(uiState.videoQuality, lensFacing, cameraState) {
+        if (cameraState is Camera2Engine.CameraState.Opened) {
+            val fpsList = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
+            uiState.supportedFpsModes = fpsList
+            if (!fpsList.contains(uiState.videoFps)) {
+                uiState.videoFps = fpsList.firstOrNull() ?: VideoFpsMode.FPS_30
+            }
         }
     }
-    
-    val cameraState by camera2Engine.cameraState.collectAsState()
     
     LaunchedEffect(cameraState) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
             uiState.supportedVideoQualities = videoCaps.supportedQualities
-            uiState.supportedFpsModes = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
+            val fpsList = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
+            uiState.supportedFpsModes = fpsList
             uiState.supportedVideoProfiles = videoCaps.profileDescriptions
 
             if (!videoCaps.supportedQualities.contains(uiState.videoQuality)) {
                 uiState.videoQuality = videoCaps.supportedQualities.firstOrNull() ?: VideoQualityMode.FHD
             }
-            if (!videoCaps.supportedFpsModes.contains(uiState.videoFps)) {
-                uiState.videoFps = videoCaps.supportedFpsModes.firstOrNull() ?: VideoFpsMode.FPS_30
+            if (!fpsList.contains(uiState.videoFps)) {
+                uiState.videoFps = fpsList.firstOrNull() ?: VideoFpsMode.FPS_30
             }
 
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
