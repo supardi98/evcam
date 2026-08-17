@@ -140,56 +140,59 @@ fun TopCameraBar(
                     }
                 }
                 
-                Spacer(modifier = Modifier.width(4.dp))
-                IconButton(
-                    onClick = {
-                        uiState.timerMode = when (uiState.timerMode) {
-                            TimerMode.OFF -> TimerMode.SEC_3
-                            TimerMode.SEC_3 -> TimerMode.SEC_10
-                            TimerMode.SEC_10 -> TimerMode.SEC_15
-                            TimerMode.SEC_15 -> TimerMode.SEC_20
-                            TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
-                            TimerMode.PEACE -> TimerMode.OFF
-                        }
-                    },
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    val timerTint = if (uiState.timerMode == TimerMode.OFF) Color.White else Color.Yellow
-                    Box(contentAlignment = Alignment.Center) {
-                        val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
-                        Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint)
-                        if (uiState.timerMode != TimerMode.OFF && uiState.timerMode != TimerMode.PEACE) {
-                            Text(
-                                text = "${uiState.timerMode.seconds}",
-                                color = Color.Black,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.offset(y = 2.dp)
-                            )
+                if (uiState.cameraMode == CameraMode.PHOTO) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = {
+                            uiState.timerMode = when (uiState.timerMode) {
+                                TimerMode.OFF -> TimerMode.SEC_3
+                                TimerMode.SEC_3 -> TimerMode.SEC_10
+                                TimerMode.SEC_10 -> TimerMode.SEC_15
+                                TimerMode.SEC_15 -> TimerMode.SEC_20
+                                TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
+                                TimerMode.PEACE -> TimerMode.OFF
+                            }
+                        },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        val timerTint = if (uiState.timerMode == TimerMode.OFF) Color.White else Color.Yellow
+                        Box(contentAlignment = Alignment.Center) {
+                            val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
+                            Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint)
+                            if (uiState.timerMode != TimerMode.OFF && uiState.timerMode != TimerMode.PEACE) {
+                                Text(
+                                    text = "${uiState.timerMode.seconds}",
+                                    color = Color.Black,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.offset(y = 2.dp)
+                                )
+                            }
                         }
                     }
-                }
-                
-                if (uiState.timerMode != TimerMode.OFF) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${uiState.timerBurstCount}x",
-                        color = Color.Yellow,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .clickable {
-                                uiState.timerBurstCount = when (uiState.timerBurstCount) {
-                                    1 -> 3
-                                    3 -> 5
-                                    5 -> 10
-                                    else -> 1
+                    
+                    if (uiState.timerMode != TimerMode.OFF) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${uiState.timerBurstCount}x",
+                            color = Color.Yellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable {
+                                    uiState.timerBurstCount = when (uiState.timerBurstCount) {
+                                        1 -> 3
+                                        3 -> 5
+                                        5 -> 10
+                                        else -> 1
+                                    }
                                 }
-                            }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
+
             }
             
             // Group Kanan Utama
