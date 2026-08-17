@@ -791,7 +791,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxSize()
             )
 
-            if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO && !isFlippingCamera && flipRotationAnim.value == 0f) {
+            if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO && lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK && !isFlippingCamera && flipRotationAnim.value == 0f) {
+
 
                 @Suppress("UNUSED_VARIABLE")
                 val count = peakingUpdateCount // trigger recomposition
