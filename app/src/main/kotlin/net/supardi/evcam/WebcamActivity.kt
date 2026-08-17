@@ -1,9 +1,16 @@
 package net.supardi.evcam
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,7 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -83,8 +93,6 @@ fun WebcamDedicatedScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val prefs = remember { context.getSharedPreferences("evcam_prefs", android.content.Context.MODE_PRIVATE) }
-    val uiState = rememberCameraUiState(context, prefs)
 
     val serverIp = remember { WebcamStreamServer.getLocalIpAddress(context) }
 
@@ -94,6 +102,11 @@ fun WebcamDedicatedScreen(
     var isWebRtc by remember { mutableStateOf(false) }
     var isBlackoutPowerSaving by remember { mutableStateOf(false) }
     var connectedClients by remember { mutableIntStateOf(0) }
+
+    var httpMjpegLoading by remember { mutableStateOf(false) }
+    var httpSnapshotLoading by remember { mutableStateOf(false) }
+    var rtspLoading by remember { mutableStateOf(false) }
+    var webRtcLoading by remember { mutableStateOf(false) }
 
     var width by remember { mutableIntStateOf(1280) }
     var height by remember { mutableIntStateOf(720) }
@@ -165,10 +178,10 @@ fun WebcamDedicatedScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Default.Videocam, contentDescription = null, tint = Color(0xFF00E676), modifier = Modifier.size(56.dp))
-                    Text("DEDICATED IP WEBCAM MODE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Main Camera UI Destroyed — Maximum Battery & Power Saving", color = Color.Gray, fontSize = 12.sp)
-                    Text("Tap screen to unlock UI", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp))
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color(0xFF00E676), modifier = Modifier.size(56.dp))
+                    Text("POWER SAVING BLACKOUT MODE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Turn off screen preview to reduce heat and save maximum battery during live streaming.", color = Color.Gray, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
+                    Text("Tap anywhere on screen to unlock display", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp))
                 }
             }
         } else {
@@ -187,80 +200,229 @@ fun WebcamDedicatedScreen(
                         IconButton(onClick = onBackToCamera) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
-                        Text("DEDICATED IP WEBCAM", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("IP WEBCAM PROTOCOLS", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
+                }
 
-                    if (connectedClients > 0) {
+                if (connectedClients > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = Color(0xFF00E676).copy(alpha = 0.2f),
                             border = BorderStroke(1.dp, Color(0xFF00E676))
                         ) {
-                            Text(
-                                text = "$connectedClients Active Client${if (connectedClients > 1) "s" else ""}",
-                                color = Color(0xFF00E676),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(modifier = Modifier.size(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFF00E676)))
+                                Text(
+                                    text = "$connectedClients Active Client${if (connectedClients > 1) "s" else ""} Connected",
+                                    color = Color(0xFF00E676),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
                     }
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Resolution & Orientation Config
+                // Resolution & Format Selector Config
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = Color.White.copy(alpha = 0.05f),
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text("⚙️ Stream Resolution & Format", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("⚙️ Stream Video Configuration", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(Triple("1080p", 1920, 1080), Triple("720p", 1280, 720), Triple("480p", 640, 480)).forEach { (lbl, w, h) ->
-                                val sel = width == w && height == h
-                                Button(
-                                    onClick = {
-                                        width = w
-                                        height = h
-                                        camera2Engine.setupImageReader(1920, 1080, w, h)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = if (sel) Color.Yellow else Color.DarkGray),
-                                    modifier = Modifier.weight(1f)
+                        // 1. Resolution Selection
+                        Text("Resolution Quality", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val resolutions = listOf(
+                                Triple("1080p (FHD)", 1920, 1080),
+                                Triple("720p (HD)", 1280, 720),
+                                Triple("480p (SD)", 640, 480)
+                            )
+                            resolutions.forEach { (label, w, h) ->
+                                val isSelected = width == w && height == h
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color.Yellow else Color.DarkGray,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            width = w
+                                            height = h
+                                            camera2Engine.setupImageReader(1920, 1080, w, h)
+                                            val surfaces = mutableListOf<android.view.Surface>()
+                                            camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
+                                            camera2Engine.createPreviewSession(surfaces) { _ -> }
+                                        }
                                 ) {
-                                    Text(lbl, color = if (sel) Color.Black else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // 2. Orientation Selection
+                        Text("Stream Orientation", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val orientations = listOf("LANDSCAPE" to "🖼️ Landscape (16:9)", "PORTRAIT" to "📱 Portrait (9:16)")
+                            orientations.forEach { (mode, label) ->
+                                val isSelected = orientation == mode
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color(0xFF00E676) else Color.DarkGray,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { orientation = mode }
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // 1. HTTP Live MJPEG Protocol Card
+                FullProtocolCard(
+                    title = "HTTP Live MJPEG",
+                    subtitle = "Stream video langsung ke browser / OBS",
+                    url = "http://$serverIp:8080/live.mjpeg",
+                    dashboardUrl = "http://$serverIp:8080",
+                    isEnabled = isHttpMjpeg,
+                    isLoading = httpMjpegLoading,
+                    context = context,
+                    onToggle = { isChecked ->
+                        if (isChecked) {
+                            httpMjpegLoading = true
+                            coroutineScope.launch {
+                                delay(300)
+                                isHttpMjpeg = true
+                                httpMjpegLoading = false
+                            }
+                        } else {
+                            isHttpMjpeg = false
+                        }
+                    }
+                )
 
-                // Protocol Controls
-                Text("Streaming Protocols", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                WebcamProtocolCard("HTTP Live MJPEG", "http://$serverIp:8080/live.mjpeg", isHttpMjpeg) { isHttpMjpeg = it }
-                Spacer(modifier = Modifier.height(8.dp))
-                WebcamProtocolCard("HTTP Snapshot", "http://$serverIp:8080/shot.jpg", isHttpSnapshot) { isHttpSnapshot = it }
-                Spacer(modifier = Modifier.height(8.dp))
-                WebcamProtocolCard("RTSP H.264 Stream", "rtsp://$serverIp:8554/live", isRtsp) { isRtsp = it }
-                Spacer(modifier = Modifier.height(8.dp))
-                WebcamProtocolCard("WebRTC Sub-100ms Stream", "http://$serverIp:9090/stream", isWebRtc) { isWebRtc = it }
+                // 2. HTTP Snapshot Protocol Card
+                FullProtocolCard(
+                    title = "HTTP Snapshot (/shot.jpg)",
+                    subtitle = "Ambil foto single frame via URL",
+                    url = "http://$serverIp:8080/shot.jpg",
+                    dashboardUrl = null,
+                    isEnabled = isHttpSnapshot,
+                    isLoading = httpSnapshotLoading,
+                    context = context,
+                    onToggle = { isChecked ->
+                        if (isChecked) {
+                            httpSnapshotLoading = true
+                            coroutineScope.launch {
+                                delay(300)
+                                isHttpSnapshot = true
+                                httpSnapshotLoading = false
+                            }
+                        } else {
+                            isHttpSnapshot = false
+                        }
+                    }
+                )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Blackout Mode Toggle
+                // 3. RTSP H.264 Stream Card
+                FullProtocolCard(
+                    title = "RTSP H.264 Stream",
+                    subtitle = "Stream RTSP latensi rendah untuk NVR / VLC / OBS",
+                    url = "rtsp://$serverIp:8554/live",
+                    dashboardUrl = null,
+                    isEnabled = isRtsp,
+                    isLoading = rtspLoading,
+                    context = context,
+                    onToggle = { isChecked ->
+                        if (isChecked) {
+                            rtspLoading = true
+                            coroutineScope.launch {
+                                delay(400)
+                                isRtsp = true
+                                rtspLoading = false
+                            }
+                        } else {
+                            isRtsp = false
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 4. WebRTC Sub-100ms Stream Card
+                FullProtocolCard(
+                    title = "WebRTC Sub-100ms Stream",
+                    subtitle = "Stream HTML5 real-time sub-100ms ultra low-latency (Buka di browser)",
+                    url = "http://$serverIp:9090/stream",
+                    dashboardUrl = "http://$serverIp:9090",
+                    isEnabled = isWebRtc,
+                    isLoading = webRtcLoading,
+                    context = context,
+                    onToggle = { isChecked ->
+                        if (isChecked) {
+                            webRtcLoading = true
+                            coroutineScope.launch {
+                                delay(400)
+                                isWebRtc = true
+                                webRtcLoading = false
+                            }
+                        } else {
+                            isWebRtc = false
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 5. Battery Power Saving (Blackout Screen) Card
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (isBlackoutPowerSaving) Color(0xFF00E676).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
-                    border = BorderStroke(1.dp, if (isBlackoutPowerSaving) Color(0xFF00E676) else Color.White.copy(alpha = 0.1f))
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isBlackoutPowerSaving) Color(0xFF00E676).copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f),
+                    border = BorderStroke(1.dp, if (isBlackoutPowerSaving) Color(0xFF00E676).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.1f))
                 ) {
                     Row(
                         modifier = Modifier.padding(14.dp),
@@ -268,10 +430,18 @@ fun WebcamDedicatedScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("🔋 Black Screen Power Saving Mode", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text("Turn off screen preview to reduce heat and save maximum battery during live streaming.", color = Color.Gray, fontSize = 11.sp)
+                            Text("🔋 Black Screen Power Saving", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                "Turn off screen preview to reduce heat and save maximum battery during live streaming.",
+                                color = Color.LightGray,
+                                fontSize = 11.sp
+                            )
                         }
-                        Switch(checked = isBlackoutPowerSaving, onCheckedChange = { isBlackoutPowerSaving = it })
+                        Switch(
+                            checked = isBlackoutPowerSaving,
+                            onCheckedChange = { isBlackoutPowerSaving = it },
+                            modifier = Modifier.scale(0.85f)
+                        )
                     }
                 }
             }
@@ -280,28 +450,99 @@ fun WebcamDedicatedScreen(
 }
 
 @Composable
-private fun WebcamProtocolCard(
+private fun FullProtocolCard(
     title: String,
+    subtitle: String,
     url: String,
+    dashboardUrl: String?,
     isEnabled: Boolean,
+    isLoading: Boolean,
+    context: Context,
     onToggle: (Boolean) -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isEnabled) Color.Yellow.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f),
-        border = BorderStroke(1.dp, if (isEnabled) Color.Yellow.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.1f))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isEnabled) Color.Yellow.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.06f))
+            .padding(14.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text(url, color = Color.Yellow, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(subtitle, color = Color.Gray, fontSize = 10.sp)
+                }
+
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.Yellow,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Switch(
+                        checked = isEnabled,
+                        onCheckedChange = onToggle,
+                        modifier = Modifier.scale(0.75f)
+                    )
+                }
             }
-            Switch(checked = isEnabled, onCheckedChange = onToggle, modifier = Modifier.scale(0.85f))
+
+            if (isEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(url, color = Color.Yellow, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.weight(1f))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // Copy URL Icon Button
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy URL",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Stream URL", url)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "URL disalin!", Toast.LENGTH_SHORT).show()
+                                }
+                        )
+
+                        // Open in Browser Icon Button (Only for http URLs)
+                        if (url.startsWith("http")) {
+                            Icon(
+                                imageVector = Icons.Default.OpenInBrowser,
+                                contentDescription = "Open in Browser",
+                                tint = Color.Yellow,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clickable {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(dashboardUrl ?: url))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Gagal membuka browser", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
