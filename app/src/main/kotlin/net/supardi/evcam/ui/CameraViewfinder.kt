@@ -112,6 +112,10 @@ fun CameraViewfinder(
                             }
                             uiState.isPendingAfLock = false
                             
+                            if (uiState.selectedCustomScene.lockFocus) {
+                                return true
+                            }
+                            
                             if (uiState.isProMode && !uiState.isFocusAuto) {
                                 return true
                             }
@@ -119,8 +123,10 @@ fun CameraViewfinder(
                             uiState.isFocusAuto = true
                             uiState.focusOffset = Offset(e.x, e.y)
                             uiState.showFocusBox = true
+                            if (uiState.selectedCustomScene == CustomSceneMode.AUTO) {
+                                uiState.showBrightnessSlider = true
+                            }
                             uiState.showZoomSlider = true
-                            uiState.showBrightnessSlider = true
                             uiState.focusState = FocusState.TAP_INITIAL
                             uiState.focusTapCount++
                             camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
@@ -129,6 +135,10 @@ fun CameraViewfinder(
 
                         override fun onLongPress(e: MotionEvent) {
                             if (isMultiTouch || scaleGestureDetector.isInProgress) {
+                                return
+                            }
+
+                            if (uiState.selectedCustomScene.lockFocus) {
                                 return
                             }
 
