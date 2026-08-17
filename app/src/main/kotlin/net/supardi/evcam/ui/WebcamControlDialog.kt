@@ -80,7 +80,7 @@ fun WebcamControlDialog(
                 .verticalScroll(rememberScrollState())
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -97,29 +97,46 @@ fun WebcamControlDialog(
                     Text("IP WEBCAM PROTOCOLS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (connectedClients > 0) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF00E676).copy(alpha = 0.2f),
-                            border = BorderStroke(1.dp, Color(0xFF00E676))
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp).clickable { onClose() }
+                )
+            }
+
+            if (connectedClients > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF00E676).copy(alpha = 0.2f),
+                        border = BorderStroke(1.dp, Color(0xFF00E676))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color(0xFF00E676))
+                            )
                             Text(
-                                text = "$connectedClients Client${if (connectedClients > 1) "s" else ""}",
+                                text = "$connectedClients Active Client${if (connectedClients > 1) "s" else ""} Connected",
                                 color = Color(0xFF00E676),
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                fontSize = 11.sp
                             )
                         }
                     }
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp).clickable { onClose() }
-                    )
                 }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             // Error Dialog Alert Box
