@@ -437,7 +437,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    LaunchedEffect(cameraState) {
+    LaunchedEffect(cameraState, uiState.aspectRatio) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
             uiState.supportedVideoQualities = videoCaps.supportedQualities
