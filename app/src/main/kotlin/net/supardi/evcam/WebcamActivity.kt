@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.supardi.evcam.logic.*
-import net.supardi.evcam.ui.theme.evcamTheme
+import net.supardi.evcam.ui.theme.EvcamTheme
 
 class WebcamActivity : ComponentActivity() {
 
@@ -51,7 +51,7 @@ class WebcamActivity : ComponentActivity() {
         camera2Engine = Camera2Engine(context)
 
         setContent {
-            evcamTheme {
+            EvcamTheme {
                 WebcamDedicatedScreen(
                     camera2Engine = camera2Engine!!,
                     webcamServer = webcamServer!!,
