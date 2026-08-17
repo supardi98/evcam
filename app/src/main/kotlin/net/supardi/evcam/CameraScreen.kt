@@ -847,49 +847,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
             
-            if (enableHistogram && histogramData != null && cameraMode == CameraMode.PHOTO) {
-                @Suppress("UNUSED_VARIABLE")
-                val count = histogramUpdateCount // trigger recomposition
-                androidx.compose.foundation.Canvas(
-
-                    modifier = Modifier
-                        .padding(top = 54.dp, end = 20.dp)
-                        .size(100.dp, 50.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .align(Alignment.TopEnd)
-
-
-
-
-
-
-                ) {
-                    val data = histogramData!!
-                    val maxCount = (data.maxOrNull()?.toFloat() ?: 1f).coerceAtLeast(1f)
-
-                    val barWidth = size.width / data.size
-                    
-                    val path = androidx.compose.ui.graphics.Path()
-                    path.moveTo(0f, size.height)
-                    
-                    for (i in data.indices) {
-                        val normalizedHeight = (data[i] / maxCount) * size.height
-                        val x = i * barWidth
-                        val y = size.height - normalizedHeight
-                        path.lineTo(x, y)
-                    }
-                    path.lineTo(size.width, size.height)
-                    path.close()
-                    
-                    drawPath(
-                        path = path,
-                        color = Color.White,
-                        style = androidx.compose.ui.graphics.drawscope.Fill
-                    )
-                }
-            }
-
             if (showFocusBox && focusOffset != null) {
                 val focusColor = when (focusState) {
                     FocusState.TAP_INITIAL -> Color.White
