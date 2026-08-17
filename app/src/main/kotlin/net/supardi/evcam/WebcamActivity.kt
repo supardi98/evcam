@@ -349,6 +349,37 @@ fun WebcamDedicatedScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
+                        // 2. Stream Orientation Selection
+                        Text("Stream Orientation", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val orientations = listOf("LANDSCAPE" to "Landscape (16:9)", "PORTRAIT" to "Portrait (9:16)")
+                            orientations.forEach { (mode, label) ->
+                                val isSelected = orientation == mode
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color(0xFF00E676) else Color.DarkGray,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { orientation = mode }
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         // 3. Camera Lens Selection (Back Main vs Front Selfie)
                         Text("Camera Lens Selector", color = Color.LightGray, fontSize = 11.sp)
                         Spacer(modifier = Modifier.height(4.dp))
