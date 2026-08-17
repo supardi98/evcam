@@ -29,30 +29,23 @@ class AutoFitTextureView @JvmOverloads constructor(
     }
 
     private fun configureTransform(viewWidth: Int, viewHeight: Int) {
-        if (viewWidth == 0 || viewHeight == 0 || ratioWidth == 0 || ratioHeight == 0) return
+        if (viewWidth == 0 || viewHeight == 0) return
         
         val matrix = android.graphics.Matrix()
         
-        // Target aspect ratio in portrait (height / width)
-        val targetRatio = if (ratioWidth < ratioHeight) {
-            ratioHeight.toFloat() / ratioWidth.toFloat()
-        } else {
-            ratioWidth.toFloat() / ratioHeight.toFloat()
-        }
-
-        val viewRatio = viewHeight.toFloat() / viewWidth.toFloat()
+        // Sensor preview buffer aspect ratio in portrait is 16:9 (1920 / 1080)
+        val sensorAspect = 1920f / 1080f
+        val viewAspect = viewHeight.toFloat() / viewWidth.toFloat()
 
         var scaleX = 1f
         var scaleY = 1f
 
-        if (viewRatio > targetRatio) {
-            // View container is taller than target preview aspect ratio:
-            // Scale X to crop sides so content isn't stretched vertically.
-            scaleX = viewRatio / targetRatio
+        if (viewAspect > sensorAspect) {
+            // View container is taller than 16:9: scale X to crop sides
+            scaleX = viewAspect / sensorAspect
         } else {
-            // View container is wider than target preview aspect ratio:
-            // Scale Y to crop top/bottom so content isn't stretched horizontally.
-            scaleY = targetRatio / viewRatio
+            // View container is shorter than 16:9 (e.g. 4:3 or 1:1): scale Y to crop top/bottom
+            scaleY = sensorAspect / viewAspect
         }
 
         matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
