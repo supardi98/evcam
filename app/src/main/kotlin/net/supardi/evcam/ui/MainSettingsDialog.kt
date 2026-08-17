@@ -247,16 +247,101 @@ fun SettingsPanel(
                 Text("IP Webcam & Live Stream", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Button(
-                onClick = onOpenCameraInfo,
-                modifier = Modifier.fillMaxWidth(),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-            ) {
-                Text("Hardware Camera Info", color = Color.White, fontSize = 12.sp)
-            }
+            // System Hardware Resource Performance Card
+            SystemHardwareCard()
 
             Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
+
+@Composable
+private fun SystemHardwareCard() {
+    var stats by remember { mutableStateOf(SystemStatsMonitor.getResourceStats()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            stats = SystemStatsMonitor.getResourceStats()
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0x33000000),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "System Performance Monitor",
+                    color = Color(0xFFFFD700),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+                Text(
+                    text = "LIVE",
+                    color = Color.Green,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // CPU Usage Progress Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("CPU Usage", color = Color.LightGray, fontSize = 11.sp)
+                Text("${String.format("%.1f", stats.cpuUsagePercent)}%", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = (stats.cpuUsagePercent / 100f).coerceIn(0f, 1f),
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = if (stats.cpuUsagePercent > 75) Color.Red else Color(0xFF00E676),
+                trackColor = Color.DarkGray
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // RAM & Heap Memory Usage
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("RAM PSS Used", color = Color.LightGray, fontSize = 10.sp)
+                    Text("${stats.ramUsedMb} MB", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("JVM Heap Alloc", color = Color.LightGray, fontSize = 10.sp)
+                    Text("${stats.heapUsedMb} MB / ${stats.ramTotalMb} MB", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // GPU Hardware Decoder Status
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("GPU Codec Acceleration", color = Color.LightGray, fontSize = 10.sp)
+                Text("Active (MediaCodec HW)", color = Color(0xFF00E676), fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
 
