@@ -853,10 +853,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Canvas(
 
                     modifier = Modifier
-                        .padding(16.dp)
+                        .padding(top = 100.dp, start = 16.dp)
                         .size(100.dp, 60.dp)
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.6f))
                         .align(Alignment.TopStart)
+
                 ) {
                     val data = histogramData!!
                     val maxCount = (data.maxOrNull()?.toFloat() ?: 1f).coerceAtLeast(1f)
