@@ -93,25 +93,19 @@ fun ProControlPanel(
             enter = expandVertically(tween(200)) + fadeIn(tween(200)),
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-                Text("ISO", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-                Text("${minIso.toInt()}", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
-                Slider(
-                    value = iso.coerceIn(minIso, maxIso),
-                    onValueChange = onIsoChange,
-                    valueRange = minIso..maxIso,
-                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-                )
-                Text("${maxIso.toInt()}", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
-                Text(
-                    text = if (isIsoAuto) "AUTO" else "${iso.toInt()}",
-                    color = if (isIsoAuto) Color.Yellow else Color.White,
-                    modifier = Modifier.width(55.dp).clickable { onIsoAutoToggle() },
-                    textAlign = TextAlign.End,
-                    fontSize = 12.sp
-                )
-            }
+            ProSliderRow(
+                label = "ISO",
+                minLabel = "${minIso.toInt()}",
+                maxLabel = "${maxIso.toInt()}",
+                value = iso,
+                valueRange = minIso..maxIso,
+                onValueChange = onIsoChange,
+                isAuto = isIsoAuto,
+                displayValueText = if (isIsoAuto) "AUTO" else "${iso.toInt()}",
+                onAutoToggle = onIsoAutoToggle
+            )
         }
+
 
 
 
@@ -203,24 +197,18 @@ fun ProControlPanel(
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-            Text("FOC", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-            Text("0.0", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
-            Slider(
-                value = focusDistance.coerceIn(0f, maxFocusDistance),
-                onValueChange = onFocusChange,
-                valueRange = 0f..maxFocusDistance,
-                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-            )
-            Text(String.format(Locale.US, "%.1f", maxFocusDistance), color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
-            Text(
-                text = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance), 
-                color = if (isFocusAuto) Color.Yellow else Color.White, 
-                modifier = Modifier.width(55.dp).clickable { onFocusAutoToggle() }, 
-                textAlign = TextAlign.End, 
-                fontSize = 12.sp
-            )
-        }
+        ProSliderRow(
+            label = "FOC",
+            minLabel = "0.0",
+            maxLabel = String.format(Locale.US, "%.1f", maxFocusDistance),
+            value = focusDistance,
+            valueRange = 0f..maxFocusDistance,
+            onValueChange = onFocusChange,
+            isAuto = isFocusAuto,
+            displayValueText = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance),
+            onAutoToggle = onFocusAutoToggle
+        )
+
 
 
         
@@ -258,6 +246,38 @@ fun ProControlPanel(
 }
 
 @Composable
+private fun ProSliderRow(
+    label: String,
+    minLabel: String,
+    maxLabel: String,
+    value: Float,
+    valueRange: ClosedRange<Float>,
+    onValueChange: (Float) -> Unit,
+    isAuto: Boolean,
+    displayValueText: String,
+    onAutoToggle: () -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+        Text(label, color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
+        Text(minLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
+        Slider(
+            value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+        )
+        Text(maxLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
+        Text(
+            text = displayValueText,
+            color = if (isAuto) Color.Yellow else Color.White,
+            modifier = Modifier.width(55.dp).clickable { onAutoToggle() },
+            textAlign = TextAlign.End,
+            fontSize = 12.sp
+        )
+    }
+}
+
+@Composable
 private fun AwbChip(
     label: String,
     isSelected: Boolean,
@@ -275,6 +295,7 @@ private fun AwbChip(
         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
     )
 }
+
 
 
 
