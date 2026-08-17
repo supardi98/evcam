@@ -121,8 +121,17 @@ class RtspServer(
                 if (outputBuffer != null && bufferInfo.size > 0) {
                     val h264Data = ByteArray(bufferInfo.size)
                     outputBuffer.get(h264Data)
-                    clients.forEach { client ->
-                        client.sendRtpNalUnit(h264Data, bufferInfo.presentationTimeUs)
+
+                    // Extract SPS/PPS if present (BufferInfo.FLAG_CODEC_CONFIG)
+                    if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+                        spsPpsBuffer = h264Data
+                    } else {
+                        clients.forEach { client ->
+                            if (spsPpsBuffer != null) {
+                                client.sendRtpNalUnit(spsPpsBuffer!!, bufferInfo.presentationTimeUs)
+                            }
+                            client.sendRtpNalUnit(h264Data, bufferInfo.presentationTimeUs)
+                        }
                     }
                 }
                 codec.releaseOutputBuffer(outputIndex, false)
@@ -132,6 +141,10 @@ class RtspServer(
             Log.e("EVCAM_RTSP", "Error encoding YUV to H264 NAL", e)
         }
     }
+
+    @Volatile
+    private var spsPpsBuffer: ByteArray? = null
+
 
     private inner class RtspClientHandler(private val socket: Socket) : Runnable {
         private var outputStream: OutputStream? = null
@@ -144,31 +157,37 @@ class RtspServer(
             try {
                 outputStream = socket.getOutputStream()
                 datagramSocket = DatagramSocket()
-                val inputStream = socket.getInputStream()
-                val reader = inputStream.bufferedReader()
+                val reader = socket.getInputStream().bufferedReader()
 
                 while (isRunning && !socket.isClosed) {
-                    val line = reader.readLine() ?: break
-                    if (line.isEmpty()) continue
+                    val requestLine = reader.readLine() ?: break
+                    if (requestLine.trim().isEmpty()) continue
 
-                    Log.d("EVCAM_RTSP", "RTSP Request: $line")
+                    Log.d("EVCAM_RTSP", "RTSP Request Line: $requestLine")
 
-                    val tokens = line.split(" ")
+                    val tokens = requestLine.split(" ")
                     if (tokens.size < 3) continue
                     val method = tokens[0]
 
                     var cseq = "1"
                     var transportLine = ""
-                    var lineRead: String?
-                    while (reader.readLine().also { lineRead = it } != null) {
-                        if (lineRead.isNullOrEmpty()) break
-                        if (lineRead!!.startsWith("CSeq:", ignoreCase = true)) {
-                            cseq = lineRead!!.substring(5).trim()
+
+                    while (true) {
+                        val header = reader.readLine()
+                        if (header == null || header.isEmpty() || header == "\r") break
+                        if (header.startsWith("CSeq:", ignoreCase = true)) {
+                            cseq = header.substring(5).trim()
                         }
-                        if (lineRead!!.startsWith("Transport:", ignoreCase = true)) {
-                            transportLine = lineRead!!.substring(10).trim()
+                        if (header.startsWith("Transport:", ignoreCase = true)) {
+                            transportLine = header.substring(10).trim()
                         }
                     }
+
+
+
+
+
+
 
                     when (method) {
                         "OPTIONS" -> {
@@ -179,6 +198,13 @@ class RtspServer(
                             outputStream?.flush()
                         }
                         "DESCRIBE" -> {
+                            val sprop = if (spsPpsBuffer != null) {
+                                val b64 = android.util.Base64.encodeToString(spsPpsBuffer!!, android.util.Base64.NO_WRAP)
+                                "a=fmtp:96 packetization-mode=1;sprop-parameter-sets=$b64\r\n"
+                            } else {
+                                "a=fmtp:96 packetization-mode=1\r\n"
+                            }
+
                             val sdp = "v=0\r\n" +
                                     "o=- 0 0 IN IP4 0.0.0.0\r\n" +
                                     "s=EV Cam RTSP Stream\r\n" +
@@ -186,26 +212,21 @@ class RtspServer(
                                     "t=0 0\r\n" +
                                     "m=video 0 RTP/AVP 96\r\n" +
                                     "a=rtpmap:96 H264/90000\r\n" +
-                                    "a=fmtp:96 packetization-mode=1\r\n" +
-                                    "a=control:track0\r\n"
+                                    sprop +
+                                    "a=control:*\r\n"
                             val response = "RTSP/1.0 200 OK\r\n" +
                                     "CSeq: $cseq\r\n" +
                                     "Content-Type: application/sdp\r\n" +
                                     "Content-Length: ${sdp.length}\r\n\r\n" + sdp
+
                             outputStream?.write(response.toByteArray())
                             outputStream?.flush()
                         }
                         "SETUP" -> {
-                            // Extract client_port
-                            if (transportLine.contains("client_port=")) {
-                                try {
-                                    val portPart = transportLine.substringAfter("client_port=").substringBefore("-").substringBefore(";")
-                                    clientRtpPort = portPart.toInt()
-                                } catch (e: Exception) {}
-                            }
+                            val transportResp = if (transportLine.isNotEmpty()) transportLine else "RTP/AVP;unicast;client_port=5000-5001;server_port=6000-6001"
                             val response = "RTSP/1.0 200 OK\r\n" +
                                     "CSeq: $cseq\r\n" +
-                                    "Transport: RTP/AVP;unicast;client_port=$clientRtpPort-${clientRtpPort + 1};server_port=6000-6001\r\n" +
+                                    "Transport: $transportResp\r\n" +
                                     "Session: 12345678\r\n\r\n"
                             outputStream?.write(response.toByteArray())
                             outputStream?.flush()
@@ -234,40 +255,109 @@ class RtspServer(
             }
         }
 
-        fun sendRtpNalUnit(nalData: ByteArray, presentationTimeUs: Long) {
+        fun sendRtpNalUnit(rawNalData: ByteArray, presentationTimeUs: Long) {
+            try {
+                // Strip Annex-B start codes (0x00000001 or 0x000001)
+                var offset = 0
+                if (rawNalData.size >= 4 && rawNalData[0] == 0.toByte() && rawNalData[1] == 0.toByte() && rawNalData[2] == 0.toByte() && rawNalData[3] == 1.toByte()) {
+                    offset = 4
+                } else if (rawNalData.size >= 3 && rawNalData[0] == 0.toByte() && rawNalData[1] == 0.toByte() && rawNalData[2] == 1.toByte()) {
+                    offset = 3
+                }
+
+                val nalSize = rawNalData.size - offset
+                if (nalSize <= 0) return
+
+                val nalHeader = rawNalData[offset]
+                val nalType = nalHeader.toInt() and 0x1F
+
+                // Single NAL unit packet (<= 1400 bytes)
+                if (nalSize <= 1400) {
+                    val nalPayload = ByteArray(nalSize)
+                    System.arraycopy(rawNalData, offset, nalPayload, 0, nalSize)
+                    sendRtpPacket(nalPayload, presentationTimeUs, true)
+                } else {
+                    // FU-A Fragmentation Packet (> 1400 bytes)
+                    val nri = (nalHeader.toInt() and 0x60).toByte()
+                    val fuIndicator = (nri.toInt() or 28).toByte() // FU-A type 28
+
+                    var nalOffset = offset + 1
+                    var bytesRemaining = nalSize - 1
+                    val maxChunkSize = 1350
+
+                    var isFirst = true
+                    while (bytesRemaining > 0) {
+                        val chunkSize = Math.min(bytesRemaining, maxChunkSize)
+                        val isLast = (bytesRemaining - chunkSize) == 0
+
+                        var fuHeader = nalType.toByte()
+                        if (isFirst) fuHeader = (fuHeader.toInt() or 0x80).toByte() // Start bit
+                        if (isLast) fuHeader = (fuHeader.toInt() or 0x40).toByte() // End bit
+
+                        val fuPayload = ByteArray(2 + chunkSize)
+                        fuPayload[0] = fuIndicator
+                        fuPayload[1] = fuHeader
+                        System.arraycopy(rawNalData, nalOffset, fuPayload, 2, chunkSize)
+
+                        sendRtpPacket(fuPayload, presentationTimeUs, isLast)
+
+                        nalOffset += chunkSize
+                        bytesRemaining -= chunkSize
+                        isFirst = false
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("EVCAM_RTSP", "Error sending RTP packet", e)
+            }
+        }
+
+        private fun sendRtpPacket(payload: ByteArray, presentationTimeUs: Long, isMarker: Boolean) {
             try {
                 val rtpHeader = ByteArray(12)
-                rtpHeader[0] = 0x80.toByte() // Version 2
-                rtpHeader[1] = 96.toByte() // Payload type H.264 (96)
+                rtpHeader[0] = (0x80 or (if (isMarker) 0x80 else 0x00)).toByte()
+                rtpHeader[1] = 96.toByte() // Payload type H.264
 
-                // Sequence number (2 bytes)
                 sequenceNumber = (sequenceNumber + 1) and 0xFFFF
                 rtpHeader[2] = (sequenceNumber shr 8).toByte()
                 rtpHeader[3] = (sequenceNumber and 0xFF).toByte()
 
-                // Timestamp (4 bytes at 90kHz clock)
                 val rtpTimestamp = (presentationTimeUs * 90 / 1000).toInt()
                 rtpHeader[4] = (rtpTimestamp shr 24).toByte()
                 rtpHeader[5] = (rtpTimestamp shr 16).toByte()
                 rtpHeader[6] = (rtpTimestamp shr 8).toByte()
                 rtpHeader[7] = (rtpTimestamp and 0xFF).toByte()
 
-                // SSRC (4 bytes)
                 rtpHeader[8] = 0x12.toByte()
                 rtpHeader[9] = 0x34.toByte()
                 rtpHeader[10] = 0x56.toByte()
                 rtpHeader[11] = 0x78.toByte()
 
-                val packetData = ByteArray(rtpHeader.size + nalData.size)
+                val packetData = ByteArray(rtpHeader.size + payload.size)
                 System.arraycopy(rtpHeader, 0, packetData, 0, rtpHeader.size)
-                System.arraycopy(nalData, 0, packetData, rtpHeader.size, nalData.size)
+                System.arraycopy(payload, 0, packetData, rtpHeader.size, payload.size)
 
-                val packet = DatagramPacket(packetData, packetData.size, socket.inetAddress, clientRtpPort)
-                datagramSocket?.send(packet)
-            } catch (e: Exception) {
-                Log.e("EVCAM_RTSP", "Error sending RTP packet over UDP", e)
-            }
+                // 1. Send via UDP
+                try {
+                    val packet = DatagramPacket(packetData, packetData.size, socket.inetAddress, clientRtpPort)
+                    datagramSocket?.send(packet)
+                } catch (e: Exception) {}
+
+                // 2. Send via TCP Interleaved ($ binary framing)
+                try {
+                    val tcpFrame = ByteArray(4 + packetData.size)
+                    tcpFrame[0] = '$'.toByte()
+                    tcpFrame[1] = 0.toByte()
+                    val len = packetData.size
+                    tcpFrame[2] = (len shr 8).toByte()
+                    tcpFrame[3] = (len and 0xFF).toByte()
+                    System.arraycopy(packetData, 0, tcpFrame, 4, packetData.size)
+                    outputStream?.write(tcpFrame)
+                    outputStream?.flush()
+                } catch (e: Exception) {}
+            } catch (e: Exception) {}
         }
+
+
 
         fun close() {
             try {
