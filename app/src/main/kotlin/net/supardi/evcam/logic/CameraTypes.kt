@@ -10,20 +10,27 @@ enum class VideoQualityMode(val quality: Int, val label: String) { SD(480, "480p
 enum class VideoFpsMode(val fps: Int, val label: String) { FPS_24(24, "24 FPS"), FPS_30(30, "30 FPS"), FPS_60(60, "60 FPS"), FPS_120(120, "120 FPS"), FPS_240(240, "240 FPS") }
 enum class ImageFormatMode(val label: String) { JPEG("JPEG"), RAW("RAW+JPEG") }
 
-enum class CustomSceneMode(val label: String, val description: String) {
+enum class CustomSceneMode(
+    val label: String,
+    val description: String,
+    val lockIso: Boolean = false,
+    val lockShutter: Boolean = false,
+    val lockFocus: Boolean = false,
+    val lockWhiteBalance: Boolean = false
+) {
     AUTO("Auto / Normal", "Standard camera defaults"),
     NIGHT("Night Boost", "Longer exposure and increased ISO for low-light conditions"),
-    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost"),
-    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects"),
+    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true),
+    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects", lockShutter = true),
     PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast"),
     LANDSCAPE("Vibrant Landscape", "Vibrant green/blue color saturation boost with -0.3 EV"),
     DOCUMENT("Document B&W", "High contrast black and white for documents and text"),
-    MACRO("Macro Close-Up", "Locks focus to minimum distance for tiny subject details"),
-    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails"),
+    MACRO("Macro Close-Up", "Locks focus to minimum distance for tiny subject details", lockFocus = true),
+    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true),
     BACKLIGHT("HDR Backlight", "Balances exposure for subjects against strong light sources"),
-    CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes"),
+    CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes", lockWhiteBalance = true),
     SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes"),
-    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography")
+    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography", lockIso = true, lockShutter = true, lockFocus = true)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {

@@ -67,10 +67,10 @@ fun ProControlPanel(
     val isSceneLocked = activeCustomScene != CustomSceneMode.AUTO || isHdrEnabled || isNightModeEnabled
     val sceneName = if (activeCustomScene != CustomSceneMode.AUTO) activeCustomScene.label else if (isHdrEnabled) "HDR" else "Night"
 
-    val isIsoLocked = activeCustomScene in listOf(CustomSceneMode.FIREWORKS, CustomSceneMode.ASTRO_LONG_EXP)
-    val isShutterLocked = activeCustomScene in listOf(CustomSceneMode.ACTION, CustomSceneMode.FIREWORKS, CustomSceneMode.ASTRO_LONG_EXP)
-    val isFocusLocked = activeCustomScene in listOf(CustomSceneMode.MACRO, CustomSceneMode.ASTRO_LONG_EXP)
-    val isWbLocked = activeCustomScene in listOf(CustomSceneMode.SUNSET, CustomSceneMode.CANDLELIGHT)
+    val isIsoLocked = activeCustomScene.lockIso
+    val isShutterLocked = activeCustomScene.lockShutter
+    val isFocusLocked = activeCustomScene.lockFocus
+    val isWbLocked = activeCustomScene.lockWhiteBalance
 
     Column(
         modifier = Modifier
