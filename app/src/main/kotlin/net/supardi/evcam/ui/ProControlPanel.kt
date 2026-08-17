@@ -300,11 +300,23 @@ fun ProControlPanel(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_OFF) }
+                        .clickable {
+                            // When switching to CUS, map current preset to Kelvin if live estimation is unavailable
+                            val currentPresetKelvin = when (whiteBalance) {
+                                CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT -> 5500f
+                                CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> 6500f
+                                CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT -> 2800f
+                                CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT -> 4000f
+                                else -> manualKelvin
+                            }
+                            onManualKelvinChange(currentPresetKelvin)
+                            onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_OFF)
+                        }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) FontWeight.Bold else FontWeight.Normal
                 )
+
             }
         }
 
