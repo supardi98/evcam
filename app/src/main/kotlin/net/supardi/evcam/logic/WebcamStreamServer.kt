@@ -113,9 +113,11 @@ class WebcamStreamServer(
                                     "Pragma: no-cache\r\n" +
                                     "Expires: -1\r\n" +
                                     "Access-Control-Allow-Origin: *\r\n" +
-                                    "Content-Type: multipart/x-mixed-replace; boundary=--jpgboundary\r\n\r\n")
+                                    "Content-Type: multipart/x-mixed-replace; boundary=jpgboundary\r\n\r\n")
                             outputStream?.write(header.toByteArray())
                             outputStream?.flush()
+
+                            latestFrameJpeg?.let { sendMjpegFrame(it) }
 
                             // Keep thread alive while client is connected
                             while (isRunning && !socket.isClosed) {
