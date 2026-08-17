@@ -821,10 +821,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .size(60.dp)
                         .border(2.dp, focusColor, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                 )
-                LaunchedEffect(focusOffset, showFocusBox) {
+                LaunchedEffect(uiState.focusTapCount) {
                     if (showFocusBox) {
                         focusState = FocusState.TAP_INITIAL
-                        delay(180) // Show white box first on touch
+                        delay(220) // Show white box first on touch
                         if (focusState == FocusState.TAP_INITIAL) {
                             focusState = FocusState.SEARCHING // Turn yellow while focusing
                         }

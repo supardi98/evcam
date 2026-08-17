@@ -96,6 +96,7 @@ fun CameraViewfinder(
                             uiState.showZoomSlider = true
                             uiState.showBrightnessSlider = true
                             uiState.focusState = FocusState.TAP_INITIAL
+                            uiState.focusTapCount++
                             camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
                             return true
                         }
@@ -110,6 +111,7 @@ fun CameraViewfinder(
                             uiState.focusOffset = Offset(e.x, e.y)
                             uiState.showFocusBox = true
                             uiState.focusState = FocusState.TAP_INITIAL
+                            uiState.focusTapCount++
                             camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
                         }
 
