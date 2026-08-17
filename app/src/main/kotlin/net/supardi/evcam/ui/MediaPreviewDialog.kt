@@ -129,24 +129,57 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                 try {
                     if (isVideo) {
                         val retriever = android.media.MediaMetadataRetriever()
-                        retriever.setDataSource(context, uri)
-                        val rotStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
-                        if (rotStr != null) {
-                            rotation = rotStr.toInt()
+                        try {
+                            retriever.setDataSource(context, uri)
+                            val rotStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                            if (rotStr != null) {
+                                rotation = rotStr.toInt()
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                val capFps = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
+                                if (!capFps.isNullOrEmpty()) fps = capFps
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            try { retriever.release() } catch (e: Exception) {}
                         }
-                        // Android 11+ supports KEY_CAPTURE_FRAMERATE
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            fps = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE) ?: ""
+
+                        if (fps.isEmpty() || fps == "0.000000" || fps == "0") {
+                            val extractor = android.media.MediaExtractor()
+                            try {
+                                extractor.setDataSource(context, uri, null)
+                                for (i in 0 until extractor.trackCount) {
+                                    val format = extractor.getTrackFormat(i)
+                                    val mime = format.getString(android.media.MediaFormat.KEY_MIME) ?: ""
+                                    if (mime.startsWith("video/")) {
+                                        if (format.containsKey(android.media.MediaFormat.KEY_FRAME_RATE)) {
+                                            val fr = format.getInteger(android.media.MediaFormat.KEY_FRAME_RATE)
+                                            if (fr > 0) fps = "$fr"
+                                        }
+                                        if (fps.isEmpty() || fps == "0") {
+                                            var sampleCount = 0
+                                            val buf = java.nio.ByteBuffer.allocate(1024)
+                                            while (extractor.readSampleData(buf, 0) >= 0) {
+                                                sampleCount++
+                                                if (extractor.sampleTime > 1_000_000L) break
+                                                extractor.advance()
+                                            }
+                                            if (sampleCount > 5) fps = "$sampleCount"
+                                        }
+                                        break
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            } finally {
+                                try { extractor.release() } catch (e: Exception) {}
+                            }
                         }
-                        if (fps.isEmpty() || fps == "0.000000") {
-                            // Fallback to older framerate if possible
-                            val fpsNum = retriever.extractMetadata(25) // KEY_FRAMERATE is API 31, but 25 is METADATA_KEY_FRAMERATE in older APIs somewhat (not official, 25 is KEY_FRAMERATE in API 30+)
-                            if (fpsNum != null) fps = fpsNum
-                        }
+
                         if (fps.isNotEmpty()) {
                             try { fps = fps.toFloat().toInt().toString() } catch (e: Exception) {}
                         }
-                        retriever.release()
                     } else {
                         rotation = try {
                             cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.ORIENTATION))
@@ -265,9 +298,13 @@ fun MediaPreviewDialog(
         androidx.compose.runtime.mutableStateListOf(*fetched.toTypedArray())
     }
 
-    val pageCount = if (mediaList.isNotEmpty()) mediaList.size else if (lastCapturedBitmap != null) 1 else 0
-    val pagerState = rememberPagerState(initialPage = 0) { pageCount }
+    val actualCount = if (mediaList.isNotEmpty()) mediaList.size else if (lastCapturedBitmap != null) 1 else 0
+    val pageCount = if (actualCount > 1) Int.MAX_VALUE else actualCount
+    val initialPage = if (actualCount > 1) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % actualCount) else 0
+    val pagerState = rememberPagerState(initialPage = initialPage) { pageCount }
     val scope = rememberCoroutineScope()
+
+    val currentActualIndex = if (actualCount > 0) pagerState.currentPage % actualCount else 0
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteItem by remember { mutableStateOf<MediaItem?>(null) }
@@ -275,14 +312,15 @@ fun MediaPreviewDialog(
     // Shared post-delete navigation — called after item is confirmed deleted
     fun onItemDeleted(item: MediaItem) {
         val idx = mediaList.indexOf(item)
-        val removeIdx = if (idx >= 0) idx else pagerState.currentPage
+        val removeIdx = if (idx >= 0) idx else currentActualIndex
         if (removeIdx < mediaList.size) mediaList.removeAt(removeIdx)
         onMediaDeleted(item.uri)  // notify parent to refresh thumbnail
         if (mediaList.isEmpty()) {
             onDismiss()
         } else {
             val next = removeIdx.coerceAtMost(mediaList.size - 1)
-            scope.launch { pagerState.scrollToPage(next) }
+            val basePage = if (mediaList.size > 0) (pagerState.currentPage / mediaList.size) * mediaList.size else 0
+            scope.launch { pagerState.scrollToPage(basePage + next) }
         }
     }
 
@@ -299,7 +337,7 @@ fun MediaPreviewDialog(
     }
 
     fun deleteCurrentItem() {
-        val item = mediaList.getOrNull(pagerState.currentPage) ?: return
+        val item = mediaList.getOrNull(currentActualIndex) ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val pending = MediaStore.createDeleteRequest(context.contentResolver, listOf(item.uri))
             pendingDeleteItem = item
@@ -319,8 +357,8 @@ fun MediaPreviewDialog(
     var showExifDialog by remember { mutableStateOf(false) }
 
     // Fetch info for current page
-    val currentItem = mediaList.getOrNull(pagerState.currentPage)
-    val currentInfo by produceState(initialValue = MediaInfo(), pagerState.currentPage, currentItem) {
+    val currentItem = mediaList.getOrNull(currentActualIndex)
+    val currentInfo by produceState(initialValue = MediaInfo(), currentActualIndex, currentItem) {
         value = if (currentItem != null) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 fetchMediaInfo(context, currentItem.uri, currentItem.isVideo)
@@ -332,9 +370,7 @@ fun MediaPreviewDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
-        // Full-screen backdrop:
-        //   • horizontal swipe anywhere → navigate pager
-        //   • tap (little/no drag) → dismiss
+        // Full-screen backdrop
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -343,40 +379,13 @@ fun MediaPreviewDialog(
                     detectTapGestures(
                         onTap = { onDismiss() }
                     )
-                }
-                .pointerInput(pageCount) {
-                    var totalDragX = 0f
-                    detectDragGestures(
-                        onDragStart = { totalDragX = 0f },
-                        onDragEnd = {
-                            if (kotlin.math.abs(totalDragX) > 80 && pageCount > 1) {
-                                val raw = if (totalDragX < 0) pagerState.currentPage + 1
-                                          else pagerState.currentPage - 1
-                                val next = ((raw % pageCount) + pageCount) % pageCount
-                                scope.launch { pagerState.animateScrollToPage(next) }
-                            }
-                        },
-                        onDragCancel = { totalDragX = 0f },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            totalDragX += dragAmount.x
-                        }
-                    )
                 },
 
             contentAlignment = Alignment.Center
         ) {
-            if (pageCount > 0) {
+            if (actualCount > 0) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth(0.92f)
-                        .wrapContentHeight()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            // Absorb clicks so they do not propagate to the backdrop's click/tap detector
-                        },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Top bar — counter & close
@@ -392,17 +401,16 @@ fun MediaPreviewDialog(
                                 .background(Color.Black.copy(alpha = 0.6f))
                                 .clickable { showGalleryGrid = true }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
-                                .pointerInput(pageCount) {
+                                .pointerInput(actualCount) {
                                     detectHorizontalDragGestures(
                                         onDragStart = { fastJumpDragAccum = 0f },
                                         onHorizontalDrag = { _, dragAmount ->
                                             fastJumpDragAccum += dragAmount
-                                            val steps = (fastJumpDragAccum / 40f).toInt()
+                                            val steps = (fastJumpDragAccum / 30f).toInt()
                                             if (steps != 0) {
-                                                fastJumpDragAccum -= steps * 40f
-                                                val raw = pagerState.currentPage - steps * 10
-                                                val next = ((raw % pageCount) + pageCount) % pageCount
-                                                scope.launch { pagerState.animateScrollToPage(next) }
+                                                fastJumpDragAccum -= steps * 30f
+                                                val targetPage = pagerState.currentPage - steps * 5
+                                                scope.launch { pagerState.scrollToPage(targetPage) }
                                             }
                                         }
                                     )
@@ -413,31 +421,30 @@ fun MediaPreviewDialog(
                             Icon(
                                 imageVector = Icons.Default.GridView,
                                 contentDescription = "Gallery Grid",
-                                tint = Color.White.copy(alpha = 0.8f),
+                                tint = Color.White,
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "${pagerState.currentPage + 1} / $pageCount",
-                                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
+                                text = "${currentActualIndex + 1} / $actualCount",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
+
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             // Delete button
-                            if (mediaList.getOrNull(pagerState.currentPage) != null) {
-                                IconButton(
-                                    onClick = {
-                                        // Android 11+: OS shows its own confirm dialog via createDeleteRequest
-                                        // Android <11: show our own confirm dialog
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                            deleteCurrentItem()
-                                        } else {
-                                            showDeleteConfirm = true
-                                        }
-                                    },
-                                    modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
-                                ) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
-                                }
+                            IconButton(
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        deleteCurrentItem()
+                                    } else {
+                                        showDeleteConfirm = true
+                                    }
+                                },
+                                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
                             }
                             // Close button
                             IconButton(
@@ -449,13 +456,14 @@ fun MediaPreviewDialog(
                         }
                     }
 
-                    // HorizontalPager — driven programmatically from the full-screen swipe above
+                    // Native HorizontalPager with infinite smooth swiping
                     HorizontalPager(
                         state = pagerState,
-                        userScrollEnabled = false,
+                        userScrollEnabled = true,
                         modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).wrapContentHeight()
                     ) { page ->
-                        val item = mediaList.getOrNull(page)
+                        val itemIndex = if (actualCount > 0) page % actualCount else 0
+                        val item = mediaList.getOrNull(itemIndex)
                         val isCurrentVideo = item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)
 
                         val openActiveMedia = {
@@ -782,18 +790,19 @@ fun MediaPreviewDialog(
                                 } else if (row.entry != null) {
                                     val (item, originalIdx) = row.entry
                                     item(key = "item_${item.uri}") {
-                                        val isSelected = originalIdx == pagerState.currentPage
+                                        val isSelected = originalIdx == currentActualIndex
                                         Box(
                                             modifier = Modifier
                                                 .aspectRatio(1f)
-                                                .clip(RoundedCornerShape(2.dp))
+                                                .clip(RoundedCornerShape(6.dp))
                                                 .then(
-                                                    if (isSelected) Modifier.border(2.dp, Color.Yellow, RoundedCornerShape(2.dp))
+                                                    if (isSelected) Modifier.border(2.dp, Color.Yellow, RoundedCornerShape(6.dp))
                                                     else Modifier
                                                 )
                                                 .clickable {
                                                     showGalleryGrid = false
-                                                    scope.launch { pagerState.scrollToPage(originalIdx) }
+                                                    val basePage = if (actualCount > 0) (pagerState.currentPage / actualCount) * actualCount else 0
+                                                    scope.launch { pagerState.scrollToPage(basePage + originalIdx) }
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {

@@ -98,6 +98,137 @@ class Camera2Engine(private val context: Context) {
         _cameraState.value = CameraState.Closed
     }
 
+    data class VideoCapabilitiesInfo(
+        val supportedQualities: List<VideoQualityMode>,
+        val supportedFpsModes: List<VideoFpsMode>,
+        val profileDescriptions: List<String>
+    )
+
+    fun getSupportedFpsForQuality(cameraId: String, quality: VideoQualityMode): List<VideoFpsMode> {
+        try {
+            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return listOf(VideoFpsMode.FPS_30)
+
+            val targetWidth = when (quality) {
+                VideoQualityMode.UHD -> 3840
+                VideoQualityMode.QHD -> 2560
+                VideoQualityMode.FHD -> 1920
+                VideoQualityMode.HD -> 1280
+                VideoQualityMode.SD -> 640
+            }
+            val targetHeight = when (quality) {
+                VideoQualityMode.UHD -> 2160
+                VideoQualityMode.QHD -> 1440
+                VideoQualityMode.FHD -> 1080
+                VideoQualityMode.HD -> 720
+                VideoQualityMode.SD -> 480
+            }
+
+            val sizes = map.getOutputSizes(MediaRecorder::class.java) ?: emptyArray()
+            val matchingSize = sizes.find { 
+                (it.width == targetWidth && it.height == targetHeight) || (it.width == targetHeight && it.height == targetWidth) 
+            }
+
+            val fpsSet = mutableSetOf<Int>()
+
+            if (matchingSize != null) {
+                val durRecorder = map.getOutputMinFrameDuration(MediaRecorder::class.java, matchingSize)
+                val baseFps = if (durRecorder > 0) (1_000_000_000.0 / durRecorder).toInt() else 30
+                if (baseFps > 0) fpsSet.add(baseFps)
+
+                try {
+                    val highSpeedRanges = map.getHighSpeedVideoFpsRangesFor(matchingSize)
+                    highSpeedRanges?.forEach { fpsSet.add(it.upper) }
+                } catch (e: Exception) {}
+
+                try {
+                    val idInt = cameraId.toIntOrNull()
+                    if (idInt != null) {
+                        if (quality == VideoQualityMode.HD && android.media.CamcorderProfile.hasProfile(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_720P)) {
+                            fpsSet.add(120)
+                        }
+                        if (quality == VideoQualityMode.FHD && android.media.CamcorderProfile.hasProfile(idInt, android.media.CamcorderProfile.QUALITY_HIGH_SPEED_1080P)) {
+                            fpsSet.add(120)
+                        }
+                    }
+                } catch (e: Exception) {}
+            } else {
+                fpsSet.add(30)
+            }
+
+            val result = mutableListOf<VideoFpsMode>()
+            val sortedFps = fpsSet.sorted()
+            for (fpsVal in sortedFps) {
+                when {
+                    fpsVal in 25..35 -> if (!result.contains(VideoFpsMode.FPS_30)) result.add(VideoFpsMode.FPS_30)
+                    fpsVal in 50..65 -> if (!result.contains(VideoFpsMode.FPS_60)) result.add(VideoFpsMode.FPS_60)
+                    fpsVal in 110..130 -> if (!result.contains(VideoFpsMode.FPS_120)) result.add(VideoFpsMode.FPS_120)
+                    fpsVal in 230..250 -> if (!result.contains(VideoFpsMode.FPS_240)) result.add(VideoFpsMode.FPS_240)
+                }
+            }
+            if (result.isEmpty()) result.add(VideoFpsMode.FPS_30)
+            return result
+        } catch (e: Exception) {
+            return listOf(VideoFpsMode.FPS_30)
+        }
+    }
+
+    fun queryVideoCapabilities(cameraId: String): VideoCapabilitiesInfo {
+        try {
+            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            
+            val qualities = mutableListOf<VideoQualityMode>()
+            val descriptions = mutableListOf<String>()
+
+            if (map != null) {
+                val sizes = map.getOutputSizes(MediaRecorder::class.java) ?: emptyArray()
+
+                // Standard resolution matching CameraInfoDialog (no 480p)
+                if (sizes.any { (it.width == 3840 && it.height == 2160) || (it.width == 2160 && it.height == 3840) }) {
+                    qualities.add(VideoQualityMode.UHD)
+                }
+                if (sizes.any { (it.width == 2560 && it.height == 1440) || (it.width == 1440 && it.height == 2560) }) {
+                    qualities.add(VideoQualityMode.QHD)
+                }
+                if (sizes.any { (it.width == 1920 && it.height == 1080) || (it.width == 1080 && it.height == 1920) }) {
+                    qualities.add(VideoQualityMode.FHD)
+                }
+                if (sizes.any { (it.width == 1280 && it.height == 720) || (it.width == 720 && it.height == 1280) }) {
+                    qualities.add(VideoQualityMode.HD)
+                }
+
+                if (qualities.isEmpty()) {
+                    qualities.addAll(listOf(VideoQualityMode.QHD, VideoQualityMode.FHD, VideoQualityMode.HD))
+                }
+
+                for (q in qualities) {
+                    val resStr = when (q) {
+                        VideoQualityMode.UHD -> "4K UHD"
+                        VideoQualityMode.QHD -> "2560x1440"
+                        VideoQualityMode.FHD -> "1080p"
+                        VideoQualityMode.HD -> "720p"
+                        VideoQualityMode.SD -> "480p"
+                    }
+                    val fpsModes = getSupportedFpsForQuality(cameraId, q)
+                    val fpsListStr = fpsModes.joinToString(", ") { "${it.fps}" }
+                    descriptions.add("$resStr @ $fpsListStr fps")
+                }
+            }
+
+            val initialQuality = qualities.firstOrNull() ?: VideoQualityMode.HD
+            val initialFpsModes = getSupportedFpsForQuality(cameraId, initialQuality)
+
+            return VideoCapabilitiesInfo(qualities, initialFpsModes, descriptions)
+        } catch (e: Exception) {
+            return VideoCapabilitiesInfo(
+                listOf(VideoQualityMode.QHD, VideoQualityMode.FHD, VideoQualityMode.HD),
+                listOf(VideoFpsMode.FPS_30, VideoFpsMode.FPS_60, VideoFpsMode.FPS_120),
+                listOf("2560x1440 @ 30 fps", "1080p @ 30 fps", "720p @ 30, 60, 120 fps")
+            )
+        }
+    }
+
     private val stateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
             cameraDevice = camera
@@ -144,8 +275,11 @@ class Camera2Engine(private val context: Context) {
                 setVideoSource(MediaRecorder.VideoSource.SURFACE)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setOutputFile(outputFile)
-                setVideoEncodingBitRate(10000000)
+                setVideoEncodingBitRate(if (fps >= 60) 25000000 else 10000000)
                 setVideoFrameRate(fps)
+                if (fps > 30) {
+                    setCaptureRate(fps.toDouble())
+                }
                 setVideoSize(width, height)
                 setVideoEncoder(MediaRecorder.VideoEncoder.H264)
                 if (audioEnabled) setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -500,6 +634,39 @@ class Camera2Engine(private val context: Context) {
         try {
             val requestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
             enableStabilization(requestBuilder)
+            
+            try {
+                val activeId = device.id
+                val chars = cameraManager.getCameraCharacteristics(activeId)
+                val availableRanges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES) ?: emptyArray()
+
+                var targetRange: android.util.Range<Int>? = null
+                for (r in availableRanges) {
+                    if (r.upper == lastRecordedFps) {
+                        targetRange = r
+                        break
+                    }
+                }
+                if (targetRange == null) {
+                    for (r in availableRanges) {
+                        if (r.upper in (lastRecordedFps - 5)..(lastRecordedFps + 5)) {
+                            targetRange = r
+                            break
+                        }
+                    }
+                }
+                if (targetRange == null && availableRanges.isNotEmpty()) {
+                    targetRange = availableRanges.maxByOrNull { it.upper }
+                }
+
+                if (targetRange != null) {
+                    Log.d("EVCAM", "Setting CONTROL_AE_TARGET_FPS_RANGE to $targetRange for $lastRecordedFps fps recording")
+                    requestBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, targetRange)
+                }
+            } catch (e: Exception) {
+                Log.e("EVCAM", "Failed setting AE_TARGET_FPS_RANGE", e)
+            }
+            
             val previewSurface = currentPreviewSurface
             if (previewSurface != null) requestBuilder.addTarget(previewSurface)
             requestBuilder.addTarget(pSurface)

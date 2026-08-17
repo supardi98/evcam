@@ -254,12 +254,15 @@ fun takePhoto(
 fun startVideoRecord(
     context: Context,
     camera2Engine: Camera2Engine,
+    width: Int = 1920,
+    height: Int = 1080,
+    fps: Int = 30,
     audioEnabled: Boolean,
     onMediaSaved: (Bitmap, Uri) -> Unit,
     onEvent: (Any) -> Unit
 ): Any? {
     val tempFile = File(context.cacheDir, "temp_vid_${System.currentTimeMillis()}.mp4").absolutePath
-    camera2Engine.setupMediaRecorder(width = 1920, height = 1080, fps = 30, audioEnabled = audioEnabled, outputFile = tempFile)
+    camera2Engine.setupMediaRecorder(width = width, height = height, fps = fps, audioEnabled = audioEnabled, outputFile = tempFile)
     
     Log.d("EVCAM", "startVideoRecord called with file=$tempFile")
     camera2Engine.startRecording {

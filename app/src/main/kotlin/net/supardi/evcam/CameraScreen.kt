@@ -422,18 +422,40 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(exposureIndex) {
         camera2Engine.setExposureCompensation(exposureIndex)
     }
+
+    val activeCamId = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) "1" else "0"
+
+    LaunchedEffect(uiState.videoQuality, lensFacing) {
+        val fpsList = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
+        uiState.supportedFpsModes = fpsList
+        if (!fpsList.contains(uiState.videoFps)) {
+            uiState.videoFps = fpsList.firstOrNull() ?: VideoFpsMode.FPS_30
+        }
+    }
     
     val cameraState by camera2Engine.cameraState.collectAsState()
     
     LaunchedEffect(cameraState) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
+            val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
+            uiState.supportedVideoQualities = videoCaps.supportedQualities
+            uiState.supportedFpsModes = videoCaps.supportedFpsModes
+            uiState.supportedVideoProfiles = videoCaps.profileDescriptions
+
+            if (!videoCaps.supportedQualities.contains(uiState.videoQuality)) {
+                uiState.videoQuality = videoCaps.supportedQualities.firstOrNull() ?: VideoQualityMode.FHD
+            }
+            if (!videoCaps.supportedFpsModes.contains(uiState.videoFps)) {
+                uiState.videoFps = videoCaps.supportedFpsModes.firstOrNull() ?: VideoFpsMode.FPS_30
+            }
+
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
             val startPreview = {
                 textureView.setAspectRatio(1080, 1920)
                 val surface = android.view.Surface(textureView.surfaceTexture)
                 camera2Engine.setupImageReader(1920, 1080)
                 val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
-                camera2Engine.setupMediaRecorder(width = 2560, height = 1440, fps = 120, audioEnabled = true, outputFile = tempVideoFile)
+                camera2Engine.setupMediaRecorder(width = 1920, height = 1080, fps = 30, audioEnabled = true, outputFile = tempVideoFile)
                 
                 val targets = mutableListOf<android.view.Surface>(surface)
                 val persistentSurface = camera2Engine.getOrCreatePersistentSurface()
@@ -520,9 +542,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 stopMethod?.invoke(activeRecording)
                 isRecording = false
             } else {
+                val (vWidth, vHeight) = when (uiState.videoQuality) {
+                    VideoQualityMode.UHD -> Pair(3840, 2160)
+                    VideoQualityMode.QHD -> Pair(2560, 1440)
+                    VideoQualityMode.FHD -> Pair(1920, 1080)
+                    VideoQualityMode.HD -> Pair(1280, 720)
+                    VideoQualityMode.SD -> Pair(640, 480)
+                }
+                val vFps = uiState.videoFps.fps
+
                 activeRecording = startVideoRecord(
                     context = context,
                     camera2Engine = camera2Engine,
+                    width = vWidth,
+                    height = vHeight,
+                    fps = vFps,
                     audioEnabled = videoAudioEnabled,
                     onMediaSaved = { bitmap, uri ->
                         lastCapturedUri = uri
