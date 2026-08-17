@@ -788,27 +788,33 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                     val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
                     val sensorRotation = if (isFront) 270f else 90f
-
+                    
+                    // Sensor native YUV buffer is 4:3 portrait (480x640 in rotated view).
+                    // TextureView container is size.width x size.height.
+                    // TextureView 16:9 crops top/bottom of 4:3 sensor. TextureView 1:1 crops top/bottom further.
+                    // To match TextureView, scale 4:3 sensor width (480) to container width size.width.
+                    val nativeSensorH = size.width * (4f / 3f) // height of 4:3 frame for this container width
+                    
                     withTransform({
                         rotate(sensorRotation, pivot = center)
                         if (isFront) {
                             scale(scaleX = -1f, scaleY = 1f, pivot = center)
                         }
                     }) {
-                        // In rotated canvas space, draw bitmap fitting the exact container dimensions (swapping w & h)
-                        val drawW = size.height.toInt()
-                        val drawH = size.width.toInt()
+                        val drawW = size.width.toInt()
+                        val drawH = nativeSensorH.toInt()
                         drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
                             dstOffset = androidx.compose.ui.unit.IntOffset(
-                                x = (center.x - drawW / 2f).toInt(),
-                                y = (center.y - drawH / 2f).toInt()
+                                x = (center.x - drawH / 2f).toInt(),
+                                y = (center.y - drawW / 2f).toInt()
                             ),
-                            dstSize = androidx.compose.ui.unit.IntSize(drawW, drawH)
+                            dstSize = androidx.compose.ui.unit.IntSize(drawH, drawW)
                         )
                     }
                 }
             }
+
 
 
 
