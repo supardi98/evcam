@@ -789,24 +789,36 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
                     val sensorRotation = if (isFront) 270f else 90f
                     
+                    // Match AutoFitTextureView matrix transform exactly:
+                    // AutoFitTextureView uses 16:9 buffer (w * 16 / 9) and applies scaleY = targetHeight / containerHeight to undo FIT_XY compression.
+                    val containerW = size.width
+                    val containerH = size.height
+                    val targetHeight = containerW * 16f / 9f
+                    val scaleYFactor = targetHeight / containerH
+
                     withTransform({
+                        scale(scaleX = 1f, scaleY = scaleYFactor, pivot = center)
                         rotate(sensorRotation, pivot = center)
                         if (isFront) {
                             scale(scaleX = -1f, scaleY = 1f, pivot = center)
                         }
                     }) {
-                        // Drawing centered in rotated canvas matching container size
+                        // In rotated 16:9 sensor buffer space (640x360 analysis buffer ratio), draw bitmap centered
+                        val targetW = containerW.toInt()
+                        val targetH = targetHeight.toInt()
+                        
                         drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
                             dstOffset = androidx.compose.ui.unit.IntOffset(
-                                x = (center.x - size.height / 2f).toInt(),
-                                y = (center.y - size.width / 2f).toInt()
+                                x = (center.x - targetH / 2f).toInt(),
+                                y = (center.y - targetW / 2f).toInt()
                             ),
-                            dstSize = androidx.compose.ui.unit.IntSize(size.height.toInt(), size.width.toInt())
+                            dstSize = androidx.compose.ui.unit.IntSize(targetH, targetW)
                         )
                     }
                 }
             }
+
 
 
 
