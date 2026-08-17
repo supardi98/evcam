@@ -389,11 +389,27 @@ class Camera2Engine(private val context: Context) {
         }
     }
     
+    var onAfStateCallback: ((Int) -> Unit)? = null
+
+    private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            super.onCaptureCompleted(session, request, result)
+            val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+            if (afState != null) {
+                onAfStateCallback?.invoke(afState)
+            }
+        }
+    }
+
     fun updatePreview() {
         val session = captureSession ?: return
         val builder = previewRequestBuilder ?: return
         try {
-            session.setRepeatingRequest(builder.build(), null, backgroundHandler)
+            session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, backgroundHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
         }

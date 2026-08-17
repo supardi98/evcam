@@ -642,10 +642,28 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setSceneMode(isNightModeEnabled, isHdrEnabled)
     }
 
-    LaunchedEffect(uiState.enableEis) {
-        camera2Engine.previewRequestBuilder?.let { builder ->
-            camera2Engine.enableStabilization(builder, uiState.enableEis)
-            camera2Engine.updatePreview()
+    LaunchedEffect(cameraState) {
+        camera2Engine.onAfStateCallback = { afState ->
+            when (afState) {
+                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
+                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
+                    if (showFocusBox) {
+                        uiState.focusState = FocusState.SEARCHING
+                    }
+                }
+                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
+                    if (showFocusBox) {
+                        uiState.focusState = FocusState.SUCCESS
+                    }
+                }
+                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED,
+                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
+                    if (showFocusBox) {
+                        uiState.focusState = FocusState.FAILED
+                    }
+                }
+            }
         }
     }
 
@@ -782,7 +800,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             if (showFocusBox && focusOffset != null) {
                 val focusColor = when (focusState) {
-                    FocusState.SEARCHING -> Color.White
+                    FocusState.SEARCHING -> Color.Yellow
                     FocusState.SUCCESS -> Color.Green
                     FocusState.FAILED -> Color.Red
                 }
@@ -797,11 +815,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 )
                 LaunchedEffect(focusState, focusOffset) {
                     if (focusState == FocusState.SUCCESS || focusState == FocusState.FAILED) {
-                        coroutineScope.launch { delay(2000); focusState = FocusState.SEARCHING; showFocusBox = false }
-                    }
-                    if (focusState != FocusState.SEARCHING) {
-                        kotlinx.coroutines.delay(1000)
+                        delay(1200)
                         showFocusBox = false
+                        focusState = FocusState.SEARCHING
                     }
                 }
             }
