@@ -129,43 +129,37 @@ fun WebcamDedicatedScreen(
     LaunchedEffect(cameraState, width, height) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             camera2Engine.setupImageReader(1920, 1080, width, height)
+
+            camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
+                val image = reader.acquireLatestImage()
+                if (image != null) {
+                    try {
+                        webcamServer.pushYuvFrame(image)
+                        rtspServer.pushYuvFrame(image)
+                        webRtcServer.pushYuvFrame(image)
+                    } finally {
+                        image.close()
+                    }
+                }
+            }, camera2Engine.backgroundHandler)
+
             val surfaces = mutableListOf<android.view.Surface>()
             camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
             camera2Engine.createPreviewSession(surfaces) { _ -> }
         }
     }
 
-    // Attach frame listener for active streaming
+    // Attach frame listener & server lifecycles
     LaunchedEffect(isHttpMjpeg, isHttpSnapshot, isRtsp, isWebRtc) {
-        val isAnyActive = isHttpMjpeg || isHttpSnapshot || isRtsp || isWebRtc
-        if (isAnyActive) {
-            webcamServer.enableHttpMjpeg = isHttpMjpeg
-            webcamServer.enableHttpSnapshot = isHttpSnapshot
-            webcamServer.enableRtspStream = isRtsp
-            webcamServer.enableWebRtc = isWebRtc
-            webcamServer.onClientCountChanged = { count -> connectedClients = count }
+        webcamServer.enableHttpMjpeg = isHttpMjpeg
+        webcamServer.enableHttpSnapshot = isHttpSnapshot
+        webcamServer.enableRtspStream = isRtsp
+        webcamServer.enableWebRtc = isWebRtc
+        webcamServer.onClientCountChanged = { count -> connectedClients = count }
 
-            if (isHttpMjpeg || isHttpSnapshot) webcamServer.start() else webcamServer.stop()
-            if (isRtsp) rtspServer.start() else rtspServer.stop()
-            if (isWebRtc) webRtcServer.start() else webRtcServer.stop()
-
-            camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
-                val image = reader.acquireLatestImage()
-                if (image != null) {
-                    try {
-                        if (isHttpMjpeg || isHttpSnapshot) webcamServer.pushYuvFrame(image)
-                        if (isRtsp) rtspServer.pushYuvFrame(image)
-                        if (isWebRtc) webRtcServer.pushYuvFrame(image)
-                    } finally {
-                        image.close()
-                    }
-                }
-            }, camera2Engine.backgroundHandler)
-        } else {
-            webcamServer.stop()
-            rtspServer.stop()
-            webRtcServer.stop()
-        }
+        if (isHttpMjpeg || isHttpSnapshot) webcamServer.start() else webcamServer.stop()
+        if (isRtsp) rtspServer.start() else rtspServer.stop()
+        if (isWebRtc) webRtcServer.start() else webRtcServer.stop()
     }
 
     Surface(
