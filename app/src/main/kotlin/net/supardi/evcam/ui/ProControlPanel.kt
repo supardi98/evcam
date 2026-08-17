@@ -202,9 +202,10 @@ fun ProControlPanel(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        // ── AWB Presets Row ──────────────────────────────────────────────────
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
             Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(start = 16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(start = 8.dp)) {
                 Text(
                     text = "AUTO",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
@@ -212,7 +213,7 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_AUTO) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) FontWeight.Bold else FontWeight.Normal
                 )
@@ -223,7 +224,7 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
                 )
@@ -234,7 +235,7 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
                 )
@@ -245,20 +246,37 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_OFF) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) FontWeight.Bold else FontWeight.Normal
                 )
             }
-            if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
+        }
+
+        // ── Custom Kelvin Slider Row (appears below when CUS is selected) ──
+        AnimatedVisibility(
+            visible = whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF,
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+                Text("K", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp, textAlign = TextAlign.Center)
                 Slider(
                     value = manualKelvin,
                     onValueChange = onManualKelvinChange,
                     valueRange = 2000f..10000f,
-                    modifier = Modifier.height(30.dp)
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                 )
-                Text("${manualKelvin.toInt()}K", color = Color.White, fontSize = 12.sp)
+                Text(
+                    text = "${manualKelvin.toInt()}K",
+                    color = Color.Yellow,
+                    modifier = Modifier.width(55.dp),
+                    textAlign = TextAlign.End,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
 }
+
