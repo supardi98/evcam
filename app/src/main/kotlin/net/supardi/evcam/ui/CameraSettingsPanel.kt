@@ -114,8 +114,25 @@ fun SettingsPopupPanels(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+
+        // 3. Color Filter Panel
+        AnimatedVisibility(
+            visible = uiState.showFilterDialog,
+            enter = expandVertically(animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow, dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy)) + fadeIn(tween(250)),
+            exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(tween(200))
+        ) {
+            Column {
+                ColorFilterPanel(
+                    selectedFilter = uiState.selectedFilter,
+                    onFilterSelect = { uiState.selectedFilter = it },
+                    onClose = { uiState.showFilterDialog = false }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
         
-        // 3. Main Settings Panel
+        // 4. Main Settings Panel
+
         AnimatedVisibility(
             visible = uiState.showSettings,
             enter = expandVertically(animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow, dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy)) + fadeIn(tween(250)),

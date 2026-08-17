@@ -121,7 +121,15 @@ fun TopCameraBar(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable { uiState.showFilterDialog = true },
+                        .clickable {
+                            uiState.showFilterDialog = !uiState.showFilterDialog
+                            if (uiState.showFilterDialog) {
+                                uiState.showProPanel = false
+                                uiState.showLayerPanel = false
+                                uiState.showSettings = false
+                            }
+                        },
+
                     contentAlignment = Alignment.Center
                 ) {
                     val backgroundAlpha = if (uiState.selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f

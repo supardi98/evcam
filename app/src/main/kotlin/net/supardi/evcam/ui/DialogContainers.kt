@@ -148,14 +148,7 @@ fun DialogContainers(
         )
     }
 
-    // 4. Color Filter Dialog Wrapper
-    if (uiState.showFilterDialog) {
-        ColorFilterDialog(
-            selectedFilter = uiState.selectedFilter,
-            onFilterSelect = { uiState.selectedFilter = it },
-            onDismissRequest = { uiState.showFilterDialog = false }
-        )
-    }
+
 
     if (uiState.showCameraInfoDialog) {
         CameraInfoDialog(onDismiss = { uiState.showCameraInfoDialog = false })
