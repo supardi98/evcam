@@ -68,6 +68,12 @@ fun CameraViewfinder(
                             0f,    0f,    0.95f, 0f, 0f,
                             0f,    0f,    0f,    1f, 0f
                         )
+                        customScene == CustomSceneMode.CANDLELIGHT -> floatArrayOf(
+                            1.25f, 0f,    0f,    0f, 0f,
+                            0f,    0.85f, 0f,    0f, 0f,
+                            0f,    0f,    0.65f, 0f, 0f,
+                            0f,    0f,    0f,    1f, 0f
+                        )
                         else -> null
                     }
 

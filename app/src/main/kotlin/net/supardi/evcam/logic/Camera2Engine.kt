@@ -750,6 +750,41 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 1)
             }
+            CustomSceneMode.MACRO -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                val deviceId = cameraDevice?.id
+                if (deviceId != null) {
+                    try {
+                        val chars = cameraManager.getCameraCharacteristics(deviceId)
+                        val minDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+                        if (minDist > 0f) {
+                            builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, minDist) // Lock to minimum focus distance
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+            CustomSceneMode.FIREWORKS -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                builder.set(CaptureRequest.SENSOR_SENSITIVITY, 100) // Lock ISO 100
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 500_000_000L) // 0.5s for smooth preview
+            }
+            CustomSceneMode.BACKLIGHT -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 3) // +1.0 EV
+            }
+            CustomSceneMode.CANDLELIGHT -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT)
+            }
+            CustomSceneMode.SNOW_BEACH -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 3) // +1.0 EV compensation
+            }
         }
         updatePreview()
     }

@@ -17,7 +17,12 @@ enum class CustomSceneMode(val label: String, val description: String) {
     ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects"),
     PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast"),
     LANDSCAPE("Vibrant Landscape", "Vibrant green/blue color saturation boost with -0.3 EV"),
-    DOCUMENT("Document B&W", "High contrast black and white for documents and text")
+    DOCUMENT("Document B&W", "High contrast black and white for documents and text"),
+    MACRO("Macro Close-Up", "Locks focus to minimum distance for tiny subject details"),
+    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails"),
+    BACKLIGHT("HDR Backlight", "Balances exposure for subjects against strong light sources"),
+    CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes"),
+    SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes")
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
