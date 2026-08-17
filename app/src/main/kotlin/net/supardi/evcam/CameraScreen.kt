@@ -853,11 +853,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 androidx.compose.foundation.Canvas(
 
                     modifier = Modifier
-                        .padding(top = 80.dp, end = 16.dp)
-                        .size(100.dp, 60.dp)
+                        .padding(top = 54.dp, end = 20.dp)
+                        .size(90.dp, 40.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.Black.copy(alpha = 0.6f))
                         .align(Alignment.TopEnd)
+
 
 
 
