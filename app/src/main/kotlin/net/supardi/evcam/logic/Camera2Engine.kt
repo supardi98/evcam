@@ -436,12 +436,15 @@ class Camera2Engine(private val context: Context) {
             // Read active AWB color correction gains from sensor metadata to calculate live Kelvin
             val gains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
             if (gains != null && gains.red > 0f && gains.blue > 0f) {
-                // Approximate color temperature from red/blue channel gains ratio
-                val ratio = gains.red / gains.blue
-                // Empirical Kelvin curve estimation: ratio ~ 0.5 -> 7500K, ratio ~ 1.0 -> 5500K, ratio ~ 2.0 -> 3000K
-                val estimatedKelvin = (5500f / (ratio.toDouble().pow(0.8))).toFloat().coerceIn(2000f, 10000f)
+                // Invert formula: rGain = 2.5 - 1.5*norm, bGain = 1.0 + 2.0*norm
+                // (2.5 - rGain)/1.5 ~ norm, (bGain - 1.0)/2.0 ~ norm
+                val normR = ((2.5f - gains.red) / 1.5f).coerceIn(0f, 1f)
+                val normB = ((gains.blue - 1.0f) / 2.0f).coerceIn(0f, 1f)
+                val avgNorm = (normR + normB) / 2.0f
+                val estimatedKelvin = (2000f + avgNorm * 8000f).coerceIn(2000f, 10000f)
                 onAwbGainsCallback?.invoke(estimatedKelvin)
             }
+
 
 
         }
@@ -589,26 +592,18 @@ class Camera2Engine(private val context: Context) {
             builder.set(CaptureRequest.CONTROL_AWB_MODE, whiteBalance)
             if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
                 builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-                val temp = manualKelvin / 100.0f
-                val r: Float
-                val g: Float
-                val b_val: Float
-                if (temp <= 66.0f) {
-                    r = 255.0f
-                    g = (99.4708025861f * Math.log(temp.toDouble()).toFloat() - 161.1195681661f).coerceIn(0f, 255f)
-                    b_val = if (temp <= 19.0f) 0.0f else (138.5177312231f * Math.log(temp.toDouble() - 10.0).toFloat() - 305.0447927307f).coerceIn(0f, 255f)
-                } else {
-                    r = (329.698727446f * Math.pow(temp.toDouble() - 60.0, -0.1332047592).toFloat()).coerceIn(0f, 255f)
-                    g = (288.1221695283f * Math.pow(temp.toDouble() - 60.0, -0.0755148492).toFloat()).coerceIn(0f, 255f)
-                    b_val = 255.0f
-                }
-                val rGain = (255f / r).coerceIn(1f, 3.5f)
-                val gGain = (255f / g).coerceIn(1f, 3.5f)
-                val bGain = (255f / b_val).coerceIn(1f, 3.5f)
+                // Standard White Balance Kelvin to RGGB Gains mapping:
+                // Lower Kelvin (2000K) = Warm/Red tint -> higher Red gain
+                // Higher Kelvin (10000K) = Cool/Blue tint -> higher Blue gain
+                val normalizedTemp = (manualKelvin - 2000f) / 8000f // 0f .. 1f
+                val rGain = (2.5f - 1.5f * normalizedTemp).coerceIn(1.0f, 3.5f)
+                val gGain = 1.0f
+                val bGain = (1.0f + 2.0f * normalizedTemp).coerceIn(1.0f, 3.5f)
                 builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, android.hardware.camera2.params.RggbChannelVector(rGain, gGain, gGain, bGain))
             } else {
                 builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
             }
+
         } else {
             builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
