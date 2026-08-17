@@ -159,6 +159,7 @@ fun DialogContainers(
             isStreaming = uiState.isWebcamStreaming,
             serverIp = uiState.webcamServerIp,
             port = uiState.webcamHttpPort,
+            connectedClients = uiState.connectedWebcamClients,
             webcamWidth = uiState.webcamResolutionWidth,
             webcamHeight = uiState.webcamResolutionHeight,
             onWebcamResolutionChange = { w, h ->
