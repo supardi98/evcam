@@ -833,8 +833,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 val count = peakingUpdateCount // trigger recomposition
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                     val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
-                    val sensorRotation = if (isFront) 270f else 90f
-                    val nativeSensorH = size.width * (4f / 3f)
+                    // analysisImageReader stream is 16:9 YUV (640x360).
+                    // In portrait rotated canvas space (90°):
+                    // AutoFitTextureView renders 16:9 stream (height = container.width * 16 / 9).
+                    // For 4:3 and 1:1 mode, Compose crops top/bottom of the container Box, but TextureView maintains un-stretched 16:9 stream height.
+                    val full169Height = size.width * (16f / 9f)
                     
                     withTransform({
                         rotate(sensorRotation, pivot = center)
@@ -842,9 +845,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             scale(scaleX = 1f, scaleY = -1f, pivot = center)
                         }
                     }) {
-
                         val drawW = size.width.toInt()
-                        val drawH = nativeSensorH.toInt()
+                        val drawH = full169Height.toInt()
                         drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
                             dstOffset = androidx.compose.ui.unit.IntOffset(
@@ -854,6 +856,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             dstSize = androidx.compose.ui.unit.IntSize(drawH, drawW)
                         )
                     }
+
                 }
             }
 
