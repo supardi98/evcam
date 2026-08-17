@@ -178,9 +178,16 @@ fun ProControlPanel(
 
 
 
-        // ── Info banner when ISO/Shutter locked by scene mode ────────────────
+        val lockedParams = mutableListOf<String>()
+        if (isIsoLocked) lockedParams.add("ISO")
+        if (isShutterLocked) lockedParams.add("Shutter")
+        if (isFocusLocked) lockedParams.add("Focus")
+        if (isWbLocked) lockedParams.add("WB")
+        val lockedParamsText = if (lockedParams.isNotEmpty()) lockedParams.joinToString(" & ") else "Parameters"
+
+        // ── Info banner when any parameter is locked by scene mode ────────────────
         AnimatedVisibility(
-            visible = isSceneLocked,
+            visible = isSceneLocked && lockedParams.isNotEmpty(),
             enter = expandVertically(tween(200)) + fadeIn(tween(200)),
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {
@@ -201,7 +208,7 @@ fun ProControlPanel(
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    text = "ISO & Shutter are automatically controlled by $sceneName mode",
+                    text = "$lockedParamsText are automatically controlled by $sceneName mode",
                     color = Color(0xFFFF9800),
                     fontSize = 11.sp,
                     lineHeight = 14.sp
@@ -235,30 +242,36 @@ fun ProControlPanel(
         Spacer(modifier = Modifier.height(8.dp))
         
         // ── AWB Presets Row ──────────────────────────────────────────────────
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-            Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            val scrollState = rememberScrollState()
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 4.dp)
-                    .horizontalScroll(scrollState)
-            ) {
+        AnimatedVisibility(
+            visible = !isWbLocked,
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+                Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+                val scrollState = rememberScrollState()
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 4.dp)
+                        .horizontalScroll(scrollState)
+                ) {
 
-                val awbModes = listOf(
-                    "AUTO" to CaptureRequest.CONTROL_AWB_MODE_AUTO,
-                    "DAY" to CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT,
-                    "CLD" to CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
-                    "INC" to CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT,
-                    "FLU" to CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT
-                )
-                awbModes.forEach { (label, mode) ->
-                    AwbChip(
-                        label = label,
-                        isSelected = whiteBalance == mode,
-                        onClick = { onWhiteBalanceChange(mode) }
+                    val awbModes = listOf(
+                        "AUTO" to CaptureRequest.CONTROL_AWB_MODE_AUTO,
+                        "DAY" to CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT,
+                        "CLD" to CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
+                        "INC" to CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT,
+                        "FLU" to CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT
                     )
+                    awbModes.forEach { (label, mode) ->
+                        AwbChip(
+                            label = label,
+                            isSelected = whiteBalance == mode,
+                            onClick = { onWhiteBalanceChange(mode) }
+                        )
+                    }
                 }
             }
         }
