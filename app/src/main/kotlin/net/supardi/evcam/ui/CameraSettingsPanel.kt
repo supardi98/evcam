@@ -71,9 +71,8 @@ fun SettingsPopupPanels(
                     onFocusAutoToggle = { uiState.isFocusAuto = !uiState.isFocusAuto },
                     whiteBalance = uiState.whiteBalance,
                     onWhiteBalanceChange = { uiState.whiteBalance = it; uiState.isProMode = true },
-                    manualKelvin = uiState.manualKelvin,
-                    onManualKelvinChange = { uiState.manualKelvin = it; uiState.isProMode = true },
                     onClose = { uiState.showProPanel = false },
+
 
                     isHdrEnabled = uiState.isHdrEnabled,
                     isNightModeEnabled = uiState.isNightModeEnabled
