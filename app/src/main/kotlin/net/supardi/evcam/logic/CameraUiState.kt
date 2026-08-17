@@ -101,7 +101,7 @@ class CameraUiState(
     var liveLocation by mutableStateOf<android.location.Location?>(null)
     var liveAddress by mutableStateOf<android.location.Address?>(null)
     
-    var aspectRatio by mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_4_3.name) ?: AspectRatioMode.RATIO_4_3.name))
+    var aspectRatio by mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_16_9.name) ?: AspectRatioMode.RATIO_16_9.name))
     var videoQuality by mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name))
     var videoFps by mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name))
     var videoAudioEnabled by mutableStateOf(true)
