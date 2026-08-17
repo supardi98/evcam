@@ -67,7 +67,13 @@ object Camera2Helper {
         return modes.toList()
     }
 
+    fun getSupportedSceneModes(chars: CameraCharacteristics): List<Int> {
+        val modes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES) ?: return emptyList()
+        return modes.toList().filter { it != CameraCharacteristics.CONTROL_SCENE_MODE_DISABLED }
+    }
+
     fun getSupportedVideoResolutions(chars: CameraCharacteristics): List<Size> {
+
         val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return emptyList()
         val sizes = map.getOutputSizes(android.media.MediaRecorder::class.java) ?: emptyArray()
         return sizes.toList().sortedByDescending { it.width * it.height }

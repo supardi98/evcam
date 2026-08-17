@@ -131,6 +131,9 @@ class CameraUiState(
     var hasNightExtension by mutableStateOf(true)
     var hasManualSensorSupport by mutableStateOf(true)
     var hasManualFocusSupport by mutableStateOf(true)
+    var supportedSceneModes by mutableStateOf<List<Int>>(emptyList())
+    var selectedSceneMode by mutableIntStateOf(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+
 
     var supportedVideoQualities by mutableStateOf<List<VideoQualityMode>>(VideoQualityMode.values().toList())
     var supportedFpsModes by mutableStateOf<List<VideoFpsMode>>(VideoFpsMode.values().toList())

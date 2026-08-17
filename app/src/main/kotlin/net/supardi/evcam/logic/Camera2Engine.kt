@@ -638,13 +638,10 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
     
-    fun setSceneMode(isNightMode: Boolean, isHdrMode: Boolean) {
+    fun setSceneMode(sceneMode: Int) {
         val builder = previewRequestBuilder ?: return
-        if (isNightMode) {
-            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_NIGHT)
-            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
-        } else if (isHdrMode) {
-            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+        if (sceneMode != CaptureRequest.CONTROL_SCENE_MODE_DISABLED) {
+            builder.set(CaptureRequest.CONTROL_SCENE_MODE, sceneMode)
             builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
         } else {
             builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
@@ -652,6 +649,16 @@ class Camera2Engine(private val context: Context) {
         }
         updatePreview()
     }
+
+    fun setSceneMode(isNightMode: Boolean, isHdrMode: Boolean) {
+        val mode = when {
+            isNightMode -> CaptureRequest.CONTROL_SCENE_MODE_NIGHT
+            isHdrMode -> CaptureRequest.CONTROL_SCENE_MODE_HDR
+            else -> CaptureRequest.CONTROL_SCENE_MODE_DISABLED
+        }
+        setSceneMode(mode)
+    }
+
 
     fun takePhoto(flashMode: FlashMode, onImageCaptured: (Image) -> Unit) {
         Log.d("EVCAM", "takePhoto() called, cameraDevice=$cameraDevice, imageReader=$imageReader, captureSession=$captureSession")

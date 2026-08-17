@@ -324,10 +324,15 @@ fun TopCameraBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Kiri: SCENE Pill Button
-                if (uiState.hasNightExtension || uiState.hasHdrExtension) {
+                // Kiri: Dynamic Hardware SCENE Pill Button
+                val hasAnyScene = uiState.hasNightExtension || uiState.hasHdrExtension || uiState.supportedSceneModes.isNotEmpty()
+                if (hasAnyScene) {
                     val currentLabel = when {
                         uiState.isNightModeEnabled -> "NIGHT"
                         uiState.isHdrEnabled -> "HDR"
+                        uiState.selectedSceneMode != android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED -> {
+                            getSceneModeName(uiState.selectedSceneMode)
+                        }
                         else -> "SCENE"
                     }
                     val currentIcon = when {
@@ -335,7 +340,7 @@ fun TopCameraBar(
                         uiState.isHdrEnabled -> Icons.Filled.HdrOn
                         else -> Icons.Filled.AutoAwesome
                     }
-                    val isActive = uiState.isNightModeEnabled || uiState.isHdrEnabled
+                    val isActive = uiState.isNightModeEnabled || uiState.isHdrEnabled || uiState.selectedSceneMode != android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
 
                     Row(
                         modifier = Modifier
@@ -372,31 +377,35 @@ fun TopCameraBar(
                             }
                         }
 
-                        // Expanded Options (OFF, NIGHT, HDR)
+                        // Expanded Options (OFF, NIGHT, HDR, + Hardware Scenes)
                         AnimatedVisibility(
                             visible = isSceneOptionsExpanded,
                             enter = expandHorizontally(tween(200)) + fadeIn(tween(200)),
                             exit = shrinkHorizontally(tween(200)) + fadeOut(tween(200))
                         ) {
+                            val scrollState = rememberScrollState()
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(start = 6.dp, end = 4.dp)
+                                modifier = Modifier
+                                    .padding(start = 6.dp, end = 4.dp)
+                                    .horizontalScroll(scrollState)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .clip(CircleShape)
-                                        .background(if (!uiState.isNightModeEnabled && !uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                        .background(if (!isActive) Color.Yellow else Color.White.copy(alpha = 0.15f))
                                         .clickable {
                                             uiState.isNightModeEnabled = false
                                             uiState.isHdrEnabled = false
+                                            uiState.selectedSceneMode = android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
                                             isSceneOptionsExpanded = false
                                         }
                                         .padding(horizontal = 8.dp, vertical = 5.dp)
                                 ) {
                                     Text(
                                         text = "OFF",
-                                        color = if (!uiState.isNightModeEnabled && !uiState.isHdrEnabled) Color.Black else Color.White,
+                                        color = if (!isActive) Color.Black else Color.White,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
                                     )
@@ -410,6 +419,7 @@ fun TopCameraBar(
                                             .clickable {
                                                 uiState.isNightModeEnabled = true
                                                 uiState.isHdrEnabled = false
+                                                uiState.selectedSceneMode = android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
                                                 uiState.isIsoAuto = true
                                                 uiState.isShutterAuto = true
                                                 isSceneOptionsExpanded = false
@@ -433,6 +443,7 @@ fun TopCameraBar(
                                             .clickable {
                                                 uiState.isHdrEnabled = true
                                                 uiState.isNightModeEnabled = false
+                                                uiState.selectedSceneMode = android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
                                                 uiState.isIsoAuto = true
                                                 uiState.isShutterAuto = true
                                                 isSceneOptionsExpanded = false
@@ -447,12 +458,39 @@ fun TopCameraBar(
                                         )
                                     }
                                 }
+
+                                // Additional Hardware Scene Modes
+                                uiState.supportedSceneModes.forEach { mode ->
+                                    val isSelected = uiState.selectedSceneMode == mode
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                            .clickable {
+                                                uiState.selectedSceneMode = mode
+                                                uiState.isNightModeEnabled = false
+                                                uiState.isHdrEnabled = false
+                                                uiState.isIsoAuto = true
+                                                uiState.isShutterAuto = true
+                                                isSceneOptionsExpanded = false
+                                            }
+                                            .padding(horizontal = 8.dp, vertical = 5.dp)
+                                    ) {
+                                        Text(
+                                            text = getSceneModeName(mode),
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 } else {
                     Spacer(modifier = Modifier.width(1.dp))
                 }
+
 
                 // Kanan: Histogram Canvas (Strict Horizontal Row Alignment)
                 if (uiState.enableHistogram && uiState.histogramData != null) {
@@ -488,4 +526,28 @@ fun TopCameraBar(
         }
     }
 }
+
+private fun getSceneModeName(mode: Int): String {
+    return when (mode) {
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_ACTION -> "ACTION"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_PORTRAIT -> "PORTRAIT"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_LANDSCAPE -> "LANDSCAPE"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_NIGHT -> "NIGHT"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_NIGHT_PORTRAIT -> "NIGHT PORTRAIT"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_THEATRE -> "THEATRE"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_BEACH -> "BEACH"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_SNOW -> "SNOW"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_SUNSET -> "SUNSET"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_STEADYPHOTO -> "STEADY"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_FIREWORKS -> "FIREWORKS"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_SPORTS -> "SPORTS"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_PARTY -> "PARTY"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_CANDLELIGHT -> "CANDLE"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_BARCODE -> "BARCODE"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_HDR -> "HDR"
+        android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_FACE_PRIORITY -> "FACE"
+        else -> "SCENE ($mode)"
+    }
+}
+
 

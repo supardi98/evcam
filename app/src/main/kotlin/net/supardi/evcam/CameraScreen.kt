@@ -398,6 +398,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(isTorchOn) {
         camera2Engine.setTorchState(isTorchOn)
     }
+
+    LaunchedEffect(uiState.selectedSceneMode) {
+        camera2Engine.setSceneMode(uiState.selectedSceneMode)
+    }
+
     
     val textureView = remember { net.supardi.evcam.ui.AutoFitTextureView(context) }
     
@@ -505,7 +510,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     android.util.Log.d("EVCAM_HW", "Hardware Min Focus Dist (diopters): $minFocusDist")
                 }
 
+                val sceneModes = Camera2Helper.getSupportedSceneModes(chars)
+                uiState.supportedSceneModes = sceneModes
+                android.util.Log.d("EVCAM_HW", "Hardware Scene Modes: $sceneModes")
+
                 val awbModes = Camera2Helper.getSupportedAwbModes(chars)
+
                 if (awbModes.isNotEmpty()) {
                     uiState.supportedAwbModes = awbModes
                     android.util.Log.d("EVCAM_HW", "Hardware AWB Modes: $awbModes")
