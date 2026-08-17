@@ -37,6 +37,6 @@
         <activity
             android:name=".WebcamActivity"
             android:exported="false"
-            android:theme="@style/Theme.evcam" />
+            android:theme="@style/Theme.evcam.Webcam" />
     </application>
 </manifest>

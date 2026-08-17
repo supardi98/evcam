@@ -54,10 +54,9 @@ class WebcamActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Set edge-to-edge system bars matching dark theme
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        // Set system status bar & navigation bar to exact #0D1117 dark background
+        window.statusBarColor = android.graphics.Color.parseColor("#0D1117")
+        window.navigationBarColor = android.graphics.Color.parseColor("#0D1117")
         androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
@@ -225,8 +224,6 @@ fun WebcamDedicatedScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
