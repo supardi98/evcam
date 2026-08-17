@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
+
 
 class Camera2Engine(private val context: Context) {
     val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -418,6 +420,7 @@ class Camera2Engine(private val context: Context) {
     
     var isAfTriggered = false
     var onAfStateCallback: ((Int) -> Unit)? = null
+    var onAwbGainsCallback: ((Float) -> Unit)? = null
 
     private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
@@ -428,11 +431,20 @@ class Camera2Engine(private val context: Context) {
             super.onCaptureCompleted(session, request, result)
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             if (afState != null) {
-                Log.d("EVCAM_AF", "AF State: $afState, isAfTriggered: $isAfTriggered")
                 onAfStateCallback?.invoke(afState)
+            }
+            // Read active AWB color correction gains from sensor metadata to calculate live Kelvin
+            val gains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
+            if (gains != null && gains.redGain > 0f && gains.blueGain > 0f) {
+                // Approximate color temperature from red/blue channel gains ratio
+                val ratio = gains.redGain / gains.blueGain
+                // Empirical Kelvin curve estimation: ratio ~ 0.5 -> 7500K, ratio ~ 1.0 -> 5500K, ratio ~ 2.0 -> 3000K
+                val estimatedKelvin = (5500f / (ratio.toDouble().pow(0.8))).toFloat().coerceIn(2000f, 10000f)
+                onAwbGainsCallback?.invoke(estimatedKelvin)
             }
         }
     }
+
 
     fun updatePreview() {
         val session = captureSession ?: return

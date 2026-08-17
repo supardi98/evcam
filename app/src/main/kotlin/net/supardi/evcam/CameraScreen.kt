@@ -699,7 +699,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
 
     LaunchedEffect(cameraState) {
+        camera2Engine.onAwbGainsCallback = { liveKelvin ->
+            // Update manualKelvin continuously while in AUTO/preset modes so switching to CUS inherits live Kelvin
+            if (uiState.whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF) {
+                uiState.manualKelvin = liveKelvin
+            }
+        }
         camera2Engine.onAfStateCallback = { afState ->
+
             if (showFocusBox) {
                 when (afState) {
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
