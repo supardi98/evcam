@@ -23,9 +23,19 @@ import kotlin.math.pow
 
 class Camera2Engine(private val context: Context) {
     val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-    
-    var cameraDevice: CameraDevice? = null
-        private set
+
+    fun getCameraIdForFacing(lensFacing: Int): String {
+        try {
+            for (id in cameraManager.cameraIdList) {
+                val chars = cameraManager.getCameraCharacteristics(id)
+                val facing = chars.get(CameraCharacteristics.LENS_FACING)
+                if (facing == lensFacing) {
+                    return id
+                }
+            }
+        } catch (e: Exception) {}
+        return "0"
+    }
     var captureSession: CameraCaptureSession? = null
         private set
     
@@ -268,11 +278,11 @@ class Camera2Engine(private val context: Context) {
                 val w = maxOf(s.width, s.height)
                 val h = minOf(s.width, s.height)
                 val label = when {
-                    w >= 3840 -> "4K (2160p)"
-                    w >= 2560 -> "2.5K (1440p)"
-                    w >= 1920 -> "1080p (FHD)"
-                    w >= 1280 -> "720p (HD)"
-                    w >= 640 -> "480p (SD)"
+                    w == 3840 && h == 2160 -> "4K (3840x2160)"
+                    w == 2560 && h == 1440 -> "2.5K (2560x1440)"
+                    w == 1920 && h == 1080 -> "1080p (1920x1080)"
+                    w == 1280 && h == 720 -> "720p (1280x720)"
+                    w == 640 && h == 480 -> "480p (640x480)"
                     else -> "${w}x${h}"
                 }
                 if (list.none { it.second == w && it.third == h }) {

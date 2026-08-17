@@ -120,6 +120,7 @@ fun WebcamDedicatedScreen(
     var width by remember { mutableIntStateOf(1280) }
     var height by remember { mutableIntStateOf(720) }
     var orientation by remember { mutableStateOf("LANDSCAPE") }
+    var lensFacing by remember { mutableIntStateOf(android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) }
 
     var transferSpeedText by remember { mutableStateOf("0.0 KB/s") }
 
@@ -144,10 +145,11 @@ fun WebcamDedicatedScreen(
     val cameraState by camera2Engine.cameraState.collectAsState()
 
     // Lazy Camera Engine start/stop: Open camera ONLY when at least one streaming protocol is ON
-    LaunchedEffect(isAnyActive) {
+    LaunchedEffect(isAnyActive, lensFacing) {
         if (isAnyActive) {
             camera2Engine.startBackgroundThread()
-            camera2Engine.openCamera("0")
+            val targetId = camera2Engine.getCameraIdForFacing(lensFacing)
+            camera2Engine.openCamera(targetId)
             camera2Engine.setupImageReader(1920, 1080, width, height)
         } else {
             camera2Engine.closeCamera()
@@ -347,22 +349,30 @@ fun WebcamDedicatedScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // 2. Orientation Selection
-                        Text("Stream Orientation", color = Color.LightGray, fontSize = 11.sp)
+                        // 3. Camera Lens Selection (Back Main vs Front Selfie)
+                        Text("Camera Lens Selector", color = Color.LightGray, fontSize = 11.sp)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val orientations = listOf("LANDSCAPE" to "Landscape (16:9)", "PORTRAIT" to "Portrait (9:16)")
-                            orientations.forEach { (mode, label) ->
-                                val isSelected = orientation == mode
+                            val lenses = listOf(
+                                android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK to "Back Main Camera",
+                                android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT to "Front Selfie Camera"
+                            )
+                            lenses.forEach { (facing, label) ->
+                                val isSelected = lensFacing == facing
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) Color(0xFF00E676) else Color.DarkGray,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { orientation = mode }
+                                        .clickable {
+                                            if (lensFacing != facing) {
+                                                lensFacing = facing
+                                                camera2Engine.closeCamera()
+                                            }
+                                        }
                                 ) {
                                     Text(
                                         text = label,
