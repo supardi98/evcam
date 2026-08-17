@@ -10,33 +10,44 @@ class AutoFitTextureView @JvmOverloads constructor(
     defStyle: Int = 0
 ) : TextureView(context, attrs, defStyle) {
 
-    private var ratioWidth = 1080
-    private var ratioHeight = 1920
-
     fun setAspectRatio(width: Int, height: Int) {
-        if (width < 0 || height < 0) return
-        ratioWidth = width
-        ratioHeight = height
         requestLayout()
+        configureTransform()
     }
 
-    fun configureTransform() {
-        setTransform(null)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        configureTransform(w, h)
+    }
+
+    fun configureTransform(w: Int = width, h: Int = height) {
+        if (w == 0 || h == 0) return
+
+        val matrix = android.graphics.Matrix()
+        
+        // Sensor buffer height in portrait for view width w is w * 16 / 9 (e.g. 1080 * 16 / 9 = 1920)
+        val sensorBufferHeight = w * 16f / 9f
+
+        var scaleX = 1f
+        var scaleY = 1f
+
+        if (h < sensorBufferHeight) {
+            // Container is shorter than 16:9 (e.g. 4:3 or 1:1): FIT_XY compressed height, so scale Y up to restore un-stretched 1:1 pixel aspect
+            scaleY = sensorBufferHeight / h.toFloat()
+        } else if (h > sensorBufferHeight) {
+            // Container is taller than 16:9: scale X up to restore un-stretched 1:1 pixel aspect
+            scaleX = h.toFloat() / sensorBufferHeight
+        }
+
+        matrix.setScale(scaleX, scaleY, w / 2f, h / 2f)
+        setTransform(matrix)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
-
-        if (ratioWidth == 0 || ratioHeight == 0) {
-            setMeasuredDimension(width, height)
-        } else {
-            if (width < height * ratioWidth / ratioHeight) {
-                setMeasuredDimension(width, width * ratioHeight / ratioWidth)
-            } else {
-                setMeasuredDimension(height * ratioWidth / ratioHeight, height)
-            }
-        }
+        // Always measure to fill the parent Compose Box!
+        setMeasuredDimension(width, height)
     }
 }
