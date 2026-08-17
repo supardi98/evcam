@@ -44,9 +44,9 @@ class CameraUiState(
         android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT,
         android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
         android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT,
-        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT,
-        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT
     ))
+
     
     var isIsoAuto by mutableStateOf(true)
     var isShutterAuto by mutableStateOf(true)
