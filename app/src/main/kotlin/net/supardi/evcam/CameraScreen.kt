@@ -837,51 +837,50 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val full169Height = size.width * (16f / 9f)
 
                     
-                    withTransform({
-                        rotate(sensorRotation, pivot = center)
-                        if (isFront) {
-                            scale(scaleX = 1f, scaleY = -1f, pivot = center)
+                    withTransform(
+                        transformBlock = {
+                            rotate(sensorRotation, pivot = center)
+                            if (isFront) {
+                                scale(scaleX = 1f, scaleY = -1f, pivot = center)
+                            }
+                        },
+                        drawBlock = {
+                            val bitmapW = peakingBitmap!!.width.toFloat()
+                            val bitmapH = peakingBitmap!!.height.toFloat()
+                            val containerAspect = size.width / size.height // e.g., 4/3, 16/9, 1/1
+
+                            val targetBitmapAspect = containerAspect
+                            val currentBitmapAspect = bitmapH / bitmapW
+
+                            var srcX = 0
+                            var srcY = 0
+                            var srcW = bitmapW.toInt()
+                            var srcH = bitmapH.toInt()
+
+                            if (currentBitmapAspect > targetBitmapAspect) {
+                                srcH = (bitmapW * targetBitmapAspect).toInt()
+                                srcY = ((bitmapH - srcH) / 2f).toInt()
+                            } else if (currentBitmapAspect < targetBitmapAspect) {
+                                srcW = (bitmapH / targetBitmapAspect).toInt()
+                                srcX = ((bitmapW - srcW) / 2f).toInt()
+                            }
+
+                            val drawW = size.height.toInt()
+                            val drawH = size.width.toInt()
+
+                            drawImage(
+                                image = peakingBitmap!!.asImageBitmap(),
+                                srcOffset = androidx.compose.ui.unit.IntOffset(srcX, srcY),
+                                srcSize = androidx.compose.ui.unit.IntSize(srcW, srcH),
+                                dstOffset = androidx.compose.ui.unit.IntOffset(
+                                    x = (center.x - drawW / 2f).toInt(),
+                                    y = (center.y - drawH / 2f).toInt()
+                                ),
+                                dstSize = androidx.compose.ui.unit.IntSize(drawW, drawH)
+                            )
                         }
-                        // Sensor YUV analysis stream is 16:9 portrait (360x640 in rotated orientation).
-                        // In rotated canvas space: bitmap width = 360, bitmap height = 640.
-                        // Container dimensions in rotated space: targetW = size.height, targetH = size.width.
-                        // Calculate crop bounds on the bitmap to match container aspect ratio without stretching:
-                        val bitmapW = peakingBitmap!!.width.toFloat()
-                        val bitmapH = peakingBitmap!!.height.toFloat()
-                        val containerAspect = size.width / size.height // e.g., 4/3, 16/9, 1/1
+                    )
 
-                        // Target aspect in rotated bitmap space (H/W)
-                        val targetBitmapAspect = containerAspect
-                        val currentBitmapAspect = bitmapH / bitmapW
-
-                        var srcX = 0
-                        var srcY = 0
-                        var srcW = bitmapW.toInt()
-                        var srcH = bitmapH.toInt()
-
-                        if (currentBitmapAspect > targetBitmapAspect) {
-                            // Crop top and bottom of rotated YUV frame (like TextureView does)
-                            srcH = (bitmapW * targetBitmapAspect).toInt()
-                            srcY = ((bitmapH - srcH) / 2f).toInt()
-                        } else if (currentBitmapAspect < targetBitmapAspect) {
-                            srcW = (bitmapH / targetBitmapAspect).toInt()
-                            srcX = ((bitmapW - srcW) / 2f).toInt()
-                        }
-
-                        val drawW = size.height.toInt()
-                        val drawH = size.width.toInt()
-
-                        this@Canvas.drawImage(
-                            image = peakingBitmap!!.asImageBitmap(),
-                            srcOffset = androidx.compose.ui.unit.IntOffset(srcX, srcY),
-                            srcSize = androidx.compose.ui.unit.IntSize(srcW, srcH),
-                            dstOffset = androidx.compose.ui.unit.IntOffset(
-                                x = (center.x - drawW / 2f).toInt(),
-                                y = (center.y - drawH / 2f).toInt()
-                            ),
-                            dstSize = androidx.compose.ui.unit.IntSize(drawW, drawH)
-                        )
-                    })
 
 
 
