@@ -798,7 +798,7 @@ class Camera2Engine(private val context: Context) {
     }
 
 
-    fun takePhoto(flashMode: FlashMode, onImageCaptured: (Image) -> Unit) {
+    fun takePhoto(flashMode: FlashMode, activeCustomScene: CustomSceneMode = CustomSceneMode.AUTO, onImageCaptured: (Image) -> Unit) {
         Log.d("EVCAM", "takePhoto() called, cameraDevice=$cameraDevice, imageReader=$imageReader, captureSession=$captureSession")
         val device = cameraDevice ?: run { Log.e("EVCAM", "cameraDevice is null"); return }
         val reader = imageReader ?: run { Log.e("EVCAM", "imageReader is null"); return }
@@ -848,9 +848,21 @@ class Camera2Engine(private val context: Context) {
             val isoVal = previewRequestBuilder?.get(CaptureRequest.SENSOR_SENSITIVITY)
             if (isoVal != null) captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, isoVal)
             
-            val shutterVal = previewRequestBuilder?.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
-            if (shutterVal != null) captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterVal)
-            
+            // For long exposure scenes, apply true capture shutter speed instead of the limited preview shutter speed
+            when (activeCustomScene) {
+                CustomSceneMode.ASTRO_LONG_EXP -> {
+                    captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 10_000_000_000L) // 10 seconds true exposure
+                    captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                }
+                CustomSceneMode.FIREWORKS -> {
+                    captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 2_000_000_000L) // 2 seconds true exposure
+                    captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                }
+                else -> {
+                    val shutterVal = previewRequestBuilder?.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+                    if (shutterVal != null) captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterVal)
+                }
+            }
             val focusDist = previewRequestBuilder?.get(CaptureRequest.LENS_FOCUS_DISTANCE)
             if (focusDist != null) captureBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDist)
             

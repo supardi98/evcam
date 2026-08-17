@@ -86,7 +86,7 @@ fun takePhoto(
     onPhotoSaved: (Bitmap, Uri) -> Unit
 ) {
 
-    camera2Engine.takePhoto(flashMode) { image ->
+    camera2Engine.takePhoto(flashMode, customSceneMode) { image ->
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
