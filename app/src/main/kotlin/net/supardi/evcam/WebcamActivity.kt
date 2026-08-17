@@ -119,6 +119,7 @@ fun WebcamDedicatedScreen(
 
     var width by remember { mutableIntStateOf(1280) }
     var height by remember { mutableIntStateOf(720) }
+    var fps by remember { mutableIntStateOf(30) }
     var orientation by remember { mutableStateOf("LANDSCAPE") }
     var selectedAspectRatio by remember { mutableStateOf("ALL") }
     var lensFacing by remember { mutableIntStateOf(android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) }
@@ -180,7 +181,7 @@ fun WebcamDedicatedScreen(
 
             val surfaces = mutableListOf<android.view.Surface>()
             camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
-            camera2Engine.createPreviewSession(surfaces) { _ -> }
+            camera2Engine.createPreviewSession(surfaces, targetFps = fps) { _ -> }
         }
     }
 
@@ -358,7 +359,7 @@ fun WebcamDedicatedScreen(
                                                     camera2Engine.setupImageReader(1920, 1080, w, h)
                                                     val surfaces = mutableListOf<android.view.Surface>()
                                                     camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
-                                                    camera2Engine.createPreviewSession(surfaces) { _ -> }
+                                                    camera2Engine.createPreviewSession(surfaces, targetFps = fps) { _ -> }
                                                 }
                                         ) {
                                             Text(
@@ -380,6 +381,42 @@ fun WebcamDedicatedScreen(
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
+
+                        // 2. Stream Frame Rate (FPS) Selector
+                        Text("Stream Frame Rate (FPS)", color = Color.LightGray, fontSize = 11.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val fpsModes = listOf(60 to "60 FPS (Ultra Smooth)", 30 to "30 FPS (Standard)", 24 to "24 FPS (Cinema)", 15 to "15 FPS (Low Bandwidth)")
+                            fpsModes.forEach { (targetFpsVal, fpsLabel) ->
+                                val isSelected = fps == targetFpsVal
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Color.Yellow else Color.DarkGray,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            if (fps != targetFpsVal) {
+                                                fps = targetFpsVal
+                                                val surfaces = mutableListOf<android.view.Surface>()
+                                                camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
+                                                camera2Engine.createPreviewSession(surfaces, targetFps = targetFpsVal) { _ -> }
+                                            }
+                                        }
+                                ) {
+                                    Text(
+                                        text = fpsLabel,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
 
                         // 2. Stream Orientation Selection
                         Text("Stream Orientation", color = Color.LightGray, fontSize = 11.sp)

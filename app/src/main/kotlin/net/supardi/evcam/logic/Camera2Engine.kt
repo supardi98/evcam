@@ -455,11 +455,17 @@ class Camera2Engine(private val context: Context) {
         }
     }
 
-    fun createPreviewSession(targets: List<Surface>, onConfigured: (CameraCaptureSession) -> Unit) {
+    fun createPreviewSession(targets: List<Surface>, targetFps: Int = 30, onConfigured: (CameraCaptureSession) -> Unit) {
         val device = cameraDevice ?: return
         try {
             previewRequestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             previewRequestBuilder?.let { enableStabilization(it) }
+
+            // Apply target FPS range (e.g. 60 FPS, 30 FPS, 24 FPS)
+            if (targetFps > 0) {
+                previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, android.util.Range(targetFps, targetFps))
+            }
+
             if (targets.isNotEmpty()) {
                 currentPreviewSurface = targets[0]
             }
