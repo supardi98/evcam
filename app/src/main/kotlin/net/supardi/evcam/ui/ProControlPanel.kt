@@ -52,12 +52,11 @@ fun ProControlPanel(
     onFocusAutoToggle: () -> Unit,
     whiteBalance: Int,
     onWhiteBalanceChange: (Int) -> Unit,
-    manualKelvin: Float,
-    onManualKelvinChange: (Float) -> Unit,
     onClose: () -> Unit,
     isHdrEnabled: Boolean = false,
     isNightModeEnabled: Boolean = false
 ) {
+
 
     val isSceneLocked = isHdrEnabled || isNightModeEnabled
     val sceneName = when {
@@ -239,65 +238,44 @@ fun ProControlPanel(
                     .horizontalScroll(scrollState)
             ) {
 
-                Text(
-                    text = "AUTO",
-                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_AUTO) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
-                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) FontWeight.Bold else FontWeight.Normal
+                val awbModes = listOf(
+                    "AUTO" to CaptureRequest.CONTROL_AWB_MODE_AUTO,
+                    "DAY" to CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT,
+                    "CLD" to CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
+                    "INC" to CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT,
+                    "FLU" to CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT
                 )
-                Text(
-                    text = "DAY",
-                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Black else Color.White,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
-                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
-                )
-                Text(
-                    text = "CLD",
-                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Black else Color.White,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
-                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT) FontWeight.Bold else FontWeight.Normal
-                )
-                Text(
-                    text = "INC",
-                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) Color.Black else Color.White,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
-                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT) FontWeight.Bold else FontWeight.Normal
-                )
-                Text(
-                    text = "FLU",
-                    color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) Color.Black else Color.White,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) Color.Yellow else Color.White.copy(alpha = 0.2f))
-                        .clickable { onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    fontSize = 12.sp,
-                    fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT) FontWeight.Bold else FontWeight.Normal
-                )
+                awbModes.forEach { (label, mode) ->
+                    AwbChip(
+                        label = label,
+                        isSelected = whiteBalance == mode,
+                        onClick = { onWhiteBalanceChange(mode) }
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+private fun AwbChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Text(
+        text = label,
+        color = if (isSelected) Color.Black else Color.White,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.2f))
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        fontSize = 12.sp,
+        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+    )
+}
+
 
 
 
