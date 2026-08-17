@@ -103,10 +103,12 @@ class RtspServer(
 
 
     fun pushYuvFrame(image: Image) {
-        if (!isEncoderRunning || clients.isEmpty()) return
+        if (!isEncoderRunning) return
+        if (clients.isEmpty()) return
         try {
             val codec = mediaCodec ?: return
             val inputIndex = codec.dequeueInputBuffer(10000)
+
             if (inputIndex >= 0) {
                 val inputBuffer = codec.getInputBuffer(inputIndex) ?: return
                 inputBuffer.clear()

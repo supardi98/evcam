@@ -198,7 +198,7 @@ fun WebcamControlDialog(
             // 3. RTSP H.264 Protocol Card
             ProtocolCard(
                 title = "RTSP H.264 Stream",
-                subtitle = "Stream RTSP latensi rendah untuk NVR / VLC",
+                subtitle = "Stream RTSP latensi rendah untuk NVR / VLC / OBS",
                 url = "rtsp://$serverIp:8554/live",
                 dashboardUrl = null,
                 isEnabled = enableRtspStream,
@@ -226,6 +226,7 @@ fun WebcamControlDialog(
                     }
                 }
             )
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
