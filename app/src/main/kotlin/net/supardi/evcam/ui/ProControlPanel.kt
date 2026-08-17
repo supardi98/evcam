@@ -102,10 +102,11 @@ fun ProControlPanel(
                 Text(
                     text = if (isIsoAuto) "AUTO" else "${iso.toInt()}",
                     color = if (isIsoAuto) Color.Yellow else Color.White,
-                    modifier = Modifier.width(40.dp).clickable { onIsoAutoToggle() },
+                    modifier = Modifier.width(55.dp).clickable { onIsoAutoToggle() },
                     textAlign = TextAlign.End,
                     fontSize = 12.sp
                 )
+
             }
         }
 
@@ -185,7 +186,7 @@ fun ProControlPanel(
             Text(
                 text = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance), 
                 color = if (isFocusAuto) Color.Yellow else Color.White, 
-                modifier = Modifier.width(40.dp).clickable { onFocusAutoToggle() }, 
+                modifier = Modifier.width(55.dp).clickable { onFocusAutoToggle() }, 
                 textAlign = TextAlign.End, 
                 fontSize = 12.sp
             )
