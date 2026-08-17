@@ -112,19 +112,26 @@ fun WebcamDedicatedScreen(
     var height by remember { mutableIntStateOf(720) }
     var orientation by remember { mutableStateOf("LANDSCAPE") }
 
-    // Dedicated Camera Engine start/stop
+    // Dedicated Camera Engine start/stop & session creation
+    val cameraState by camera2Engine.cameraState.collectAsState()
+
     DisposableEffect(Unit) {
         camera2Engine.startBackgroundThread()
         camera2Engine.openCamera("0")
         camera2Engine.setupImageReader(1920, 1080, width, height)
 
-        val surfaces = mutableListOf<android.view.Surface>()
-        camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
-        camera2Engine.createPreviewSession(surfaces) { _ -> }
-
         onDispose {
             camera2Engine.closeCamera()
             camera2Engine.stopBackgroundThread()
+        }
+    }
+
+    LaunchedEffect(cameraState, width, height) {
+        if (cameraState is Camera2Engine.CameraState.Opened) {
+            camera2Engine.setupImageReader(1920, 1080, width, height)
+            val surfaces = mutableListOf<android.view.Surface>()
+            camera2Engine.analysisImageReader?.surface?.let { surfaces.add(it) }
+            camera2Engine.createPreviewSession(surfaces) { _ -> }
         }
     }
 
