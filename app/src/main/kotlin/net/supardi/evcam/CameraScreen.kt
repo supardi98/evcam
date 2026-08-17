@@ -248,57 +248,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         )
     }
     
-    val webcamServer = remember { WebcamStreamServer(context) }
-    val rtspServer = remember { RtspServer(8554) }
-    val webRtcServer = remember { WebRtcServer(9090) }
-
-    val isHttpActive = uiState.enableHttpMjpeg || uiState.enableHttpSnapshot
-
-    LaunchedEffect(isHttpActive) {
-        if (isHttpActive) {
-            webcamServer.enableHttpMjpeg = uiState.enableHttpMjpeg
-            webcamServer.enableHttpSnapshot = uiState.enableHttpSnapshot
-            webcamServer.enableRtspStream = uiState.enableRtspStream
-            webcamServer.enableWebRtc = uiState.enableWebRtc
-            webcamServer.onClientCountChanged = { count ->
-                uiState.connectedWebcamClients = count
-            }
-            uiState.webcamServerIp = WebcamStreamServer.getLocalIpAddress(context)
-            webcamServer.start()
-        } else {
-            webcamServer.stop()
-        }
-    }
-
-    LaunchedEffect(uiState.enableRtspStream) {
-        if (uiState.enableRtspStream) {
-            rtspServer.start()
-        } else {
-            rtspServer.stop()
-        }
-    }
-
-    LaunchedEffect(uiState.enableWebRtc) {
-        if (uiState.enableWebRtc) {
-            webRtcServer.start()
-        } else {
-            webRtcServer.stop()
-        }
-    }
-
-
-
-    LaunchedEffect(uiState.enableHttpMjpeg, uiState.enableHttpSnapshot, uiState.enableRtspStream, uiState.enableWebRtc) {
-        webcamServer.enableHttpMjpeg = uiState.enableHttpMjpeg
-        webcamServer.enableHttpSnapshot = uiState.enableHttpSnapshot
-        webcamServer.enableRtspStream = uiState.enableRtspStream
-        webcamServer.enableWebRtc = uiState.enableWebRtc
-    }
-
-
-
     LaunchedEffect(enableHistogram, enableFocusPeaking) {
-
         proAnalyzer.enableHistogram = enableHistogram
         proAnalyzer.enableFocusPeaking = enableFocusPeaking
     }
@@ -326,9 +276,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     val camera2Engine = remember { Camera2Engine(context) }
 
-    LaunchedEffect(uiState.webcamResolutionWidth, uiState.webcamResolutionHeight) {
-        camera2Engine.setupImageReader(1920, 1080, uiState.webcamResolutionWidth, uiState.webcamResolutionHeight)
-    }
+
 
     DisposableEffect(context) {
         val orientationEventListener = object : android.view.OrientationEventListener(context) {
@@ -599,16 +547,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     val image = reader.acquireLatestImage()
                     if (image != null) {
                         try {
-                            if (uiState.isWebcamStreaming) {
-                                webcamServer.pushYuvFrame(image)
-                            }
-                            if (uiState.enableRtspStream) {
-                                rtspServer.pushYuvFrame(image)
-                            }
-                            if (uiState.enableWebRtc) {
-                                webRtcServer.pushYuvFrame(image)
-                            }
-
                             if (enableHistogram || enableFocusPeaking) {
                                 proAnalyzer.analyze(image, 0)
                             }
