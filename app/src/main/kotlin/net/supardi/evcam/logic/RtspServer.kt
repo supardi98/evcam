@@ -66,15 +66,19 @@ class RtspServer(
         try {
             val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, 640, 480)
             format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar)
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 1000000)
+            format.setInteger(MediaFormat.KEY_BIT_RATE, 1500000)
             format.setInteger(MediaFormat.KEY_FRAME_RATE, 30)
-            format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
+            format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1) // Keyframe every 1s
+            format.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR) // Constant bitrate low latency
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                format.setInteger(MediaFormat.KEY_LATENCY, 0) // Ultra low latency
+            }
 
             mediaCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
             mediaCodec?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             mediaCodec?.start()
             isEncoderRunning = true
-            Log.d("EVCAM_RTSP", "H.264 MediaCodec Encoder started successfully")
+            Log.d("EVCAM_RTSP", "H.264 Low-Latency MediaCodec Encoder started")
         } catch (e: Exception) {
             Log.e("EVCAM_RTSP", "Failed to start H.264 MediaCodec encoder", e)
         }
@@ -123,41 +127,33 @@ class RtspServer(
                 val uBuffer = uPlane.buffer
                 val vBuffer = vPlane.buffer
 
-                val nv12 = ByteArray(width * height * 3 / 2)
-                var position = 0
+                val ySize = width * height
+                val nv12 = ByteArray(ySize * 3 / 2)
 
-                // Copy Y plane line by line
+                // Fast Direct Array Copy for Y plane
                 val yRowStride = yPlane.rowStride
-                val yPixelStride = yPlane.pixelStride
-                for (row in 0 until height) {
-                    if (yPixelStride == 1) {
+                if (yRowStride == width) {
+                    yBuffer.get(nv12, 0, ySize)
+                } else {
+                    for (row in 0 until height) {
                         yBuffer.position(row * yRowStride)
-                        yBuffer.get(nv12, position, width)
-                        position += width
-                    } else {
-                        yBuffer.position(row * yRowStride)
-                        for (col in 0 until width) {
-                            nv12[position++] = yBuffer.get()
-                        }
+                        yBuffer.get(nv12, row * width, width)
                     }
                 }
 
-                // Interleave UV planes for NV12
+                // Fast Interleave UV for NV12
                 val uvRowStride = uPlane.rowStride
                 val uvPixelStride = uPlane.pixelStride
                 val uvHeight = height / 2
                 val uvWidth = width / 2
+                var pos = ySize
 
                 for (row in 0 until uvHeight) {
                     val uRowPos = row * uvRowStride
                     val vRowPos = row * vPlane.rowStride
                     for (col in 0 until uvWidth) {
-                        val uVal = uBuffer.get(uRowPos + col * uvPixelStride)
-                        val vVal = vBuffer.get(vRowPos + col * vPlane.pixelStride)
-                        if (position < nv12.size - 1) {
-                            nv12[position++] = uVal
-                            nv12[position++] = vVal
-                        }
+                        nv12[pos++] = uBuffer.get(uRowPos + col * uvPixelStride)
+                        nv12[pos++] = vBuffer.get(vRowPos + col * vPixelStride)
                     }
                 }
 
