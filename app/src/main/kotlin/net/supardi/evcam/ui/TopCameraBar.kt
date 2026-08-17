@@ -28,13 +28,15 @@ fun TopCameraBar(
     uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 48.dp, start = 24.dp, end = 24.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 48.dp, start = 24.dp, end = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
         Row {
             if (uiState.hasFlashSupport) {
                 Box(
@@ -105,74 +107,7 @@ fun TopCameraBar(
             }
 
 
-            if (uiState.cameraMode == CameraMode.PHOTO) {
-                if (uiState.hasNightExtension) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                uiState.isNightModeEnabled = !uiState.isNightModeEnabled
-                                if (uiState.isNightModeEnabled) {
-                                    uiState.isHdrEnabled = false
-                                    // Reset ISO & Shutter to AUTO — Night mode controls exposure automatically
-                                    uiState.isIsoAuto = true
-                                    uiState.isShutterAuto = true
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.DarkMode,
-                                contentDescription = "Night Mode",
-                                tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                }
-                
-                if (uiState.hasHdrExtension) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                uiState.isHdrEnabled = !uiState.isHdrEnabled
-                                if (uiState.isHdrEnabled) {
-                                    uiState.isNightModeEnabled = false // Mutually exclusive
-                                    // Reset ISO & Shutter to AUTO — HDR mode controls exposure automatically
-                                    uiState.isIsoAuto = true
-                                    uiState.isShutterAuto = true
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val backgroundAlpha = if (uiState.isHdrEnabled) 0.3f else 0f
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.HdrOn,
-                                contentDescription = "HDR Mode",
-                                tint = if (uiState.isHdrEnabled) Color.Yellow else Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                }
+
                 
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
@@ -332,8 +267,84 @@ fun TopCameraBar(
                     imageVector = Icons.Default.Settings, 
                     contentDescription = "Settings", 
                     tint = if (uiState.showSettings) Color.Yellow else Color.White
-                )
+        }
+    }
+
+    // ── Secondary Sub-Bar Row (Scene Extensions: OFF -> HDR -> NIGHT toggle chip) ──
+    if (uiState.cameraMode == CameraMode.PHOTO && (uiState.hasHdrExtension || uiState.hasNightExtension)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp, start = 24.dp, end = 24.dp),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val sceneModeText = when {
+                uiState.isHdrEnabled -> "HDR ON"
+                uiState.isNightModeEnabled -> "NIGHT ON"
+                else -> "SCENE OFF"
+            }
+            val sceneIcon = when {
+                uiState.isHdrEnabled -> Icons.Filled.HdrOn
+                uiState.isNightModeEnabled -> Icons.Filled.DarkMode
+                else -> Icons.Filled.MotionPhotosOff
+            }
+            val isActive = uiState.isHdrEnabled || uiState.isNightModeEnabled
+
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isActive) Color.Yellow.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.4f))
+                    .clickable {
+                        // Cycle toggle: OFF -> HDR -> NIGHT -> OFF
+                        when {
+                            !uiState.isHdrEnabled && !uiState.isNightModeEnabled -> {
+                                if (uiState.hasHdrExtension) {
+                                    uiState.isHdrEnabled = true
+                                    uiState.isNightModeEnabled = false
+                                } else if (uiState.hasNightExtension) {
+                                    uiState.isNightModeEnabled = true
+                                    uiState.isHdrEnabled = false
+                                }
+                            }
+                            uiState.isHdrEnabled -> {
+                                if (uiState.hasNightExtension) {
+                                    uiState.isHdrEnabled = false
+                                    uiState.isNightModeEnabled = true
+                                } else {
+                                    uiState.isHdrEnabled = false
+                                    uiState.isNightModeEnabled = false
+                                }
+                            }
+                            else -> {
+                                uiState.isHdrEnabled = false
+                                uiState.isNightModeEnabled = false
+                            }
+                        }
+                    }
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = sceneIcon,
+                        contentDescription = "Scene Toggle",
+                        tint = if (isActive) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = sceneModeText,
+                        color = if (isActive) Color.Yellow else Color.White.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
     }
 }
+}
+
