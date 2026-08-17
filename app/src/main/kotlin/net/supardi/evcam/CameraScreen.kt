@@ -330,8 +330,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
     
     
-    LaunchedEffect(currentZoom) {
-        if (kotlin.math.abs(currentZoom - 1f) < 0.01f) {
+    LaunchedEffect(zoomAnim.value, showZoomSlider) {
+        if (showZoomSlider) {
             delay(3000)
             showZoomSlider = false
         }
@@ -1062,6 +1062,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                 .clip(CircleShape)
                                 .background(if (kotlin.math.abs(zoomAnim.value - zoomVal) < 0.05f) Color.Yellow.copy(alpha = 0.3f) else Color.Transparent)
                                 .clickable {
+                                    showZoomSlider = true
                                     coroutineScope.launch {
                                         zoomAnim.snapTo(zoomAnim.value) // start from current
                                         zoomAnim.animateTo(
