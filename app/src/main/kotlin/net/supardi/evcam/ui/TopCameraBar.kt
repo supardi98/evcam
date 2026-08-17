@@ -99,9 +99,14 @@ fun TopCameraBar(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .clickable { 
-                                uiState.isNightModeEnabled = !uiState.isNightModeEnabled 
-                                if (uiState.isNightModeEnabled) uiState.isHdrEnabled = false
+                            .clickable {
+                                uiState.isNightModeEnabled = !uiState.isNightModeEnabled
+                                if (uiState.isNightModeEnabled) {
+                                    uiState.isHdrEnabled = false
+                                    // Reset ISO & Shutter to AUTO — Night mode controls exposure automatically
+                                    uiState.isIsoAuto = true
+                                    uiState.isShutterAuto = true
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -128,9 +133,14 @@ fun TopCameraBar(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .clickable { 
+                            .clickable {
                                 uiState.isHdrEnabled = !uiState.isHdrEnabled
-                                if (uiState.isHdrEnabled) uiState.isNightModeEnabled = false // Mutually exclusive
+                                if (uiState.isHdrEnabled) {
+                                    uiState.isNightModeEnabled = false // Mutually exclusive
+                                    // Reset ISO & Shutter to AUTO — HDR mode controls exposure automatically
+                                    uiState.isIsoAuto = true
+                                    uiState.isShutterAuto = true
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {

@@ -1,12 +1,19 @@
 package net.supardi.evcam.ui
 
 import android.hardware.camera2.CaptureRequest
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -41,8 +48,17 @@ fun ProControlPanel(
     onWhiteBalanceChange: (Int) -> Unit,
     manualKelvin: Float,
     onManualKelvinChange: (Float) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    isHdrEnabled: Boolean = false,
+    isNightModeEnabled: Boolean = false
 ) {
+    val isSceneLocked = isHdrEnabled || isNightModeEnabled
+    val sceneName = when {
+        isHdrEnabled -> "HDR"
+        isNightModeEnabled -> "Night"
+        else -> ""
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -65,33 +81,78 @@ fun ProControlPanel(
             )
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-            Text("ISO", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            Slider(
-                value = iso.coerceIn(minIso, maxIso), 
-                onValueChange = onIsoChange, 
-                valueRange = minIso..maxIso, 
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-            )
-            Text(
-                text = if (isIsoAuto) "AUTO" else "${iso.toInt()}", 
-                color = if (isIsoAuto) Color.Yellow else Color.White, 
-                modifier = Modifier.width(40.dp).clickable { onIsoAutoToggle() }, 
-                textAlign = TextAlign.End, 
-                fontSize = 12.sp
-            )
+        // ── ISO row: hidden when HDR or Night is active ───────────────────────
+        AnimatedVisibility(
+            visible = !isSceneLocked,
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+                Text("ISO", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+                Slider(
+                    value = iso.coerceIn(minIso, maxIso),
+                    onValueChange = onIsoChange,
+                    valueRange = minIso..maxIso,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                )
+                Text(
+                    text = if (isIsoAuto) "AUTO" else "${iso.toInt()}",
+                    color = if (isIsoAuto) Color.Yellow else Color.White,
+                    modifier = Modifier.width(40.dp).clickable { onIsoAutoToggle() },
+                    textAlign = TextAlign.End,
+                    fontSize = 12.sp
+                )
+            }
         }
-        
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-            Text("SHT", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            Slider(value = shutterSpeed, onValueChange = onShutterChange, valueRange = 100000f..1000000000f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-            Text(
-                text = if (isShutterAuto) "AUTO" else "1/${1_000_000_000L / shutterSpeed.toLong().coerceAtLeast(1)}", 
-                color = if (isShutterAuto) Color.Yellow else Color.White, 
-                modifier = Modifier.width(40.dp).clickable { onShutterAutoToggle() }, 
-                textAlign = TextAlign.End, 
-                fontSize = 12.sp
-            )
+
+        // ── Shutter row: hidden when HDR or Night is active ───────────────────
+        AnimatedVisibility(
+            visible = !isSceneLocked,
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+                Text("SHT", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+                Slider(value = shutterSpeed, onValueChange = onShutterChange, valueRange = 100000f..1000000000f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                Text(
+                    text = if (isShutterAuto) "AUTO" else "1/${1_000_000_000L / shutterSpeed.toLong().coerceAtLeast(1)}",
+                    color = if (isShutterAuto) Color.Yellow else Color.White,
+                    modifier = Modifier.width(40.dp).clickable { onShutterAutoToggle() },
+                    textAlign = TextAlign.End,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        // ── Info banner when ISO/Shutter locked by scene mode ────────────────
+        AnimatedVisibility(
+            visible = isSceneLocked,
+            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
+            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFFF9800).copy(alpha = 0.15f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = Color(0xFFFF9800),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "ISO & Shutter dikontrol otomatis oleh mode $sceneName",
+                    color = Color(0xFFFF9800),
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
+                )
+            }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {

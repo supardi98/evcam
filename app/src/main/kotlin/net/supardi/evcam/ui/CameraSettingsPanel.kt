@@ -69,7 +69,9 @@ fun SettingsPopupPanels(
                     onWhiteBalanceChange = { uiState.whiteBalance = it },
                     manualKelvin = uiState.manualKelvin,
                     onManualKelvinChange = { uiState.manualKelvin = it },
-                    onClose = { uiState.showProPanel = false }
+                    onClose = { uiState.showProPanel = false },
+                    isHdrEnabled = uiState.isHdrEnabled,
+                    isNightModeEnabled = uiState.isNightModeEnabled
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
