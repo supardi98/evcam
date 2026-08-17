@@ -443,11 +443,38 @@ class Camera2Engine(private val context: Context) {
         
         val cropRegion = previewRequestBuilder?.get(CaptureRequest.SCALER_CROP_REGION) ?: sensorRect
         
+        val sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+        val isFront = chars.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
+
+        val normalizedX: Float
+        val normalizedY: Float
+
+        when (sensorOrientation) {
+            90 -> {
+                normalizedX = y / height
+                normalizedY = if (isFront) x / width else 1f - (x / width)
+            }
+            270 -> {
+                normalizedX = 1f - (y / height)
+                normalizedY = if (isFront) 1f - (x / width) else x / width
+            }
+            180 -> {
+                normalizedX = 1f - (x / width)
+                normalizedY = 1f - (y / height)
+            }
+            else -> {
+                normalizedX = if (isFront) 1f - (x / width) else x / width
+                normalizedY = y / height
+            }
+        }
+
+        val mappedX = cropRegion.left + (normalizedX.coerceIn(0f, 1f)) * cropRegion.width()
+        val mappedY = cropRegion.top + (normalizedY.coerceIn(0f, 1f)) * cropRegion.height()
+
+        Log.d("EVCAM_TOUCH", "Touch ($x, $y) on View ($width x $height) -> Sensor Mapped ($mappedX, $mappedY) Orient: $sensorOrientation")
+        
         val halfTouchWidth = 150
         val halfTouchHeight = 150
-        
-        val mappedX = cropRegion.left + (x / width) * cropRegion.width()
-        val mappedY = cropRegion.top + (y / height) * cropRegion.height()
         
         val focusRect = Rect(
             max(cropRegion.left, (mappedX - halfTouchWidth).toInt()),
