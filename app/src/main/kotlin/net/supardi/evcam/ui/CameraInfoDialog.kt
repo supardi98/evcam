@@ -189,9 +189,17 @@ private fun fetchCameraHardwareInfo(context: Context): List<CameraHardwareInfo> 
 
             val hasFlash = chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) ?: false
             val oisModes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
-            val hasOis = oisModes?.any { it != CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_OFF } ?: false
+            val hasStdOis = oisModes?.any { it != CameraCharacteristics.LENS_OPTICAL_STABILIZATION_MODE_OFF } ?: false
+
             val eisModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)
-            val hasEis = eisModes?.any { it != CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_OFF } ?: false
+            val hasStdEis = eisModes?.any { it != CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_OFF } ?: false
+
+            val vendorKeys = chars.keys.map { it.name }
+            val hasVendorOis = vendorKeys.any { k -> k.contains("ois", ignoreCase = true) || k.contains("optical", ignoreCase = true) }
+            val hasVendorEis = vendorKeys.any { k -> k.contains("eis", ignoreCase = true) || k.contains("ais", ignoreCase = true) || k.contains("stabiliz", ignoreCase = true) }
+
+            val hasOis = hasStdOis || (hasVendorOis && facingStr.startsWith("Rear"))
+            val hasEis = hasStdEis || (hasVendorEis && facingStr.startsWith("Rear"))
             
             val aeLock = chars.get(CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE) ?: false
             val wbLock = chars.get(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE) ?: false
