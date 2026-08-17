@@ -43,9 +43,13 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
+        // Make status bar & navigation bar 100% transparent on camera preview
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
             controller.show(WindowInsetsCompat.Type.statusBars())
             controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
         }
 
         checkCameraPermission()
