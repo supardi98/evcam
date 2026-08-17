@@ -88,6 +88,15 @@ fun CameraBottomBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        val isVideoMedia = remember(lastCapturedUri, lastCapturedBitmap) {
+            if (lastCapturedUri != null) {
+                val type = try { context.contentResolver.getType(lastCapturedUri) } catch (e: Exception) { null }
+                type?.startsWith("video/") == true || 
+                lastCapturedUri.toString().contains("video", ignoreCase = true) || 
+                lastCapturedUri.toString().endsWith(".mp4", ignoreCase = true)
+            } else false
+        }
+
         // ── Thumbnail ──────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
@@ -120,6 +129,23 @@ fun CameraBottomBar(
                 )
             } else {
                 Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
+            }
+
+            if (isVideoMedia && (lastCapturedBitmap != null || lastCapturedUri != null)) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Video Badge",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
 
