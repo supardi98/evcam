@@ -56,6 +56,12 @@ fun CameraViewfinder(
                         filter != ColorFilterMode.NORMAL -> filter.matrixValues
                         customScene == CustomSceneMode.DOCUMENT -> ColorFilterMode.MONO.matrixValues
                         customScene == CustomSceneMode.SUNSET -> ColorFilterMode.WARM.matrixValues
+                        customScene == CustomSceneMode.FOOD -> floatArrayOf(
+                            1.10f, 0f,    0f,    0f, 0f, // Boost Red slightly
+                            0f,    1.05f, 0f,    0f, 0f, // Boost Green slightly for yellow warmth
+                            0f,    0f,    0.90f, 0f, 0f, // Reduce Blue slightly
+                            0f,    0f,    0f,    1f, 0f
+                        )
                         customScene == CustomSceneMode.LANDSCAPE -> floatArrayOf(
                             1.15f, 0f,    0f,    0f, 0f,
                             0f,    1.25f, 0f,    0f, 0f,

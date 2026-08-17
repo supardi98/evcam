@@ -31,7 +31,10 @@ enum class CustomSceneMode(
     CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes", lockWhiteBalance = true),
     SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes", lockEv = true),
     ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography", lockIso = true, lockShutter = true, lockFocus = true, lockEv = true),
-    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true, lockEv = true)
+    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true, lockEv = true),
+    FOOD("Food / Culinary", "Enhances warm colors and adds slight brightness (+0.3 EV) to make food look appetizing", lockEv = true),
+    CONCERT("Concert / Stage", "Reduces exposure (-1.5 EV) and uses fast shutter to prevent blown-out faces from stage lights", lockEv = true),
+    WATERFALL("Silky Waterfall", "Low ISO and slow shutter (1/4s) to create silky smooth water movement", lockIso = true, lockShutter = true, lockEv = true)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
