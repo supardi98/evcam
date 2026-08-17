@@ -421,6 +421,8 @@ class Camera2Engine(private val context: Context) {
     var isAfTriggered = false
     var onAfStateCallback: ((Int) -> Unit)? = null
     var onAwbGainsCallback: ((Float) -> Unit)? = null
+    var lastLiveGains: android.hardware.camera2.params.RggbChannelVector? = null
+
 
     private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
@@ -433,17 +435,18 @@ class Camera2Engine(private val context: Context) {
             if (afState != null) {
                 onAfStateCallback?.invoke(afState)
             }
-            // Read active AWB color correction gains from sensor metadata to calculate live Kelvin
+            // Read active AWB color correction gains from sensor metadata for exact Custom AWB matching
             val gains = result.get(CaptureResult.COLOR_CORRECTION_GAINS)
             if (gains != null && gains.red > 0f && gains.blue > 0f) {
+                lastLiveGains = gains
                 // Invert formula: rGain = 2.5 - 1.5*norm, bGain = 1.0 + 2.0*norm
-                // (2.5 - rGain)/1.5 ~ norm, (bGain - 1.0)/2.0 ~ norm
                 val normR = ((2.5f - gains.red) / 1.5f).coerceIn(0f, 1f)
                 val normB = ((gains.blue - 1.0f) / 2.0f).coerceIn(0f, 1f)
                 val avgNorm = (normR + normB) / 2.0f
                 val estimatedKelvin = (2000f + avgNorm * 8000f).coerceIn(2000f, 10000f)
                 onAwbGainsCallback?.invoke(estimatedKelvin)
             }
+
 
 
 
@@ -591,16 +594,24 @@ class Camera2Engine(private val context: Context) {
 
             builder.set(CaptureRequest.CONTROL_AWB_MODE, whiteBalance)
             if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
-                // Use FAST color correction mode instead of TRANSFORM_MATRIX to preserve hardware ISP contrast/tonemapping
-                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
-                val normalizedTemp = (manualKelvin - 2000f) / 8000f // 0f .. 1f
-                val rGain = (2.5f - 1.5f * normalizedTemp).coerceIn(1.0f, 3.5f)
-                val gGain = 1.0f
-                val bGain = (1.0f + 2.0f * normalizedTemp).coerceIn(1.0f, 3.5f)
-                builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, android.hardware.camera2.params.RggbChannelVector(rGain, gGain, gGain, bGain))
+                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+                // Use exact gain ratio multiplier from hardware sensor
+                val baseGains = lastLiveGains
+                val baseR = baseGains?.red ?: 1.8f
+                val baseB = baseGains?.blue ?: 1.8f
+                val baseG1 = baseGains?.greenEven ?: 1.0f
+                val baseG2 = baseGains?.greenOdd ?: 1.0f
+
+                // Scale gains around center 5500K
+                val factor = (manualKelvin / 5500f).coerceIn(0.4f, 2.2f)
+                val rGain = (baseR / factor).coerceIn(1.0f, 4.0f)
+                val bGain = (baseB * factor).coerceIn(1.0f, 4.0f)
+
+                builder.set(CaptureRequest.COLOR_CORRECTION_GAINS, android.hardware.camera2.params.RggbChannelVector(rGain, baseG1, baseG2, bGain))
             } else {
                 builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
             }
+
 
 
         } else {
