@@ -318,7 +318,7 @@ fun WebcamControlDialog(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("🔋 Black Screen Power Saving", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Text(
-                            "Matikan preview layar & redupkan kecerahan agar HP dingin dan baterai sangat hemat saat live stream.",
+                            "Turn off screen preview to reduce heat and save maximum battery during live streaming.",
                             color = Color.LightGray,
                             fontSize = 11.sp
                         )

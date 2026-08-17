@@ -1397,7 +1397,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(24.dp)
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Videocam,
+                        imageVector = androidx.compose.material.icons.Icons.Default.Settings,
                         contentDescription = null,
                         tint = Color(0xFF00E676),
                         modifier = Modifier.size(48.dp)
