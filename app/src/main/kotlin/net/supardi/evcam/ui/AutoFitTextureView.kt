@@ -24,10 +24,16 @@ class AutoFitTextureView @JvmOverloads constructor(
     fun configureTransform(w: Int = width, h: Int = height, mode: AspectRatioMode = AspectRatioMode.RATIO_16_9) {
         if (w == 0 || h == 0) return
 
-        val matrix = android.graphics.Matrix()
-
         // 16:9 portrait preview buffer height for width w (e.g. 1080 * 16 / 9 = 1920)
         val targetHeight = w * 16f / 9f
+
+        // In 16:9 mode, use identity matrix to match captured photo FOV 100% identically without any scale zoom
+        if (Math.abs(h.toFloat() - targetHeight) < 10f) {
+            setTransform(null)
+            return
+        }
+
+        val matrix = android.graphics.Matrix()
 
         // FIT_XY compresses height 1920 down to h (1440 for 4:3, 1080 for 1:1).
         // scaleY = targetHeight / h UNDOES FIT_XY compression completely so pixels stay 1:1 un-stretched!
