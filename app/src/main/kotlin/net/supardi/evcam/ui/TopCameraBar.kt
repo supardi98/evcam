@@ -142,46 +142,48 @@ fun TopCameraBar(
                 
                 if (uiState.cameraMode == CameraMode.PHOTO) {
                     Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(
-                        onClick = {
-                            uiState.timerMode = when (uiState.timerMode) {
-                                TimerMode.OFF -> TimerMode.SEC_3
-                                TimerMode.SEC_3 -> TimerMode.SEC_10
-                                TimerMode.SEC_10 -> TimerMode.SEC_15
-                                TimerMode.SEC_15 -> TimerMode.SEC_20
-                                TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
-                                TimerMode.PEACE -> TimerMode.OFF
-                            }
-                        },
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        val isTimerActive = uiState.timerMode != TimerMode.OFF
-                        val timerTint = if (isTimerActive) Color.Yellow else Color.White
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
-                            Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint, modifier = Modifier.size(24.dp))
-                            
-                            if (isTimerActive && uiState.timerMode != TimerMode.PEACE) {
-                                // High-legibility crisp Pill Badge at top-right
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 4.dp, y = (-2).dp)
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color.Yellow)
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "${uiState.timerMode.seconds}s",
-                                        color = Color.Black,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        lineHeight = 9.sp
-                                    )
+                    val isTimerActive = uiState.timerMode != TimerMode.OFF
+                    val timerTint = if (isTimerActive) Color.Yellow else Color.White
+
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                uiState.timerMode = when (uiState.timerMode) {
+                                    TimerMode.OFF -> TimerMode.SEC_3
+                                    TimerMode.SEC_3 -> TimerMode.SEC_10
+                                    TimerMode.SEC_10 -> TimerMode.SEC_15
+                                    TimerMode.SEC_15 -> TimerMode.SEC_20
+                                    TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
+                                    TimerMode.PEACE -> TimerMode.OFF
                                 }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
+                        Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint, modifier = Modifier.size(22.dp))
+                        
+                        if (isTimerActive && uiState.timerMode != TimerMode.PEACE) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 2.dp, end = 2.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.Yellow)
+                                    .padding(horizontal = 3.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = "${uiState.timerMode.seconds}s",
+                                    color = Color.Black,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    lineHeight = 8.sp
+                                )
                             }
                         }
                     }
+
 
                     
                     if (uiState.timerMode != TimerMode.OFF) {
