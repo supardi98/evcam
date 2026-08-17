@@ -116,12 +116,21 @@ fun ProControlPanel(
             enter = expandVertically(tween(200)) + fadeIn(tween(200)),
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {
+            val minLog = kotlin.math.ln(minShutterSpeed.toDouble())
+            val maxLog = kotlin.math.ln(maxShutterSpeed.toDouble())
+            val currentLog = kotlin.math.ln(shutterSpeed.coerceIn(minShutterSpeed, maxShutterSpeed).toDouble())
+            val sliderPos = ((currentLog - minLog) / (maxLog - minLog)).toFloat().coerceIn(0f, 1f)
+
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                 Text("SHT", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
                 Slider(
-                    value = shutterSpeed.coerceIn(minShutterSpeed, maxShutterSpeed),
-                    onValueChange = onShutterChange,
-                    valueRange = minShutterSpeed..maxShutterSpeed,
+                    value = sliderPos,
+                    onValueChange = { pos ->
+                        val logVal = minLog + pos * (maxLog - minLog)
+                        val valNs = kotlin.math.exp(logVal).toFloat()
+                        onShutterChange(valNs)
+                    },
+                    valueRange = 0f..1f,
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                 )
                 Text(
@@ -134,15 +143,14 @@ fun ProControlPanel(
                             "1/$denominator"
                         }
                     },
-
                     color = if (isShutterAuto) Color.Yellow else Color.White,
                     modifier = Modifier.width(55.dp).clickable { onShutterAutoToggle() },
                     textAlign = TextAlign.End,
                     fontSize = 12.sp
                 )
-
             }
         }
+
 
         // ── Info banner when ISO/Shutter locked by scene mode ────────────────
         AnimatedVisibility(

@@ -461,24 +461,29 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 Camera2Helper.getIsoRange(chars)?.let { (min, max) ->
                     uiState.minIso = min
                     uiState.maxIso = max
+                    android.util.Log.d("EVCAM_HW", "Hardware ISO Range: $min .. $max")
                 }
 
                 Camera2Helper.getShutterRange(chars)?.let { (min, max) ->
                     uiState.minShutterSpeed = min
-                    // Allow up to 1.0s (1,000,000,000 ns) or hardware max
-                    uiState.maxShutterSpeed = maxOf(max, 1_000_000_000f)
+                    // Full 30s hardware exposure capability
+                    uiState.maxShutterSpeed = maxOf(max, 30_000_000_000f)
+                    android.util.Log.d("EVCAM_HW", "Hardware Exposure Time Range (ns): $min .. $max (${max / 1_000_000_000f}s)")
                 }
+
 
 
 
                 val minFocusDist = Camera2Helper.getMinimumFocusDistance(chars)
                 if (minFocusDist > 0f) {
                     uiState.maxFocusDistance = minFocusDist
+                    android.util.Log.d("EVCAM_HW", "Hardware Min Focus Dist (diopters): $minFocusDist")
                 }
 
                 val awbModes = Camera2Helper.getSupportedAwbModes(chars)
                 if (awbModes.isNotEmpty()) {
                     uiState.supportedAwbModes = awbModes
+                    android.util.Log.d("EVCAM_HW", "Hardware AWB Modes: $awbModes")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("EVCAM", "Failed to query hardware characteristics", e)

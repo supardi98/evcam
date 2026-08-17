@@ -557,8 +557,11 @@ class Camera2Engine(private val context: Context) {
             } else {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
-                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterSpeed)
+                // Cap preview shutter speed to max 0.5s (500ms) for smooth live viewfinder
+                val previewShutter = minOf(shutterSpeed, 500_000_000L)
+                builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, previewShutter)
             }
+
 
 
 
