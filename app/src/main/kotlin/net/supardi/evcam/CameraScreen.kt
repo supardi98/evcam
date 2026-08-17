@@ -426,7 +426,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
+    LaunchedEffect(cameraMode) {
+        // Automatically turn off continuous Torch & close Pro panel when switching between Photo & Video modes
+        uiState.isTorchOn = false
+        uiState.showProPanel = false
+    }
+
     LaunchedEffect(exposureIndex) {
+
         camera2Engine.setExposureCompensation(exposureIndex)
     }
 
