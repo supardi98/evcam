@@ -329,6 +329,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var timerJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var showShutterFlash by remember { mutableStateOf(false) }
     
+    var isProcessingHdr by remember { mutableStateOf(false) }
+    var hdrProgress by remember { mutableStateOf(0) }
+
     val mediaActionSound = remember {
         android.media.MediaActionSound().apply {
             load(android.media.MediaActionSound.SHUTTER_CLICK)
@@ -625,17 +628,44 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, 0, 0)
             }
             val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
-            takePhoto(
-                context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
-                liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
-                isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
-                customSceneMode = uiState.selectedCustomScene
-            ) { bitmap, uri ->
-                lastCapturedBitmap = bitmap
-                lastCapturedUri = uri
-                prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
-                if (!isShutterSoundEnabled) {
-                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
+            
+            if (uiState.selectedCustomScene == CustomSceneMode.COMPUTATIONAL_HDR) {
+                isProcessingHdr = true
+                hdrProgress = 0
+                takeComputationalHdrPhoto(
+                    context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
+                    liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
+                    isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
+                    onProgress = { progress -> 
+                        if (progress == -1) {
+                            isProcessingHdr = false // Error
+                        } else {
+                            hdrProgress = progress
+                        }
+                    },
+                    onPhotoSaved = { bitmap, uri ->
+                        lastCapturedBitmap = bitmap
+                        lastCapturedUri = uri
+                        prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                        if (!isShutterSoundEnabled) {
+                            audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
+                        }
+                        isProcessingHdr = false
+                    }
+                )
+            } else {
+                takePhoto(
+                    context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
+                    liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
+                    isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
+                    customSceneMode = uiState.selectedCustomScene
+                ) { bitmap, uri ->
+                    lastCapturedBitmap = bitmap
+                    lastCapturedUri = uri
+                    prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                    if (!isShutterSoundEnabled) {
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
+                    }
                 }
             }
 
@@ -1319,6 +1349,35 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         
 
         DialogContainers(uiState = uiState)
+        
+        if (isProcessingHdr) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .pointerInput(Unit) { }, // Block touches
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = Color.Yellow,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Processing HDR+ Pro...",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "$hdrProgress%",
+                        color = Color.Yellow,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        }
     }
 }
 

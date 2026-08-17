@@ -261,10 +261,10 @@ class Camera2Engine(private val context: Context) {
 
     fun setupImageReader(width: Int = 1920, height: Int = 1080, streamWidth: Int = 1280, streamHeight: Int = 720) {
         imageReader?.close()
-        imageReader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 2)
+        imageReader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 4)
         
         analysisImageReader?.close()
-        analysisImageReader = ImageReader.newInstance(streamWidth, streamHeight, ImageFormat.YUV_420_888, 2)
+        analysisImageReader = ImageReader.newInstance(streamWidth, streamHeight, ImageFormat.YUV_420_888, 4)
     }
 
     fun getSupportedStreamResolutions(cameraId: String = "0", aspectRatio: String = "ALL"): List<Triple<String, Int, Int>> {
@@ -943,6 +943,61 @@ class Camera2Engine(private val context: Context) {
             session.captureBurst(requests, null, backgroundHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
+        }
+    }
+
+    fun takeComputationalHdrBurst(onImagesCaptured: (List<ByteArray>) -> Unit) {
+        val device = cameraDevice ?: return
+        val reader = imageReader ?: return
+        val session = captureSession ?: return
+        var receivedCount = 0
+        val imagesList = mutableListOf<ByteArray>()
+
+        reader.setOnImageAvailableListener({ ir ->
+            val image = ir.acquireNextImage()
+            if (image != null) {
+                try {
+                    val buffer = image.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining())
+                    buffer.get(bytes)
+                    imagesList.add(bytes)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    image.close()
+                }
+                
+                receivedCount++
+                if (receivedCount >= 3) {
+                    ir.setOnImageAvailableListener(null, null)
+                    onImagesCaptured(imagesList)
+                }
+            }
+        }, backgroundHandler)
+
+        try {
+            val requests = mutableListOf<CaptureRequest>()
+            val evOffsets = listOf(-6, 0, 6) // -2.0 EV, 0 EV, +2.0 EV (assuming 1/3 step)
+            for (evOffset in evOffsets) {
+                val captureBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                captureBuilder.addTarget(reader.surface)
+                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientationHint())
+                captureBuilder.set(CaptureRequest.JPEG_QUALITY, 100.toByte())
+                
+                val cropRegion = previewRequestBuilder?.get(CaptureRequest.SCALER_CROP_REGION)
+                if (cropRegion != null) captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, cropRegion)
+                
+                captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, previewRequestBuilder?.get(CaptureRequest.CONTROL_AF_MODE) ?: CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evOffset)
+                
+                enableStabilization(captureBuilder)
+                requests.add(captureBuilder.build())
+            }
+            session.captureBurst(requests, null, backgroundHandler)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            reader.setOnImageAvailableListener(null, null)
         }
     }
 

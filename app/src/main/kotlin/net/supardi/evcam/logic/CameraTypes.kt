@@ -34,7 +34,8 @@ enum class CustomSceneMode(
     FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true, lockEv = true),
     FOOD("Food / Culinary", "Enhances warm colors and adds slight brightness (+0.3 EV) to make food look appetizing", lockEv = true),
     CONCERT("Concert / Stage", "Reduces exposure (-1.5 EV) and uses fast shutter to prevent blown-out faces from stage lights", lockEv = true),
-    WATERFALL("Silky Waterfall", "Low ISO and slow shutter (1/4s) to create silky smooth water movement", lockIso = true, lockShutter = true, lockEv = true)
+    WATERFALL("Silky Waterfall", "Low ISO and slow shutter (1/4s) to create silky smooth water movement", lockIso = true, lockShutter = true, lockEv = true),
+    COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking. Captures 3 photos (dark, normal, bright) and merges them for maximum dynamic range and natural clarity.", lockEv = true)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
