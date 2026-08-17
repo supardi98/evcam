@@ -122,12 +122,13 @@ class RtspServer(
                     val h264Data = ByteArray(bufferInfo.size)
                     outputBuffer.get(h264Data)
 
-                    // Extract SPS/PPS if present (BufferInfo.FLAG_CODEC_CONFIG)
                     if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                         spsPpsBuffer = h264Data
+                        Log.d("EVCAM_RTSP", "H.264 SPS/PPS Codec Config captured: ${h264Data.size} bytes")
                     } else {
+                        val isKeyFrame = (bufferInfo.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0
                         clients.forEach { client ->
-                            if (spsPpsBuffer != null) {
+                            if (isKeyFrame && spsPpsBuffer != null) {
                                 client.sendRtpNalUnit(spsPpsBuffer!!, bufferInfo.presentationTimeUs)
                             }
                             client.sendRtpNalUnit(h264Data, bufferInfo.presentationTimeUs)
@@ -137,6 +138,7 @@ class RtspServer(
                 codec.releaseOutputBuffer(outputIndex, false)
                 outputIndex = codec.dequeueOutputBuffer(bufferInfo, 0)
             }
+
         } catch (e: Exception) {
             Log.e("EVCAM_RTSP", "Error encoding YUV to H264 NAL", e)
         }
