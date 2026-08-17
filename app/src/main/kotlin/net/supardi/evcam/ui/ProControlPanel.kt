@@ -93,14 +93,14 @@ fun ProControlPanel(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                 Text("ISO", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-                Text("${minIso.toInt()}", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(start = 2.dp))
+                Text("${minIso.toInt()}", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
                 Slider(
                     value = iso.coerceIn(minIso, maxIso),
                     onValueChange = onIsoChange,
                     valueRange = minIso..maxIso,
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                 )
-                Text("${maxIso.toInt()}", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
+                Text("${maxIso.toInt()}", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
                 Text(
                     text = if (isIsoAuto) "AUTO" else "${iso.toInt()}",
                     color = if (isIsoAuto) Color.Yellow else Color.White,
@@ -110,6 +110,7 @@ fun ProControlPanel(
                 )
             }
         }
+
 
 
         // ── Shutter row: hidden when HDR or Night is active ───────────────────
@@ -134,7 +135,7 @@ fun ProControlPanel(
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                 Text("SHT", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-                Text(minLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(start = 2.dp))
+                Text(minLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
                 Slider(
                     value = sliderPos,
                     onValueChange = { pos ->
@@ -145,7 +146,7 @@ fun ProControlPanel(
                     valueRange = 0f..1f,
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                 )
-                Text(maxLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
+                Text(maxLabel, color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
                 Text(
                     text = if (isShutterAuto) "AUTO" else {
                         val seconds = shutterSpeed / 1_000_000_000f
@@ -163,6 +164,7 @@ fun ProControlPanel(
                 )
             }
         }
+
 
 
 
@@ -199,14 +201,14 @@ fun ProControlPanel(
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
             Text("FOC", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-            Text("0.0", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(start = 2.dp))
+            Text("0.0", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
             Slider(
                 value = focusDistance.coerceIn(0f, maxFocusDistance),
                 onValueChange = onFocusChange,
                 valueRange = 0f..maxFocusDistance,
                 modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
             )
-            Text(String.format(Locale.US, "%.1f", maxFocusDistance), color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
+            Text(String.format(Locale.US, "%.1f", maxFocusDistance), color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
             Text(
                 text = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance), 
                 color = if (isFocusAuto) Color.Yellow else Color.White, 
@@ -215,6 +217,7 @@ fun ProControlPanel(
                 fontSize = 12.sp
             )
         }
+
 
         
         Spacer(modifier = Modifier.height(8.dp))
@@ -277,15 +280,15 @@ fun ProControlPanel(
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-                Text("K", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp, textAlign = TextAlign.Center)
-                Text("2000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(start = 2.dp))
+                Text("K", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
+                Text("2000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
                 Slider(
                     value = manualKelvin,
                     onValueChange = onManualKelvinChange,
                     valueRange = 2000f..10000f,
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                 )
-                Text("10000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.padding(end = 4.dp))
+                Text("10000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
                 Text(
                     text = "${manualKelvin.toInt()}K",
                     color = Color.Yellow,
@@ -296,6 +299,7 @@ fun ProControlPanel(
                 )
             }
         }
+
 
     }
 }
