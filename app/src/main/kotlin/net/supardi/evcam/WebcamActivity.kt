@@ -54,6 +54,14 @@ class WebcamActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // Set status bar & navigation bar color to match background
+        window.statusBarColor = android.graphics.Color.parseColor("#0D1117")
+        window.navigationBarColor = android.graphics.Color.parseColor("#0D1117")
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
+
         val context = applicationContext
         webcamServer = WebcamStreamServer(context)
         rtspServer = RtspServer(8554)
