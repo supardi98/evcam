@@ -591,10 +591,8 @@ class Camera2Engine(private val context: Context) {
 
             builder.set(CaptureRequest.CONTROL_AWB_MODE, whiteBalance)
             if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) {
-                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
-                // Standard White Balance Kelvin to RGGB Gains mapping:
-                // Lower Kelvin (2000K) = Warm/Red tint -> higher Red gain
-                // Higher Kelvin (10000K) = Cool/Blue tint -> higher Blue gain
+                // Use FAST color correction mode instead of TRANSFORM_MATRIX to preserve hardware ISP contrast/tonemapping
+                builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
                 val normalizedTemp = (manualKelvin - 2000f) / 8000f // 0f .. 1f
                 val rGain = (2.5f - 1.5f * normalizedTemp).coerceIn(1.0f, 3.5f)
                 val gGain = 1.0f
@@ -603,6 +601,7 @@ class Camera2Engine(private val context: Context) {
             } else {
                 builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
             }
+
 
         } else {
             builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
