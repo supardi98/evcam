@@ -1323,55 +1323,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         
 
         DialogContainers(uiState = uiState)
-
-        // Fullscreen Power Saving Blackout Overlay
-        if (uiState.enableBlackScreenPowerSaving) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .clickable { uiState.enableBlackScreenPowerSaving = false },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(24.dp)
-                ) {
-                    Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Settings,
-                        contentDescription = null,
-                        tint = Color(0xFF00E676),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "POWER SAVING BLACKOUT MODE",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        text = "Camera & Stream is running in background.",
-                        color = Color.Gray,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "Tap anywhere on screen to unlock display",
-                        color = Color(0xFF00E676),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-                }
-            }
-        }
     }
-}
-
-
-
-
-
 
 
 
