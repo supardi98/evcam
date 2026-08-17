@@ -82,6 +82,7 @@ fun takePhoto(
     deviceRotation: Int,
     isFrontCamera: Boolean = false,
     mirrorSelfie: Boolean = true,
+    customSceneMode: CustomSceneMode = CustomSceneMode.AUTO,
     onPhotoSaved: (Bitmap, Uri) -> Unit
 ) {
 
@@ -187,6 +188,23 @@ fun takePhoto(
             }
             canvas.drawBitmap(bitmap, 0f, 0f, paint)
             bitmap = filteredBitmap
+        }
+
+        // Apply Computational HDR Software Tone Mapping when BACKLIGHT or NIGHT scene is active
+        if (customSceneMode == CustomSceneMode.BACKLIGHT || customSceneMode == CustomSceneMode.NIGHT) {
+            val hdrMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                1.15f, -0.05f, -0.05f, 0f, 10f,  // Lift shadows & preserve highlights
+                -0.05f, 1.15f, -0.05f, 0f, 10f,
+                -0.05f, -0.05f, 1.15f, 0f, 10f,
+                0f,     0f,     0f,    1f, 0f
+            ))
+            val hdrBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
+            val canvas = Canvas(hdrBitmap)
+            val paint = Paint().apply {
+                colorFilter = android.graphics.ColorMatrixColorFilter(hdrMatrix)
+            }
+            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+            bitmap = hdrBitmap
         }
 
         if (showWatermark && watermarkElements.isNotEmpty()) {

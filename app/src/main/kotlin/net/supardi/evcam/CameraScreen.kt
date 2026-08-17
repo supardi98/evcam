@@ -630,7 +630,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             takePhoto(
                 context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
                 liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
-                isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie
+                isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
+                customSceneMode = uiState.selectedCustomScene
             ) { bitmap, uri ->
                 lastCapturedBitmap = bitmap
                 lastCapturedUri = uri
