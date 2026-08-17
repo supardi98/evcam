@@ -19,18 +19,18 @@ enum class CustomSceneMode(
     val lockWhiteBalance: Boolean = false
 ) {
     AUTO("Auto / Normal", "Standard camera defaults"),
-    NIGHT("Night Boost", "Longer exposure and increased ISO for low-light conditions", lockIso = true, lockShutter = true),
-    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true),
-    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects", lockShutter = true),
     PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast"),
-    LANDSCAPE("Vibrant Landscape", "Vibrant green/blue color saturation boost with -0.3 EV"),
-    DOCUMENT("Document B&W", "High contrast black and white for documents and text"),
+    NIGHT("Night Boost", "Longer exposure and increased ISO for low-light conditions", lockIso = true, lockShutter = true),
     MACRO("Macro Close-Up", "Locks focus to minimum distance for tiny subject details", lockFocus = true),
-    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true),
+    LANDSCAPE("Vibrant Landscape", "Vibrant green/blue color saturation boost with -0.3 EV"),
+    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects", lockShutter = true),
     BACKLIGHT("HDR Backlight", "Balances exposure for subjects against strong light sources", lockIso = true, lockShutter = true),
+    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true),
+    DOCUMENT("Document B&W", "High contrast black and white for documents and text"),
     CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes", lockWhiteBalance = true),
     SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes"),
-    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography", lockIso = true, lockShutter = true, lockFocus = true)
+    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography", lockIso = true, lockShutter = true, lockFocus = true),
+    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
