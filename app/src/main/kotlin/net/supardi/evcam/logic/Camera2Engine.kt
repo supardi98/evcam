@@ -708,25 +708,50 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
     
-    fun setSceneMode(sceneMode: Int) {
+    fun applyCustomSceneMode(sceneMode: CustomSceneMode) {
         val builder = previewRequestBuilder ?: return
-        if (sceneMode != CaptureRequest.CONTROL_SCENE_MODE_DISABLED) {
-            builder.set(CaptureRequest.CONTROL_SCENE_MODE, sceneMode)
-            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
-        } else {
-            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
-            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+        when (sceneMode) {
+            CustomSceneMode.AUTO -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
+                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+            }
+            CustomSceneMode.NIGHT -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_NIGHT)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 2) // +0.7 EV gain
+            }
+            CustomSceneMode.SUNSET -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 2) // +0.7 EV gain for golden glow
+                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT)
+            }
+            CustomSceneMode.ACTION -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_SPORTS)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            }
+            CustomSceneMode.PORTRAIT -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_PORTRAIT)
+                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+            }
+            CustomSceneMode.LANDSCAPE -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_LANDSCAPE)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, -1) // -0.3 EV for deep colors
+            }
+            CustomSceneMode.DOCUMENT -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 1)
+            }
         }
         updatePreview()
-    }
-
-    fun setSceneMode(isNightMode: Boolean, isHdrMode: Boolean) {
-        val mode = when {
-            isNightMode -> CaptureRequest.CONTROL_SCENE_MODE_NIGHT
-            isHdrMode -> CaptureRequest.CONTROL_SCENE_MODE_HDR
-            else -> CaptureRequest.CONTROL_SCENE_MODE_DISABLED
-        }
-        setSceneMode(mode)
     }
 
 

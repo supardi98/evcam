@@ -133,6 +133,7 @@ class CameraUiState(
     var hasManualFocusSupport by mutableStateOf(true)
     var supportedSceneModes by mutableStateOf<List<Int>>(emptyList())
     var selectedSceneMode by mutableIntStateOf(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+    var selectedCustomScene by mutableStateOf(CustomSceneMode.AUTO)
 
 
 

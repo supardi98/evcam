@@ -10,6 +10,16 @@ enum class VideoQualityMode(val quality: Int, val label: String) { SD(480, "480p
 enum class VideoFpsMode(val fps: Int, val label: String) { FPS_24(24, "24 FPS"), FPS_30(30, "30 FPS"), FPS_60(60, "60 FPS"), FPS_120(120, "120 FPS"), FPS_240(240, "240 FPS") }
 enum class ImageFormatMode(val label: String) { JPEG("JPEG"), RAW("RAW+JPEG") }
 
+enum class CustomSceneMode(val label: String, val description: String) {
+    AUTO("Auto / Normal", "Standard camera defaults"),
+    NIGHT("Night Boost", "Longer exposure and increased ISO for low-light conditions"),
+    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost"),
+    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects"),
+    PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast"),
+    LANDSCAPE("Vibrant Landscape", "Vibrant green/blue color saturation boost with -0.3 EV"),
+    DOCUMENT("Document B&W", "High contrast black and white for documents and text")
+}
+
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
     NORMAL("Normal", floatArrayOf(
         1f, 0f, 0f, 0f, 0f,

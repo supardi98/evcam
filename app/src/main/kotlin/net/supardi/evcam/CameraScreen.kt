@@ -401,8 +401,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setTorchState(isTorchOn)
     }
 
-    LaunchedEffect(uiState.selectedSceneMode) {
-        camera2Engine.setSceneMode(uiState.selectedSceneMode)
+    LaunchedEffect(uiState.selectedCustomScene) {
+        camera2Engine.applyCustomSceneMode(uiState.selectedCustomScene)
     }
 
     
@@ -756,8 +756,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         )
     }
 
-    LaunchedEffect(isNightModeEnabled, isHdrEnabled) {
-        camera2Engine.setSceneMode(isNightModeEnabled, isHdrEnabled)
+    LaunchedEffect(uiState.selectedCustomScene) {
+        camera2Engine.applyCustomSceneMode(uiState.selectedCustomScene)
     }
 
     LaunchedEffect(cameraState) {

@@ -331,171 +331,81 @@ fun TopCameraBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Kiri: SCENE Pill Button
-                // Kiri: Dynamic Hardware SCENE Pill Button
-                val hasAnyScene = uiState.hasNightExtension || uiState.hasHdrExtension || uiState.supportedSceneModes.isNotEmpty()
-                if (hasAnyScene) {
-                    val currentLabel = when {
-                        uiState.isNightModeEnabled -> "NIGHT"
-                        uiState.isHdrEnabled -> "HDR"
-                        uiState.selectedSceneMode != android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED -> {
-                            getSceneModeName(uiState.selectedSceneMode)
-                        }
-                        else -> "SCENE"
-                    }
-                    val currentIcon = when {
-                        uiState.isNightModeEnabled -> Icons.Filled.DarkMode
-                        uiState.isHdrEnabled -> Icons.Filled.HdrOn
-                        else -> Icons.Filled.AutoAwesome
-                    }
-                    val isActive = uiState.isNightModeEnabled || uiState.isHdrEnabled || uiState.selectedSceneMode != android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
+                // Custom Scene Modes Bar (AUTO, NIGHT, SUNSET, ACTION, PORTRAIT, LANDSCAPE, DOCUMENT)
+                val activeScene = uiState.selectedCustomScene
+                val isActive = activeScene != CustomSceneMode.AUTO
 
-                    Row(
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Main Trigger Button
+                    Box(
                         modifier = Modifier
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .background(if (isActive) Color.Yellow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.15f))
+                            .clickable { isSceneOptionsExpanded = !isSceneOptionsExpanded }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Main Trigger Button
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (isActive) Color.Yellow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.15f))
-                                .clickable { isSceneOptionsExpanded = !isSceneOptionsExpanded }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = currentIcon,
-                                    contentDescription = "Scene Mode",
-                                    tint = if (isActive) Color.Yellow else Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = currentLabel,
-                                    color = if (isActive) Color.Yellow else Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Filled.AutoAwesome,
+                                contentDescription = "Scene Mode",
+                                tint = if (isActive) Color.Yellow else Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = activeScene.label,
+                                color = if (isActive) Color.Yellow else Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
                         }
+                    }
 
-                        // Expanded Options (OFF, NIGHT, HDR, + Hardware Scenes)
-                        AnimatedVisibility(
-                            visible = isSceneOptionsExpanded,
-                            enter = expandHorizontally(tween(200)) + fadeIn(tween(200)),
-                            exit = shrinkHorizontally(tween(200)) + fadeOut(tween(200))
+                    // Expanded Options
+                    AnimatedVisibility(
+                        visible = isSceneOptionsExpanded,
+                        enter = expandHorizontally(tween(200)) + fadeIn(tween(200)),
+                        exit = shrinkHorizontally(tween(200)) + fadeOut(tween(200))
+                    ) {
+                        val scrollState = rememberScrollState()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .padding(start = 6.dp, end = 4.dp)
+                                .horizontalScroll(scrollState)
                         ) {
-                            val scrollState = rememberScrollState()
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier
-                                    .padding(start = 6.dp, end = 4.dp)
-                                    .horizontalScroll(scrollState)
-                            ) {
+                            CustomSceneMode.values().forEach { mode ->
+                                val isSelected = activeScene == mode
                                 Box(
                                     modifier = Modifier
                                         .clip(CircleShape)
-                                        .background(if (!isActive) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                        .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.15f))
                                         .clickable {
-                                            uiState.isNightModeEnabled = false
-                                            uiState.isHdrEnabled = false
-                                            uiState.selectedSceneMode = android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
+                                            uiState.selectedCustomScene = mode
                                             isSceneOptionsExpanded = false
                                         }
-                                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
                                     Text(
-                                        text = "OFF",
-                                        color = if (!isActive) Color.Black else Color.White,
+                                        text = mode.label,
+                                        color = if (isSelected) Color.Black else Color.White,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
                                     )
                                 }
-
-                                if (uiState.hasNightExtension) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .background(if (uiState.isNightModeEnabled) Color.Yellow else Color.White.copy(alpha = 0.15f))
-                                            .clickable {
-                                                uiState.isNightModeEnabled = true
-                                                uiState.isHdrEnabled = false
-                                                uiState.selectedSceneMode = android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
-                                                uiState.isIsoAuto = true
-                                                uiState.isShutterAuto = true
-                                                isSceneOptionsExpanded = false
-                                            }
-                                            .padding(horizontal = 8.dp, vertical = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = "NIGHT",
-                                            color = if (uiState.isNightModeEnabled) Color.Black else Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
-
-                                if (uiState.hasHdrExtension) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .background(if (uiState.isHdrEnabled) Color.Yellow else Color.White.copy(alpha = 0.15f))
-                                            .clickable {
-                                                uiState.isHdrEnabled = true
-                                                uiState.isNightModeEnabled = false
-                                                uiState.selectedSceneMode = android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED
-                                                uiState.isIsoAuto = true
-                                                uiState.isShutterAuto = true
-                                                isSceneOptionsExpanded = false
-                                            }
-                                            .padding(horizontal = 8.dp, vertical = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = "HDR",
-                                            color = if (uiState.isHdrEnabled) Color.Black else Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
-
-                                // Additional Hardware Scene Modes
-                                uiState.supportedSceneModes.forEach { mode ->
-                                    val isSelected = uiState.selectedSceneMode == mode
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.15f))
-                                            .clickable {
-                                                uiState.selectedSceneMode = mode
-                                                uiState.isNightModeEnabled = false
-                                                uiState.isHdrEnabled = false
-                                                uiState.isIsoAuto = true
-                                                uiState.isShutterAuto = true
-                                                isSceneOptionsExpanded = false
-                                            }
-                                            .padding(horizontal = 8.dp, vertical = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = getSceneModeName(mode),
-                                            color = if (isSelected) Color.Black else Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
                             }
                         }
                     }
-                } else {
-                    Spacer(modifier = Modifier.width(1.dp))
                 }
 
 
