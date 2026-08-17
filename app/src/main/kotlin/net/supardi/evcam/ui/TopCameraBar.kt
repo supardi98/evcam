@@ -41,7 +41,8 @@ fun TopCameraBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 44.dp)
+            .statusBarsPadding()
+            .padding(top = 8.dp)
     ) {
         // Baris Atas Utama
         Row(
