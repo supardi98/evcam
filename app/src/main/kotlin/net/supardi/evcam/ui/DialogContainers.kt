@@ -168,11 +168,17 @@ fun DialogContainers(
             onEnableRtspStreamChange = { uiState.enableRtspStream = it },
             enableWebRtc = uiState.enableWebRtc,
             onEnableWebRtcChange = { uiState.enableWebRtc = it },
-            onToggleStreaming = {
-                uiState.isWebcamStreaming = !uiState.isWebcamStreaming
+            onStartProtocol = { _ ->
+                uiState.isWebcamStreaming = true
+            },
+            onStopProtocol = { _ ->
+                if (!uiState.enableHttpMjpeg && !uiState.enableHttpSnapshot && !uiState.enableRtspStream && !uiState.enableWebRtc) {
+                    uiState.isWebcamStreaming = false
+                }
             },
             onClose = { uiState.showWebcamDialog = false }
         )
     }
+
 
 }

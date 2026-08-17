@@ -238,19 +238,44 @@ class WebcamStreamServer(
     companion object {
         fun getLocalIpAddress(context: Context): String {
             try {
+                // 1. Try WifiManager IP
+                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+                val wifiIp = wifiManager?.connectionInfo?.ipAddress ?: 0
+                if (wifiIp != 0) {
+                    val ipStr = String.format(
+                        java.util.Locale.US,
+                        "%d.%d.%d.%d",
+                        wifiIp and 0xff,
+                        wifiIp shr 8 and 0xff,
+                        wifiIp shr 16 and 0xff,
+                        wifiIp shr 24 and 0xff
+                    )
+                    if (ipStr != "0.0.0.0" && ipStr != "127.0.0.1") {
+                        return ipStr
+                    }
+                }
+
+                // 2. Fallback: Search wlan0 or non-loopback IPv4 network interface
                 val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
+                var fallbackIp: String? = null
                 for (intf in interfaces) {
                     val addrs = Collections.list(intf.inetAddresses)
                     for (addr in addrs) {
                         if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
-                            return addr.hostAddress ?: "127.0.0.1"
+                            val host = addr.hostAddress ?: continue
+                            if (intf.name.lowercase().contains("wlan")) {
+                                return host
+                            }
+                            if (fallbackIp == null) fallbackIp = host
                         }
                     }
                 }
+                if (fallbackIp != null) return fallbackIp
             } catch (e: Exception) {
                 Log.e("EVCAM_STREAM", "Error getting IP address", e)
             }
             return "127.0.0.1"
         }
     }
+
 }
