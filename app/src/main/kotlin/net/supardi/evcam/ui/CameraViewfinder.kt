@@ -180,7 +180,7 @@ fun CameraViewfinder(
                         scaleGestureDetector.onTouchEvent(event)
 
                         if (!scaleGestureDetector.isInProgress && !isMultiTouch && event.pointerCount == 1) {
-                            if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode) {
+                            if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode && uiState.selectedCustomScene == CustomSceneMode.AUTO) {
                                 val deltaY = evScrollAnchorY - event.y
                                 val scrollStepThreshold = 80f
                                 val steps = (deltaY / scrollStepThreshold).toInt()
