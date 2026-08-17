@@ -22,26 +22,7 @@ class AutoFitTextureView @JvmOverloads constructor(
     }
 
     fun configureTransform(w: Int = width, h: Int = height, mode: AspectRatioMode = AspectRatioMode.RATIO_16_9) {
-        if (w == 0 || h == 0) return
-
-        val matrix = android.graphics.Matrix()
-
-        // Camera2 portrait stream buffer dimensions (1080 x 1920)
-        val previewWidth = 1080
-        val previewHeight = 1920
-
-        val scaleX = w.toFloat() / previewWidth.toFloat()
-        val scaleY = h.toFloat() / previewHeight.toFloat()
-
-        // For CENTER_CROP without pixel distortion, use uniform max scale
-        val scale = Math.max(scaleX, scaleY)
-
-        val scaledWidth = previewWidth * scale
-        val scaledHeight = previewHeight * scale
-
-        // Scale relative to view center (w / 2, h / 2)
-        matrix.setScale(scaledWidth / w.toFloat(), scaledHeight / h.toFloat(), w / 2f, h / 2f)
-        setTransform(matrix)
+        setTransform(null)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
