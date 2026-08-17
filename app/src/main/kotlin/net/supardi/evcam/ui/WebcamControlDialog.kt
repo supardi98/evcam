@@ -142,7 +142,8 @@ fun WebcamControlDialog(
                         }
                     }
                 }
-            } else {
+            }
+
             // Stream Video Format & Orientation Configuration
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
