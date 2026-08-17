@@ -155,21 +155,34 @@ fun TopCameraBar(
                         },
                         modifier = Modifier.size(44.dp)
                     ) {
-                        val timerTint = if (uiState.timerMode == TimerMode.OFF) Color.White else Color.Yellow
-                        Box(contentAlignment = Alignment.Center) {
+                        val isTimerActive = uiState.timerMode != TimerMode.OFF
+                        val timerTint = if (isTimerActive) Color.Yellow else Color.White
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
-                            Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint)
-                            if (uiState.timerMode != TimerMode.OFF && uiState.timerMode != TimerMode.PEACE) {
-                                Text(
-                                    text = "${uiState.timerMode.seconds}",
-                                    color = Color.Black,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.offset(y = 2.dp)
-                                )
+                            Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint, modifier = Modifier.size(24.dp))
+                            
+                            if (isTimerActive && uiState.timerMode != TimerMode.PEACE) {
+                                // High-legibility crisp Pill Badge at top-right
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 4.dp, y = (-2).dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.Yellow)
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "${uiState.timerMode.seconds}s",
+                                        color = Color.Black,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        lineHeight = 9.sp
+                                    )
+                                }
                             }
                         }
                     }
+
                     
                     if (uiState.timerMode != TimerMode.OFF) {
                         Spacer(modifier = Modifier.width(4.dp))
