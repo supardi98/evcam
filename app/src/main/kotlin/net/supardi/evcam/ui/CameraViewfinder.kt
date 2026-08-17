@@ -123,7 +123,7 @@ fun CameraViewfinder(
                             uiState.isFocusAuto = true
                             uiState.focusOffset = Offset(e.x, e.y)
                             uiState.showFocusBox = true
-                            if (uiState.selectedCustomScene == CustomSceneMode.AUTO) {
+                            if (!uiState.selectedCustomScene.lockEv) {
                                 uiState.showBrightnessSlider = true
                             }
                             uiState.showZoomSlider = true
@@ -180,7 +180,7 @@ fun CameraViewfinder(
                         scaleGestureDetector.onTouchEvent(event)
 
                         if (!scaleGestureDetector.isInProgress && !isMultiTouch && event.pointerCount == 1) {
-                            if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode && uiState.selectedCustomScene == CustomSceneMode.AUTO) {
+                            if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode && !uiState.selectedCustomScene.lockEv) {
                                 val deltaY = evScrollAnchorY - event.y
                                 val scrollStepThreshold = 80f
                                 val steps = (deltaY / scrollStepThreshold).toInt()

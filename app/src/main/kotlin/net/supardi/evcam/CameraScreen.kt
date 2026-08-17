@@ -1041,7 +1041,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        if (showBrightnessSlider && maxExposureIndex > minExposureIndex && !isProMode && uiState.selectedCustomScene == CustomSceneMode.AUTO) {
+        if (showBrightnessSlider && maxExposureIndex > minExposureIndex && !isProMode && !uiState.selectedCustomScene.lockEv) {
 
             Column(
                 modifier = Modifier
