@@ -576,17 +576,17 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             }
 
+            textureView.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, w: Int, h: Int) {
+                    startPreviewSession()
+                }
+                override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) {}
+                override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
+                override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) {}
+            }
+
             if (textureView.isAvailable) {
                 startPreviewSession()
-            } else {
-                textureView.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
-                    override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, w: Int, h: Int) {
-                        startPreviewSession()
-                    }
-                    override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) {}
-                    override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
-                    override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) {}
-                }
             }
         }
     }
