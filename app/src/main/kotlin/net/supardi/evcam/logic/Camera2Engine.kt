@@ -401,9 +401,7 @@ class Camera2Engine(private val context: Context) {
             super.onCaptureCompleted(session, request, result)
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             if (afState != null) {
-                if (isAfTriggered) {
-                    Log.d("EVCAM_AF", "AF State: $afState")
-                }
+                Log.d("EVCAM_AF", "AF State: $afState, isAfTriggered: $isAfTriggered")
                 onAfStateCallback?.invoke(afState)
             }
         }
@@ -466,14 +464,10 @@ class Camera2Engine(private val context: Context) {
         previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
         previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
         
-        try {
-            captureSession?.capture(previewRequestBuilder!!.build(), null, backgroundHandler)
-            previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
-            previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
-            updatePreview()
-        } catch (e: CameraAccessException) {
-            e.printStackTrace()
-        }
+        updatePreview()
+        
+        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+        previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_IDLE)
     }
 
     fun setExposureCompensation(index: Int) {

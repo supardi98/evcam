@@ -644,7 +644,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
     LaunchedEffect(cameraState) {
         camera2Engine.onAfStateCallback = { afState ->
-            if (showFocusBox && camera2Engine.isAfTriggered) {
+            if (showFocusBox) {
                 when (afState) {
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
@@ -653,19 +653,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_INACTIVE -> {
-                        uiState.focusState = FocusState.SUCCESS
-                        camera2Engine.isAfTriggered = false
-                        if (uiState.isPendingAfLock) {
-                            uiState.isAeAfLocked = true
-                            uiState.isPendingAfLock = false
+                        if (uiState.focusState == FocusState.SEARCHING || uiState.focusState == FocusState.TAP_INITIAL) {
+                            uiState.focusState = FocusState.SUCCESS
+                            if (uiState.isPendingAfLock) {
+                                uiState.isAeAfLocked = true
+                                uiState.isPendingAfLock = false
+                            }
                         }
                     }
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
-                        uiState.focusState = FocusState.FAILED
-                        camera2Engine.isAfTriggered = false
-                        uiState.isAeAfLocked = false
-                        uiState.isPendingAfLock = false
+                        if (uiState.focusState == FocusState.SEARCHING) {
+                            uiState.focusState = FocusState.FAILED
+                            uiState.isAeAfLocked = false
+                            uiState.isPendingAfLock = false
+                        }
                     }
                 }
             }
