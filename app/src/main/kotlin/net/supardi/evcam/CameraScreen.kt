@@ -644,27 +644,25 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
     LaunchedEffect(cameraState) {
         camera2Engine.onAfStateCallback = { afState ->
-            when (afState) {
-                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN,
-                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
-                    if (showFocusBox) {
+            if (showFocusBox && camera2Engine.isAfTriggered) {
+                when (afState) {
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
                         uiState.focusState = FocusState.SEARCHING
                     }
-                }
-                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
-                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
-                    if (showFocusBox) {
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
                         uiState.focusState = FocusState.SUCCESS
+                        camera2Engine.isAfTriggered = false
                         if (uiState.isPendingAfLock) {
                             uiState.isAeAfLocked = true
                             uiState.isPendingAfLock = false
                         }
                     }
-                }
-                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED,
-                android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
-                    if (showFocusBox) {
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED,
+                    android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
                         uiState.focusState = FocusState.FAILED
+                        camera2Engine.isAfTriggered = false
                         uiState.isAeAfLocked = false
                         uiState.isPendingAfLock = false
                     }
@@ -820,7 +818,30 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .size(60.dp)
                         .border(2.dp, focusColor, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                 )
-                LaunchedEffect(focusState, focusOffset) {
+                LaunchedEffect(focusOffset, showFocusBox) {
+                    if (showFocusBox) {
+                        focusState = FocusState.TAP_INITIAL
+                        delay(180) // Show white box first on touch
+                        if (focusState == FocusState.TAP_INITIAL) {
+                            focusState = FocusState.SEARCHING // Turn yellow while focusing
+                        }
+                        
+                        // Safety timeout: if focus takes more than 2.5s without hardware callback
+                        delay(2500)
+                        if (showFocusBox && (focusState == FocusState.SEARCHING || focusState == FocusState.TAP_INITIAL)) {
+                            if (uiState.isPendingAfLock) {
+                                uiState.isAeAfLocked = false
+                                uiState.isPendingAfLock = false
+                            }
+                            focusState = FocusState.FAILED
+                            delay(1000)
+                            showFocusBox = false
+                            focusState = FocusState.TAP_INITIAL
+                        }
+                    }
+                }
+                
+                LaunchedEffect(focusState) {
                     if (focusState == FocusState.SUCCESS || focusState == FocusState.FAILED) {
                         delay(1200)
                         showFocusBox = false

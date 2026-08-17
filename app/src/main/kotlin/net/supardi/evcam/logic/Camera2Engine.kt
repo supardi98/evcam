@@ -389,6 +389,7 @@ class Camera2Engine(private val context: Context) {
         }
     }
     
+    var isAfTriggered = false
     var onAfStateCallback: ((Int) -> Unit)? = null
 
     private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
@@ -435,6 +436,7 @@ class Camera2Engine(private val context: Context) {
     }
     
     fun focusAt(x: Float, y: Float, width: Float, height: Float) {
+        isAfTriggered = true
         val chars = cameraManager.getCameraCharacteristics(cameraDevice?.id ?: return)
         val sensorRect = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) ?: return
         
