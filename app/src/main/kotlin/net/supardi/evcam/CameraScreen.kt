@@ -571,16 +571,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
                     if (image != null) {
-                        if (uiState.isWebcamStreaming) {
-                            webcamServer.pushYuvFrame(image)
-                        }
-                        if (enableHistogram || enableFocusPeaking) {
-                            proAnalyzer.analyze(image, 0)
-                        } else {
+                        try {
+                            if (uiState.isWebcamStreaming) {
+                                webcamServer.pushYuvFrame(image)
+                            }
+                            if (enableHistogram || enableFocusPeaking) {
+                                proAnalyzer.analyze(image, 0)
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("EVCAM", "Error processing analysis image", e)
+                        } finally {
                             image.close()
                         }
                     }
                 }, camera2Engine.backgroundHandler)
+
 
 
                 camera2Engine.createPreviewSession(targets) { _ ->

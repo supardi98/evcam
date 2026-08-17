@@ -74,8 +74,8 @@ class WebcamStreamServer(
     }
 
     fun pushYuvFrame(image: Image) {
-        if (clients.isEmpty()) return
         try {
+
             val yBuffer = image.planes[0].buffer
             val uBuffer = image.planes[1].buffer
             val vBuffer = image.planes[2].buffer
