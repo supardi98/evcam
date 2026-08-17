@@ -9,8 +9,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
@@ -227,15 +230,15 @@ fun ProControlPanel(
         // ── AWB Presets Row ──────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
             Text("AWB", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
+            val scrollState = rememberScrollState()
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .weight(1f)
                     .padding(start = 4.dp)
-                    .androidx.compose.foundation.rememberScrollState().let { scrollState ->
-                        Modifier.androidx.compose.foundation.horizontalScroll(scrollState)
-                    }
+                    .horizontalScroll(scrollState)
             ) {
+
                 Text(
                     text = "AUTO",
                     color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_AUTO) Color.Black else Color.White,
