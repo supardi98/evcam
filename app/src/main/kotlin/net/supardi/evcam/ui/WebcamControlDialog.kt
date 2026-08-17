@@ -53,6 +53,8 @@ fun WebcamControlDialog(
     onEnableRtspStreamChange: (Boolean) -> Unit,
     enableWebRtc: Boolean,
     onEnableWebRtcChange: (Boolean) -> Unit,
+    enableBlackScreenPowerSaving: Boolean,
+    onEnableBlackScreenPowerSavingChange: (Boolean) -> Unit,
     onStartProtocol: (String) -> Unit,
     onStopProtocol: (String) -> Unit,
     onClose: () -> Unit
@@ -298,6 +300,36 @@ fun WebcamControlDialog(
                     }
                 }
             )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 5. Battery Power Saving (Blackout Screen) Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = if (enableBlackScreenPowerSaving) Color(0xFF00E676).copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f),
+                border = BorderStroke(1.dp, if (enableBlackScreenPowerSaving) Color(0xFF00E676).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.1f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("🔋 Black Screen Power Saving", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            "Matikan preview layar & redupkan kecerahan agar HP dingin dan baterai sangat hemat saat live stream.",
+                            color = Color.LightGray,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Switch(
+                        checked = enableBlackScreenPowerSaving,
+                        onCheckedChange = onEnableBlackScreenPowerSavingChange,
+                        modifier = Modifier.scale(0.85f)
+                    )
+                }
+            }
         }
     }
 }

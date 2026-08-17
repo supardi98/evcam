@@ -142,9 +142,11 @@ class CameraUiState(
     var enableHttpSnapshot by mutableStateOf(false)
     var enableRtspStream by mutableStateOf(false)
     var enableWebRtc by mutableStateOf(false)
+    var enableBlackScreenPowerSaving by mutableStateOf(false)
     var connectedWebcamClients by mutableIntStateOf(0)
     var showWebcamDialog by mutableStateOf(false)
     var webcamServerIp by mutableStateOf("127.0.0.1")
+
 
 
 

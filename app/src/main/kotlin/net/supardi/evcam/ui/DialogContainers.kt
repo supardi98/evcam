@@ -168,6 +168,8 @@ fun DialogContainers(
             onEnableRtspStreamChange = { uiState.enableRtspStream = it },
             enableWebRtc = uiState.enableWebRtc,
             onEnableWebRtcChange = { uiState.enableWebRtc = it },
+            enableBlackScreenPowerSaving = uiState.enableBlackScreenPowerSaving,
+            onEnableBlackScreenPowerSavingChange = { uiState.enableBlackScreenPowerSaving = it },
             onStartProtocol = { _ ->
                 uiState.isWebcamStreaming = true
             },
