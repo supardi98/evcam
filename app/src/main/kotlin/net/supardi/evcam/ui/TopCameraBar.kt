@@ -40,36 +40,48 @@ fun TopCameraBar(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .pointerInput(Unit) {
+                        .pointerInput(uiState.cameraMode) {
                             detectTapGestures(
                                 onTap = {
-                                    if (uiState.isTorchOn) {
-                                        uiState.isTorchOn = false
+                                    if (uiState.cameraMode == CameraMode.VIDEO) {
+                                        // In Video mode: simple Torch ON / OFF toggle
+                                        uiState.isTorchOn = !uiState.isTorchOn
                                     } else {
-                                        uiState.flashMode = when (uiState.flashMode) {
-                                            FlashMode.AUTO -> FlashMode.ON
-                                            FlashMode.ON -> FlashMode.OFF
-                                            FlashMode.OFF -> FlashMode.AUTO
+                                        // In Photo mode: cycle AUTO -> ON -> OFF or turn off torch if active
+                                        if (uiState.isTorchOn) {
+                                            uiState.isTorchOn = false
+                                        } else {
+                                            uiState.flashMode = when (uiState.flashMode) {
+                                                FlashMode.AUTO -> FlashMode.ON
+                                                FlashMode.ON -> FlashMode.OFF
+                                                FlashMode.OFF -> FlashMode.AUTO
+                                            }
                                         }
                                     }
                                 },
                                 onLongPress = {
-                                    uiState.isTorchOn = !uiState.isTorchOn
+                                    if (uiState.cameraMode == CameraMode.PHOTO) {
+                                        uiState.isTorchOn = !uiState.isTorchOn
+                                    }
                                 }
                             )
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    val flashIcon = if (uiState.isTorchOn) {
-                        Icons.Default.FlashOn
+                    val flashIcon = if (uiState.cameraMode == CameraMode.VIDEO) {
+                        if (uiState.isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff
                     } else {
-                        when (uiState.flashMode) {
-                            FlashMode.AUTO -> Icons.Default.FlashAuto
-                            FlashMode.ON -> Icons.Default.FlashOn
-                            FlashMode.OFF -> Icons.Default.FlashOff
+                        if (uiState.isTorchOn) {
+                            Icons.Default.FlashOn
+                        } else {
+                            when (uiState.flashMode) {
+                                FlashMode.AUTO -> Icons.Default.FlashAuto
+                                FlashMode.ON -> Icons.Default.FlashOn
+                                FlashMode.OFF -> Icons.Default.FlashOff
+                            }
                         }
                     }
-                    val iconTint = if (uiState.isTorchOn) Color.Yellow else Color.White
+                    val iconTint = if (uiState.isTorchOn || (uiState.cameraMode == CameraMode.PHOTO && uiState.flashMode == FlashMode.ON)) Color.Yellow else Color.White
                     Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
                 }
             }
