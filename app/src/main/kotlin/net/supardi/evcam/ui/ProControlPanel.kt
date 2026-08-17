@@ -301,7 +301,6 @@ fun ProControlPanel(
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.White.copy(alpha = 0.2f))
                         .clickable {
-                            // When switching to CUS, map current preset to Kelvin if live estimation is unavailable
                             val currentPresetKelvin = when (whiteBalance) {
                                 CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT -> 5500f
                                 CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> 6500f
@@ -316,39 +315,35 @@ fun ProControlPanel(
                     fontSize = 12.sp,
                     fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) FontWeight.Bold else FontWeight.Normal
                 )
-
             }
         }
 
-
-        // ── Custom Kelvin Slider Row (appears below when CUS is selected) ──
-        AnimatedVisibility(
-            visible = whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF,
-            enter = expandVertically(tween(200)) + fadeIn(tween(200)),
-            exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
-                Text("K", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
-                Text("2000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
-                Slider(
-                    value = manualKelvin,
-                    onValueChange = onManualKelvinChange,
-                    valueRange = 2000f..10000f,
-                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-                )
-                Text("10000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
-                Text(
-                    text = "${manualKelvin.toInt()}K",
-                    color = Color.Yellow,
-                    modifier = Modifier.width(55.dp),
-                    textAlign = TextAlign.End,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        // ── Custom Kelvin Slider Row (Always visible, dragging activates CUS) ──
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
+            Text("K", color = Color.Gray, modifier = Modifier.width(36.dp), fontSize = 12.sp)
+            Text("2000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.Start)
+            Slider(
+                value = manualKelvin,
+                onValueChange = { kelvin ->
+                    if (whiteBalance != CaptureRequest.CONTROL_AWB_MODE_OFF) {
+                        onWhiteBalanceChange(CaptureRequest.CONTROL_AWB_MODE_OFF)
+                    }
+                    onManualKelvinChange(kelvin)
+                },
+                valueRange = 2000f..10000f,
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+            )
+            Text("10000K", color = Color.Gray.copy(alpha = 0.7f), fontSize = 10.sp, modifier = Modifier.width(50.dp), textAlign = TextAlign.End)
+            Text(
+                text = "${manualKelvin.toInt()}K",
+                color = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) Color.Yellow else Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.width(55.dp),
+                textAlign = TextAlign.End,
+                fontSize = 12.sp,
+                fontWeight = if (whiteBalance == CaptureRequest.CONTROL_AWB_MODE_OFF) FontWeight.Bold else FontWeight.Normal
+            )
         }
-
-
     }
 }
+
 
