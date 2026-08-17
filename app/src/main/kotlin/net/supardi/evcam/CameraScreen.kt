@@ -269,16 +269,19 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
 
     
-    DisposableEffect(context, imageCaptureUseCase, videoCaptureUseCase) {
+    val camera2Engine = remember { Camera2Engine(context) }
+
+    DisposableEffect(context) {
         val orientationEventListener = object : android.view.OrientationEventListener(context) {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return
-                val rotation = when (orientation) {
-                    in 45..134 -> android.view.Surface.ROTATION_270
-                    in 135..224 -> android.view.Surface.ROTATION_180
-                    in 225..314 -> android.view.Surface.ROTATION_90
-                    else -> android.view.Surface.ROTATION_0
+                val degrees = when (orientation) {
+                    in 45..134 -> 270
+                    in 135..224 -> 180
+                    in 225..314 -> 90
+                    else -> 0
                 }
+                camera2Engine.setDeviceOrientation(degrees)
             }
         }
         orientationEventListener.enable()
@@ -359,8 +362,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             window.attributes = layoutParams
         }
     }
-    
-    val camera2Engine = remember { Camera2Engine(context) }
     
     DisposableEffect(lifecycleOwner) {
         camera2Engine.startBackgroundThread()

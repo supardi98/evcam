@@ -258,6 +258,28 @@ class Camera2Engine(private val context: Context) {
     private var lastRecordedFps = 30
     private var lastAudioEnabled = true
     private var lastOutputFile: String? = null
+    private var currentDeviceOrientationDegrees: Int = 0
+
+    fun setDeviceOrientation(degrees: Int) {
+        currentDeviceOrientationDegrees = degrees
+    }
+
+    fun getOrientationHint(): Int {
+        val deviceId = cameraDevice?.id ?: return 90
+        val chars = try {
+            cameraManager.getCameraCharacteristics(deviceId)
+        } catch (e: Exception) {
+            return 90
+        }
+        val sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+        val isFront = chars.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
+
+        return if (isFront) {
+            (sensorOrientation + currentDeviceOrientationDegrees) % 360
+        } else {
+            (sensorOrientation - currentDeviceOrientationDegrees + 360) % 360
+        }
+    }
 
     fun setupMediaRecorder(width: Int = 1920, height: Int = 1080, fps: Int = 30, audioEnabled: Boolean = true, outputFile: String) {
         lastRecordedWidth = width
@@ -283,6 +305,9 @@ class Camera2Engine(private val context: Context) {
                 setVideoSize(width, height)
                 setVideoEncoder(MediaRecorder.VideoEncoder.H264)
                 if (audioEnabled) setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                val hint = getOrientationHint()
+                setOrientationHint(hint)
+                Log.d("EVCAM", "MediaRecorder orientationHint set to $hint (device: $currentDeviceOrientationDegrees)")
                 setInputSurface(pSurface)
                 prepare()
             }
