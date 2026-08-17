@@ -147,8 +147,9 @@ fun TopCameraBar(
 
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(if (isTimerActive) Color.Yellow.copy(alpha = 0.2f) else Color.Transparent)
                             .clickable {
                                 uiState.timerMode = when (uiState.timerMode) {
                                     TimerMode.OFF -> TimerMode.SEC_3
@@ -158,31 +159,32 @@ fun TopCameraBar(
                                     TimerMode.SEC_20 -> if (uiState.isHandTrackingInstalled && uiState.isHandTrackingEnabled) TimerMode.PEACE else TimerMode.OFF
                                     TimerMode.PEACE -> TimerMode.OFF
                                 }
-                            },
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
-                        Icon(imageVector = icon, contentDescription = "Timer", tint = timerTint, modifier = Modifier.size(22.dp))
-                        
-                        if (isTimerActive && uiState.timerMode != TimerMode.PEACE) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 2.dp, end = 2.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Color.Yellow)
-                                    .padding(horizontal = 3.dp, vertical = 1.dp)
-                            ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            val icon = if (uiState.timerMode == TimerMode.PEACE) Icons.Default.PanTool else Icons.Default.Timer
+                            Icon(
+                                imageVector = icon, 
+                                contentDescription = "Timer", 
+                                tint = timerTint, 
+                                modifier = Modifier.size(20.dp)
+                            )
+                            if (isTimerActive && uiState.timerMode != TimerMode.PEACE) {
                                 Text(
                                     text = "${uiState.timerMode.seconds}s",
-                                    color = Color.Black,
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    lineHeight = 8.sp
+                                    color = Color.Yellow,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
+
 
 
                     
