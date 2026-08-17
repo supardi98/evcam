@@ -68,17 +68,18 @@ class ProAnalyzer(
                         
                         if (diffX + diffY > threshold) {
                             val rx = when (rotationDegrees) {
-                                90 -> y
+                                90 -> height - 1 - y
                                 180 -> width - 1 - x
-                                270 -> height - 1 - y
+                                270 -> y
                                 else -> x
                             }
                             val ry = when (rotationDegrees) {
-                                90 -> x
+                                90 -> width - 1 - x
                                 180 -> height - 1 - y
-                                270 -> width - 1 - x
+                                270 -> height - 1 - y
                                 else -> y
                             }
+
 
 
                             
