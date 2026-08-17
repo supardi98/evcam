@@ -1049,7 +1049,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         fontWeight = FontWeight.Bold
                     )
                 }
-            } else if (isAeAfLocked) {
+            } else if (isAeAfLocked && (focusState == FocusState.SUCCESS || !showFocusBox)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
