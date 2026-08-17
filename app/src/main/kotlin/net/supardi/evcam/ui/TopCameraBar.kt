@@ -267,8 +267,11 @@ fun TopCameraBar(
                     imageVector = Icons.Default.Settings, 
                     contentDescription = "Settings", 
                     tint = if (uiState.showSettings) Color.Yellow else Color.White
+                )
+            }
         }
     }
+
 
     // ── Secondary Sub-Bar Row (Scene Extensions: OFF -> HDR -> NIGHT toggle chip) ──
     if (uiState.cameraMode == CameraMode.PHOTO && (uiState.hasHdrExtension || uiState.hasNightExtension)) {
@@ -346,5 +349,5 @@ fun TopCameraBar(
         }
     }
 }
-}
+
 
