@@ -121,6 +121,25 @@ fun WebcamDedicatedScreen(
     var height by remember { mutableIntStateOf(720) }
     var orientation by remember { mutableStateOf("LANDSCAPE") }
 
+    var transferSpeedText by remember { mutableStateOf("0.0 KB/s") }
+
+    // Live Transfer Speed calculation loop (1s ticker)
+    LaunchedEffect(Unit) {
+        var prevBytes = 0L
+        while (true) {
+            delay(1000)
+            val currentBytes = webcamServer.totalBytesTransferred.get() + webRtcServer.totalBytesTransferred.get()
+            val deltaBytes = currentBytes - prevBytes
+            prevBytes = currentBytes
+
+            transferSpeedText = when {
+                deltaBytes >= 1024 * 1024 -> String.format(java.util.Locale.US, "%.2f MB/s", deltaBytes / (1024f * 1024f))
+                deltaBytes >= 1024 -> String.format(java.util.Locale.US, "%.1f KB/s", deltaBytes / 1024f)
+                else -> "$deltaBytes B/s"
+            }
+        }
+    }
+
     val isAnyActive = isHttpMjpeg || isHttpSnapshot || isRtsp || isWebRtc
     val cameraState by camera2Engine.cameraState.collectAsState()
 
@@ -223,7 +242,7 @@ fun WebcamDedicatedScreen(
                 if (connectedClients > 0) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp),
-                        horizontalArrangement = Arrangement.Start
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -239,6 +258,26 @@ fun WebcamDedicatedScreen(
                                 Text(
                                     text = "$connectedClients Active Client${if (connectedClients > 1) "s" else ""} Connected",
                                     color = Color(0xFF00E676),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        // Live Transfer Speed Badge
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.Yellow.copy(alpha = 0.2f),
+                            border = BorderStroke(1.dp, Color.Yellow)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "⚡ $transferSpeedText",
+                                    color = Color.Yellow,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp
                                 )

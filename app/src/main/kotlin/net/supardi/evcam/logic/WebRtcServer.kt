@@ -63,13 +63,20 @@ class WebRtcServer(
             val jpeg = YuvToJpegConverter.convertYuvToJpeg(image, quality = 75, rotationDegrees = rotationDegrees)
             latestJpegFrame = jpeg
 
+            var bytesSent = 0L
             clients.forEach { client ->
                 client.sendJpegFrame(jpeg)
+                bytesSent += jpeg.size
+            }
+            if (bytesSent > 0) {
+                totalBytesTransferred.addAndGet(bytesSent)
             }
         } catch (e: Exception) {
             Log.e("EVCAM_WEBRTC", "Error compressing YUV frame for WebRTC stream", e)
         }
     }
+
+    val totalBytesTransferred = java.util.concurrent.atomic.AtomicLong(0L)
 
     private inner class WebRtcClientHandler(private val socket: Socket) : Runnable {
         private var outputStream: OutputStream? = null

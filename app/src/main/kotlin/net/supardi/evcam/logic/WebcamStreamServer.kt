@@ -78,15 +78,22 @@ class WebcamStreamServer(
             val jpegBytes = YuvToJpegConverter.convertYuvToJpeg(image, quality = 75, rotationDegrees = rotationDegrees)
             latestFrameJpeg = jpegBytes
 
+            var bytesSent = 0L
             clients.forEach { client ->
                 if (client.isMjpegStream) {
                     client.sendMjpegFrame(jpegBytes)
+                    bytesSent += jpegBytes.size
                 }
+            }
+            if (bytesSent > 0) {
+                totalBytesTransferred.addAndGet(bytesSent)
             }
         } catch (e: Exception) {
             Log.e("EVCAM_STREAM", "Error compressing YUV to JPEG", e)
         }
     }
+
+    val totalBytesTransferred = java.util.concurrent.atomic.AtomicLong(0L)
 
     private inner class ClientHandler(private val socket: Socket) : Runnable {
         var isMjpegStream = false
