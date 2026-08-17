@@ -454,7 +454,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
             val startPreview = {
-                textureView.surfaceTexture?.setDefaultBufferSize(1080, 1920)
+                textureView.surfaceTexture?.setDefaultBufferSize(1920, 1080)
                 val surface = android.view.Surface(textureView.surfaceTexture)
                 camera2Engine.setupImageReader(1920, 1080)
                 val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
