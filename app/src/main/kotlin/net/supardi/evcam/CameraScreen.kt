@@ -537,7 +537,19 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
                 camera2Engine.createPreviewSession(targets) { _ ->
                     isTransitioningRatio = false
+                    if (isFlippingCamera) {
+                        coroutineScope.launch {
+                            flipRotationAnim.snapTo(270f)
+                            flipRotationAnim.animateTo(
+                                targetValue = 360f,
+                                animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                            )
+                            flipRotationAnim.snapTo(0f)
+                            isFlippingCamera = false
+                        }
+                    }
                 }
+
             }
 
             if (textureView.isAvailable) {
@@ -1262,25 +1274,17 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         isFlippingCamera = true
                         peakingBitmap = null // Turn off focus peaking before animation starts
                         coroutineScope.launch {
-                            // 3D Flip animation half-way (0 -> 90 degrees)
+                            // Rotate 0 to 90 degrees (facing edge-on)
                             flipRotationAnim.animateTo(
                                 targetValue = 90f,
                                 animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                             )
-                            // Switch sensor hardware
+                            // Trigger camera hardware switch while view is turned 90 degrees away
                             lensFacing = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT else android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
-                            
-                            // 3D Flip animation complete (270 -> 360 degrees)
-                            flipRotationAnim.snapTo(270f)
-                            flipRotationAnim.animateTo(
-                                targetValue = 360f,
-                                animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                            )
-                            flipRotationAnim.snapTo(0f)
-                            isFlippingCamera = false
                         }
                     }
                 }
+
 
             )
         }
