@@ -1,6 +1,7 @@
 package net.supardi.evcam.ui
 
 import android.hardware.camera2.CaptureRequest
+import net.supardi.evcam.logic.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -59,17 +60,17 @@ fun ProControlPanel(
     onClose: () -> Unit,
     isHdrEnabled: Boolean = false,
     isNightModeEnabled: Boolean = false,
-    hasManualFocusSupport: Boolean = true
+    hasManualFocusSupport: Boolean = true,
+    activeCustomScene: CustomSceneMode = CustomSceneMode.AUTO
 ) {
 
+    val isSceneLocked = activeCustomScene != CustomSceneMode.AUTO || isHdrEnabled || isNightModeEnabled
+    val sceneName = if (activeCustomScene != CustomSceneMode.AUTO) activeCustomScene.label else if (isHdrEnabled) "HDR" else "Night"
 
-
-    val isSceneLocked = isHdrEnabled || isNightModeEnabled
-    val sceneName = when {
-        isHdrEnabled -> "HDR"
-        isNightModeEnabled -> "Night"
-        else -> ""
-    }
+    val isIsoLocked = activeCustomScene in listOf(CustomSceneMode.FIREWORKS, CustomSceneMode.ASTRO_LONG_EXP)
+    val isShutterLocked = activeCustomScene in listOf(CustomSceneMode.ACTION, CustomSceneMode.FIREWORKS, CustomSceneMode.ASTRO_LONG_EXP)
+    val isFocusLocked = activeCustomScene in listOf(CustomSceneMode.MACRO, CustomSceneMode.ASTRO_LONG_EXP)
+    val isWbLocked = activeCustomScene in listOf(CustomSceneMode.SUNSET, CustomSceneMode.CANDLELIGHT)
 
     Column(
         modifier = Modifier
@@ -98,9 +99,9 @@ fun ProControlPanel(
             )
         }
 
-        // ── ISO row: hidden when HDR or Night is active ───────────────────────
+        // ── ISO row: hidden when locked by active scene ───────────────────────
         AnimatedVisibility(
-            visible = !isSceneLocked,
+            visible = !isIsoLocked,
             enter = expandVertically(tween(200)) + fadeIn(tween(200)),
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {
@@ -120,9 +121,9 @@ fun ProControlPanel(
 
 
 
-        // ── Shutter row: hidden when HDR or Night is active ───────────────────
+        // ── Shutter row: hidden when locked by active scene ───────────────────
         AnimatedVisibility(
-            visible = !isSceneLocked,
+            visible = !isShutterLocked,
             enter = expandVertically(tween(200)) + fadeIn(tween(200)),
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {
@@ -208,9 +209,9 @@ fun ProControlPanel(
             }
         }
 
-        // ── Focus row: hidden when hardware lacks manual focus support ───────
+        // ── Focus row: hidden when hardware lacks manual focus or locked by scene ───────
         AnimatedVisibility(
-            visible = hasManualFocusSupport,
+            visible = hasManualFocusSupport && !isFocusLocked,
             enter = expandVertically(tween(200)) + fadeIn(tween(200)),
             exit = shrinkVertically(tween(200)) + fadeOut(tween(200))
         ) {

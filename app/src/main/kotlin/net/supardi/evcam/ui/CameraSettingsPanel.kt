@@ -79,7 +79,8 @@ fun SettingsPopupPanels(
 
                     isHdrEnabled = uiState.isHdrEnabled,
                     isNightModeEnabled = uiState.isNightModeEnabled,
-                    hasManualFocusSupport = uiState.hasManualFocusSupport
+                    hasManualFocusSupport = uiState.hasManualFocusSupport,
+                    activeCustomScene = uiState.selectedCustomScene
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
