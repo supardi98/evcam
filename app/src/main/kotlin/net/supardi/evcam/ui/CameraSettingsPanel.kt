@@ -163,7 +163,11 @@ fun SettingsPopupPanels(
                     onOpenWatermarkSettings = onOpenWatermarkSettings,
                     onOpenPluginManager = onOpenPluginManager,
                     onOpenCameraInfo = { uiState.showCameraInfoDialog = true },
-                    onOpenWebcamSettings = { uiState.showWebcamDialog = true; uiState.showSettings = false },
+                    onOpenWebcamSettings = {
+                        uiState.showSettings = false
+                        val intent = Intent(context, net.supardi.evcam.WebcamActivity::class.java)
+                        context.startActivity(intent)
+                    },
                     onClose = { uiState.showSettings = false }
                 )
 
