@@ -370,21 +370,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
+    var isAppInForeground by remember { mutableStateOf(false) }
+    
     DisposableEffect(lifecycleOwner) {
         camera2Engine.startBackgroundThread()
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE, androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    isAppInForeground = false
                     camera2Engine.closeCamera()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
-                    val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
-                    val camId = manager.cameraIdList.firstOrNull { id ->
-                        manager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == lensFacing
-                    }
-                    if (camId != null) {
-                        camera2Engine.openCamera(camId)
-                    }
+                    isAppInForeground = true
                 }
                 else -> {}
             }
@@ -408,8 +405,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     val textureView = remember { net.supardi.evcam.ui.AutoFitTextureView(context) }
     
-    LaunchedEffect(lensFacing) {
-        val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+    LaunchedEffect(lensFacing, isAppInForeground) {
+        if (isAppInForeground) {
+            val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
         
         val camId = manager.cameraIdList.firstOrNull { id ->
             manager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == lensFacing
@@ -441,9 +439,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             camera2Engine.closeCamera()
             camera2Engine.openCamera(camId)
-
         }
     }
+}
     
     LaunchedEffect(cameraMode) {
         // Automatically turn off continuous Torch & close Pro panel when switching between Photo & Video modes
