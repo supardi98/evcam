@@ -1160,10 +1160,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 48.dp)
-                .pointerInput(Unit) { /* consume touches so panel clicks don't fall through to camera preview */ },
+                .padding(bottom = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             SettingsPopupPanels(
                 uiState = uiState,
                 onOpenWatermarkSettings = { showWatermarkDialog = true },
