@@ -851,6 +851,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         delay(1200)
                         showFocusBox = false
                         focusState = FocusState.TAP_INITIAL
+                        camera2Engine.resetFocusToContinuous()
                     }
                 }
             }
