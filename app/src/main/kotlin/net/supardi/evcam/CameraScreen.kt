@@ -648,12 +648,14 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 when (afState) {
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
-                        uiState.focusState = FocusState.SEARCHING
+                        if (uiState.focusState == FocusState.TAP_INITIAL || uiState.focusState == FocusState.SEARCHING) {
+                            uiState.focusState = FocusState.SEARCHING
+                        }
                     }
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED,
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_INACTIVE -> {
-                        if (uiState.focusState == FocusState.SEARCHING || uiState.focusState == FocusState.TAP_INITIAL) {
+                        if (uiState.focusState == FocusState.SEARCHING) {
                             uiState.focusState = FocusState.SUCCESS
                             if (uiState.isPendingAfLock) {
                                 uiState.isAeAfLocked = true
