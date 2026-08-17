@@ -205,7 +205,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
 
     
+    var cameraFlipRotation by remember { mutableStateOf(0f) }
+    val flipRotationAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+    var isFlippingCamera by remember { mutableStateOf(false) }
+
     var imageCaptureUseCase by uiState::imageCaptureUseCase
+
     var videoCaptureUseCase by uiState::videoCaptureUseCase
 
     val triggerVibe = {
@@ -773,6 +778,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .align(Alignment.Center)
             .clipToBounds()
             .aspectRatio(animatedAspectRatio)
+            .graphicsLayer {
+                rotationY = flipRotationAnim.value
+                cameraDistance = 12f * density
+            }
         ) {
             CameraViewfinder(
                 previewView = textureView,
@@ -782,7 +791,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxSize()
             )
 
-            if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO) {
+            if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO && !isFlippingCamera && flipRotationAnim.value == 0f) {
+
                 @Suppress("UNUSED_VARIABLE")
                 val count = peakingUpdateCount // trigger recomposition
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1251,10 +1261,30 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     coroutineScope.launch { zoomAnim.snapTo(newZoom) }
                 },
                 onSwitchCamera = {
-                    if (!isRecording) {
-                        lensFacing = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT else android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+                    if (!isRecording && !isFlippingCamera) {
+                        isFlippingCamera = true
+                        peakingBitmap = null // Turn off focus peaking before animation starts
+                        coroutineScope.launch {
+                            // 3D Flip animation half-way (0 -> 90 degrees)
+                            flipRotationAnim.animateTo(
+                                targetValue = 90f,
+                                animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                            )
+                            // Switch sensor hardware
+                            lensFacing = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT else android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+                            
+                            // 3D Flip animation complete (270 -> 360 degrees)
+                            flipRotationAnim.snapTo(270f)
+                            flipRotationAnim.animateTo(
+                                targetValue = 360f,
+                                animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                            )
+                            flipRotationAnim.snapTo(0f)
+                            isFlippingCamera = false
+                        }
                     }
                 }
+
             )
         }
         
