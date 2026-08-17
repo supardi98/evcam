@@ -74,11 +74,12 @@ class ProAnalyzer(
                                 else -> x
                             }
                             val ry = when (rotationDegrees) {
-                                90 -> width - 1 - x
+                                90 -> x
                                 180 -> height - 1 - y
-                                270 -> x
+                                270 -> width - 1 - x
                                 else -> y
                             }
+
 
                             
                             val pixelIdx = ry * outWidth + rx
