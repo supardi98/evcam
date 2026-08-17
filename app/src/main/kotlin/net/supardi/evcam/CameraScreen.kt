@@ -437,7 +437,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    LaunchedEffect(cameraState, uiState.aspectRatio) {
+    LaunchedEffect(cameraState) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
             uiState.supportedVideoQualities = videoCaps.supportedQualities
@@ -454,12 +454,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
             val startPreview = {
-                val (bw, bh) = when (uiState.aspectRatio) {
-                    AspectRatioMode.RATIO_16_9 -> Pair(1080, 1920)
-                    AspectRatioMode.RATIO_4_3 -> Pair(1080, 1440)
-                    AspectRatioMode.RATIO_1_1 -> Pair(1080, 1080)
-                }
-                textureView.surfaceTexture?.setDefaultBufferSize(bw, bh)
+                textureView.surfaceTexture?.setDefaultBufferSize(1080, 1920)
                 val surface = android.view.Surface(textureView.surfaceTexture)
                 camera2Engine.setupImageReader(1920, 1080)
                 val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
