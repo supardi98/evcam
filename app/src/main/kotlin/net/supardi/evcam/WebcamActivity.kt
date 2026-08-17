@@ -600,7 +600,7 @@ fun WebcamDedicatedScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Black Screen Power Saving", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Text(
-                                "Turn off screen preview to reduce heat and save maximum battery during live streaming.",
+                                "Turn display into full AMOLED black screen to save maximum battery and prevent device heating during live streaming.",
                                 color = Color.LightGray,
                                 fontSize = 11.sp
                             )
