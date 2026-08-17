@@ -84,6 +84,7 @@ fun CameraViewfinder(
                             if (uiState.isAeAfLocked) {
                                 uiState.isAeAfLocked = false
                             }
+                            uiState.isPendingAfLock = false
                             
                             if (uiState.isProMode && !uiState.isFocusAuto) {
                                 return true
@@ -104,10 +105,12 @@ fun CameraViewfinder(
                                 return
                             }
 
-                            uiState.isAeAfLocked = true
+                            uiState.isPendingAfLock = true
+                            uiState.isFocusAuto = true
                             uiState.focusOffset = Offset(e.x, e.y)
                             uiState.showFocusBox = true
-                            uiState.focusState = FocusState.SUCCESS
+                            uiState.focusState = FocusState.TAP_INITIAL
+                            camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
                         }
 
                         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {

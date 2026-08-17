@@ -655,12 +655,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
                     if (showFocusBox) {
                         uiState.focusState = FocusState.SUCCESS
+                        if (uiState.isPendingAfLock) {
+                            uiState.isAeAfLocked = true
+                            uiState.isPendingAfLock = false
+                        }
                     }
                 }
                 android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED,
                 android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
                     if (showFocusBox) {
                         uiState.focusState = FocusState.FAILED
+                        uiState.isAeAfLocked = false
+                        uiState.isPendingAfLock = false
                     }
                 }
             }
