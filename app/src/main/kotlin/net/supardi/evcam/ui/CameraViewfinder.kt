@@ -48,7 +48,7 @@ fun CameraViewfinder(
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             update = { view ->
-                view.configureTransform()
+                view.configureTransform(mode = uiState.aspectRatio)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     val filter = uiState.selectedFilter
                     if (filter == ColorFilterMode.NORMAL) {
