@@ -130,54 +130,48 @@ fun CameraBottomBar(
                 .clip(CircleShape)
                 .background(if (isRecording) Color.Red else Color.White)
                 .pointerInput(cameraMode) {
-
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         down.consume()
-                        
+
                         var isLongPress = false
-                        val startTime = System.currentTimeMillis()
-                        
-                        // Launch a coroutine to monitor hold duration
+                        var lastY = down.position.y
+
                         val longPressJob = scope.launch {
-                            delay(500)
+                            delay(400)
                             isLongPress = true
-                            isLongPressActive = true
                             when (cameraMode) {
                                 CameraMode.PHOTO -> onBurstStart()
                                 CameraMode.VIDEO -> onQuickRecordStart()
                             }
                         }
 
-                        // Track touch movements for drag-zoom and wait for release
                         while (true) {
                             val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Main)
                             val change = event.changes.firstOrNull() ?: break
-                            
+
                             if (change.pressed) {
-                                // If we are in long-press mode and drag vertically, trigger zoom
-                                if (isLongPress && cameraMode == CameraMode.VIDEO) {
-                                    val dragY = -(change.position.y - (change.previousPosition?.y ?: change.position.y))
-                                    onDragZoom(dragY)
+                                if (isLongPress) {
+                                    val currentY = change.position.y
+                                    val deltaY = lastY - currentY // Upward drag = positive zoom
+                                    lastY = currentY
+                                    if (kotlin.math.abs(deltaY) > 0.5f) {
+                                        onDragZoom(deltaY)
+                                    }
                                 }
                                 change.consume()
                             } else {
-                                // Release detected
                                 break
                             }
                         }
-                        
-                        longPressJob.cancel()
 
-                        
+                        longPressJob.cancel()
                         if (isLongPress) {
-                            isLongPressActive = false
                             when (cameraMode) {
                                 CameraMode.PHOTO -> onBurstEnd()
                                 CameraMode.VIDEO -> onQuickRecordStop()
                             }
                         } else {
-                            // Tap gesture
                             when (cameraMode) {
                                 CameraMode.PHOTO -> onShutterTap()
                                 CameraMode.VIDEO -> if (isRecording) onVideoTapStop() else onVideoTap()

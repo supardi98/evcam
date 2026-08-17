@@ -34,24 +34,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.camera.camera2.interop.Camera2CameraControl
-import androidx.camera.camera2.interop.CaptureRequestOptions
-import androidx.camera.core.AspectRatio
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.FocusMeteringAction
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.FallbackStrategy
-import androidx.camera.video.MediaStoreOutputOptions
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
-import androidx.camera.video.VideoRecordEvent
-import androidx.camera.view.PreviewView
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -144,8 +127,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var lastCapturedUri by uiState::lastCapturedUri
     var lastCapturedBitmap by uiState::lastCapturedBitmap
     
-    var cameraControl by uiState::cameraControl
-    var camera2Control by uiState::camera2Control
+    // var cameraControl by uiState::cameraControl
+    // var camera2Control by uiState::camera2Control
     var iso by uiState::iso
     var minIso by uiState::minIso
     var maxIso by uiState::maxIso
@@ -296,8 +279,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     in 225..314 -> android.view.Surface.ROTATION_90
                     else -> android.view.Surface.ROTATION_0
                 }
-                imageCaptureUseCase?.targetRotation = rotation
-                videoCaptureUseCase?.targetRotation = rotation
             }
         }
         orientationEventListener.enable()
@@ -348,9 +329,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         onDispose { mediaActionSound.release() }
     }
     
-    LaunchedEffect(isTorchOn, cameraControl) {
-        cameraControl?.enableTorch(isTorchOn)
-    }
     
     LaunchedEffect(currentZoom) {
         if (kotlin.math.abs(currentZoom - 1f) < 0.01f) {
@@ -360,6 +338,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
     
     LaunchedEffect(Unit) {
+        uiState.isBursting = false
         focusRequester.requestFocus()
     }
 
@@ -381,236 +360,115 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    val previewView = remember { PreviewView(context).apply { 
-        scaleType = PreviewView.ScaleType.FIT_CENTER 
-        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-    } }
-
-    LaunchedEffect(previewView) {
-        androidx.compose.runtime.snapshotFlow { previewView.previewStreamState.value }
-            .collect { state ->
-                android.util.Log.d("EvcamTiming", "[StreamState] PreviewView streamState changed to -> $state at ${System.currentTimeMillis()}ms")
+    val camera2Engine = remember { Camera2Engine(context) }
+    
+    DisposableEffect(lifecycleOwner) {
+        camera2Engine.startBackgroundThread()
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE, androidx.lifecycle.Lifecycle.Event.ON_STOP -> {
+                    camera2Engine.closeCamera()
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                    val camId = manager.cameraIdList.firstOrNull { id ->
+                        manager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == lensFacing
+                    }
+                    if (camId != null) {
+                        camera2Engine.openCamera(camId)
+                    }
+                }
+                else -> {}
             }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            camera2Engine.closeCamera()
+            camera2Engine.stopBackgroundThread()
+        }
     }
     
-    LaunchedEffect(lensFacing, cameraMode, aspectRatio, videoQuality, videoFps, isNightModeEnabled, isHdrEnabled) {
-        val t0 = System.currentTimeMillis()
-        android.util.Log.d("EvcamTiming", "[t0 = 0ms] State change trigger -> mode=$cameraMode, ratio=$aspectRatio, fps=${videoFps.fps}")
-        isTransitioningRatio = true
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        val executor = ContextCompat.getMainExecutor(context)
+    LaunchedEffect(isTorchOn) {
+        camera2Engine.setTorchState(isTorchOn)
+    }
+    
+    val textureView = remember { net.supardi.evcam.ui.AutoFitTextureView(context) }
+    
+    LaunchedEffect(lensFacing) {
+        val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
         
-        cameraProviderFuture.addListener({
-            val t1 = System.currentTimeMillis() - t0
-            android.util.Log.d("EvcamTiming", "[t1 = ${t1}ms] ProcessCameraProvider listener callback fired")
-            val cameraProvider = cameraProviderFuture.get()
-            @Suppress("DEPRECATION")
-            val preview = Preview.Builder().apply {
-                if (cameraMode == CameraMode.VIDEO) {
-                    setTargetAspectRatio(AspectRatio.RATIO_16_9)
-                    // Set target FPS range to hardware preview via Camera2Interop
-                    val interop = androidx.camera.camera2.interop.Camera2Interop.Extender(this)
-                    interop.setCaptureRequestOption(
-                        android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
-                        android.util.Range(videoFps.fps, videoFps.fps)
-                    )
-                    // Enable Video Stabilization (EIS/OIS) for steady video recording
-                    interop.setCaptureRequestOption(
-                        android.hardware.camera2.CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
-                        android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON
-                    )
-                } else {
-                    setTargetAspectRatio(aspectRatio.value)
-                }
-            }.build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-            
-            @Suppress("DEPRECATION")
-            val imageCapBuilder = ImageCapture.Builder().apply {
-                setTargetAspectRatio(aspectRatio.value)
-            }
-            // Force Optical Image Stabilization (OIS) for photos if supported by device
-            val imageInterop = androidx.camera.camera2.interop.Camera2Interop.Extender(imageCapBuilder)
-            imageInterop.setCaptureRequestOption(
-                android.hardware.camera2.CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
-                android.hardware.camera2.CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON
-            )
-            val imageCap = imageCapBuilder.build()
-
-            
-            val qualitySelector = QualitySelector.from(
-                videoQuality.quality,
-                FallbackStrategy.lowerQualityOrHigherThan(videoQuality.quality)
-            )
-            val recorder = Recorder.Builder()
-                .setQualitySelector(qualitySelector)
-                .build()
-            
-            val videoCap = androidx.camera.video.VideoCapture.withOutput(recorder)
-
-            
-            imageCaptureUseCase = imageCap
-            videoCaptureUseCase = videoCap
-            
-            val imageAnalysis = androidx.camera.core.ImageAnalysis.Builder()
-
-                .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-            imageAnalysis.setAnalyzer(androidx.core.content.ContextCompat.getMainExecutor(context), proAnalyzer)
-
-            val cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
-            
-            val extensionsManagerFuture = androidx.camera.extensions.ExtensionsManager.getInstanceAsync(context, cameraProvider)
-            extensionsManagerFuture.addListener({
-                var finalCameraSelector = cameraSelector
-                var hasCameraXNight = false
-                var hasCameraXHdr = false
-                try {
-                    val extensionsManager = extensionsManagerFuture.get()
-                    hasCameraXNight = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
-                    hasCameraXHdr = extensionsManager.isExtensionAvailable(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
-                    
-                    if (isNightModeEnabled && cameraMode == CameraMode.PHOTO && hasCameraXNight) {
-                        finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.NIGHT)
-                    } else if (isHdrEnabled && cameraMode == CameraMode.PHOTO && hasCameraXHdr) {
-                        finalCameraSelector = extensionsManager.getExtensionEnabledCameraSelector(cameraSelector, androidx.camera.extensions.ExtensionMode.HDR)
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("Evcam", "Failed to initialize ExtensionsManager", e)
-                }
-
-                var hasLegacyNight = false
-                var hasLegacyHdr = false
-                try {
-                    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
-                    val expectedLensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT else android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
-                    val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
-                        cameraManager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == expectedLensFacing
-                    }
-                    if (cameraId != null) {
-                        val chars = cameraManager.getCameraCharacteristics(cameraId)
-                        val sceneModes = chars.get(android.hardware.camera2.CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES) ?: intArrayOf()
-                        hasLegacyNight = sceneModes.contains(android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_NIGHT)
-                        hasLegacyHdr = sceneModes.contains(android.hardware.camera2.CameraCharacteristics.CONTROL_SCENE_MODE_HDR)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-
-                uiState.hasNightExtension = hasCameraXNight || hasLegacyNight
-                uiState.hasHdrExtension = hasCameraXHdr || hasLegacyHdr
-            
-            var boundCamera: androidx.camera.core.Camera? = null
-            try {
-                val tUnbindStart = System.currentTimeMillis() - t0
-                cameraProvider.unbindAll()
-                val tUnbindEnd = System.currentTimeMillis() - t0
-                android.util.Log.d("EvcamTiming", "[t2 = ${tUnbindEnd}ms] cameraProvider.unbindAll() took ${tUnbindEnd - tUnbindStart}ms")
-
-                boundCamera = if (cameraMode == CameraMode.VIDEO) {
-                    cameraProvider.bindToLifecycle(lifecycleOwner, finalCameraSelector, preview, videoCap)
-                } else {
-                    cameraProvider.bindToLifecycle(lifecycleOwner, finalCameraSelector, preview, imageCap, imageAnalysis)
-                }
-
-                val tBindEnd = System.currentTimeMillis() - t0
-                android.util.Log.d("EvcamTiming", "[t3 = ${tBindEnd}ms] cameraProvider.bindToLifecycle() took ${tBindEnd - tUnbindEnd}ms")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                android.util.Log.e("Evcam", "Use case binding failed, falling back to preview", e)
-                try {
-                    cameraProvider.unbindAll()
-                    boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
-                } catch (e2: Exception) {
-                    e2.printStackTrace()
-                }
-            }
-            
-            boundCamera?.let { camera ->
-                cameraControl = camera.cameraControl
-                camera2Control = Camera2CameraControl.from(camera.cameraControl)
-                
-                val builder = androidx.camera.camera2.interop.CaptureRequestOptions.Builder()
-                if (isNightModeEnabled && hasLegacyNight && !hasCameraXNight) {
-                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_MODE, android.hardware.camera2.CameraMetadata.CONTROL_MODE_USE_SCENE_MODE)
-                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE, android.hardware.camera2.CameraMetadata.CONTROL_SCENE_MODE_NIGHT)
-                } else if (isHdrEnabled && hasLegacyHdr && !hasCameraXHdr) {
-                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_MODE, android.hardware.camera2.CameraMetadata.CONTROL_MODE_USE_SCENE_MODE)
-                    builder.setCaptureRequestOption(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE, android.hardware.camera2.CameraMetadata.CONTROL_SCENE_MODE_HDR)
-                }
-                camera2Control?.captureRequestOptions = builder.build()
-                
-                val zoomState = camera.cameraInfo.zoomState.value
-                if (zoomState != null) {
-                    minZoomRatio = zoomState.minZoomRatio
-                    maxZoomRatio = zoomState.maxZoomRatio
-                    if (currentZoom < minZoomRatio || currentZoom > maxZoomRatio) {
-                        coroutineScope.launch { zoomAnim.snapTo(1f.coerceIn(minZoomRatio, maxZoomRatio)) }
-                    }
-                    cameraControl?.setZoomRatio(zoomAnim.value)
-                }
-                
-                val camera2Info = androidx.camera.camera2.interop.Camera2CameraInfo.from(camera.cameraInfo)
-                
-                // Extract Supported Video Qualities
-                val supportedQualities = androidx.camera.video.QualitySelector.getSupportedQualities(camera.cameraInfo)
-                uiState.supportedVideoQualities = VideoQualityMode.values().filter { supportedQualities.contains(it.quality) }
-                if (uiState.supportedVideoQualities.isNotEmpty() && !uiState.supportedVideoQualities.contains(uiState.videoQuality)) {
-                    uiState.videoQuality = uiState.supportedVideoQualities.first()
-                }
-                
-                // Extract Supported FPS
-                val supportedFpsList = mutableListOf<Int>()
-                val fpsRanges = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
-                fpsRanges?.forEach { range ->
-                    if (range.upper == range.lower) {
-                        supportedFpsList.add(range.upper)
-                    }
-                }
-                if (supportedFpsList.isEmpty()) {
-                    supportedFpsList.addAll(listOf(24, 30, 60))
-                }
-                uiState.supportedFpsModes = VideoFpsMode.values().filter { supportedFpsList.contains(it.fps) }
-                if (uiState.supportedFpsModes.isNotEmpty() && !uiState.supportedFpsModes.contains(uiState.videoFps)) {
-                    uiState.videoFps = uiState.supportedFpsModes.first()
-                }
-                
-                // Extract Flash and Manual Sensor capabilities
-                uiState.hasFlashSupport = camera.cameraInfo.hasFlashUnit()
-                val caps = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
-                uiState.hasManualSensorSupport = caps?.contains(android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR) == true
-                
-                val isoRange = camera2Info.getCameraCharacteristic(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-                if (isoRange != null) {
-                    minIso = isoRange.lower.toFloat()
-                    maxIso = isoRange.upper.toFloat()
-                    if (iso < minIso || iso > maxIso) {
-                        iso = minIso
-                    }
-                }
-
-                val expState = camera.cameraInfo.exposureState
-                if (expState.isExposureCompensationSupported) {
-                    minExposureIndex = expState.exposureCompensationRange.lower
-                    maxExposureIndex = expState.exposureCompensationRange.upper
-                    exposureStep = expState.exposureCompensationStep.toFloat()
-                }
-            }
-            }, executor)
-        }, executor)
-
-        val startMs = System.currentTimeMillis()
-        while (System.currentTimeMillis() - startMs < 550) {
-            if (previewView.previewStreamState.value == androidx.camera.view.PreviewView.StreamState.STREAMING) {
-                kotlinx.coroutines.delay(60)
-                break
-            }
-            kotlinx.coroutines.delay(20)
+        val camId = manager.cameraIdList.firstOrNull { id ->
+            manager.getCameraCharacteristics(id).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == lensFacing
         }
-        val tFinal = System.currentTimeMillis() - t0
-        android.util.Log.d("EvcamTiming", "[t_final = ${tFinal}ms] Hardware STREAMING confirmed, releasing transition mask")
-        isTransitioningRatio = false
+        
+        if (camId != null) {
+            val chars = manager.getCameraCharacteristics(camId)
+            val maxDigital = chars.get(android.hardware.camera2.CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
+            minZoomRatio = 1f
+            maxZoomRatio = maxDigital.coerceAtLeast(1f)
+            
+            val aeRange = chars.get(android.hardware.camera2.CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE)
+            if (aeRange != null) {
+                minExposureIndex = aeRange.lower
+                maxExposureIndex = aeRange.upper
+            }
+            
+            camera2Engine.closeCamera()
+            camera2Engine.openCamera(camId)
+        }
+    }
+    
+    LaunchedEffect(exposureIndex) {
+        camera2Engine.setExposureCompensation(exposureIndex)
+    }
+    
+    val cameraState by camera2Engine.cameraState.collectAsState()
+    
+    LaunchedEffect(cameraState) {
+        if (cameraState is Camera2Engine.CameraState.Opened) {
+            val device = (cameraState as Camera2Engine.CameraState.Opened).device
+            val startPreview = {
+                textureView.setAspectRatio(1080, 1920)
+                val surface = android.view.Surface(textureView.surfaceTexture)
+                camera2Engine.setupImageReader(1920, 1080)
+                val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
+                camera2Engine.setupMediaRecorder(width = 2560, height = 1440, fps = 120, audioEnabled = true, outputFile = tempVideoFile)
+                
+                val targets = mutableListOf<android.view.Surface>(surface)
+                val persistentSurface = camera2Engine.getOrCreatePersistentSurface()
+                targets.add(persistentSurface)
+                camera2Engine.imageReader?.surface?.let { targets.add(it) }
+                camera2Engine.analysisImageReader?.surface?.let { targets.add(it) }
+                
+                camera2Engine.analysisImageReader?.setOnImageAvailableListener({ reader ->
+                    val image = reader.acquireLatestImage()
+                    if (image != null) {
+                        if (enableHistogram || enableFocusPeaking) {
+                            proAnalyzer.analyze(image, 0)
+                        } else {
+                            image.close()
+                        }
+                    }
+                }, camera2Engine.backgroundHandler)
+                
+                camera2Engine.createPreviewSession(targets) { _ ->
+                    isTransitioningRatio = false
+                }
+            }
+            if (textureView.isAvailable) {
+                startPreview()
+            } else {
+                textureView.surfaceTextureListener = object : android.view.TextureView.SurfaceTextureListener {
+                    override fun onSurfaceTextureAvailable(st: android.graphics.SurfaceTexture, w: Int, h: Int) {
+                        startPreview()
+                    }
+                    override fun onSurfaceTextureSizeChanged(st: android.graphics.SurfaceTexture, w: Int, h: Int) {}
+                    override fun onSurfaceTextureDestroyed(st: android.graphics.SurfaceTexture) = true
+                    override fun onSurfaceTextureUpdated(st: android.graphics.SurfaceTexture) {}
+                }
+            }
+        }
     }
 
     // Single Animatable for zoom:
@@ -622,13 +480,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         androidx.compose.runtime.snapshotFlow { zoomAnim.value }
             .collect { value ->
                 currentZoom = value
-                cameraControl?.setZoomRatio(value)
+                camera2Engine.setZoomRatio(value)
             }
     }
     // Also re-apply when cameraControl changes (new camera bound)
-    LaunchedEffect(cameraControl) {
-        cameraControl?.setZoomRatio(zoomAnim.value)
-    }
+    // LaunchedEffect(cameraControl) {
+    //     cameraControl?.setZoomRatio(zoomAnim.value)
+    // }
 
     
     val executeCapture = {
@@ -646,34 +504,37 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             } else {
                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, 0, 0)
             }
-            imageCaptureUseCase?.let { cap ->
-                takePhoto(cap, context, ContextCompat.getMainExecutor(context), flashMode, selectedFilter, showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio) { bitmap, uri ->
-                    lastCapturedBitmap = bitmap
-                    lastCapturedUri = uri 
-                    prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
-                    if (!isShutterSoundEnabled) {
-                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
-                    }
+            takePhoto(context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements, liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt()) { bitmap, uri ->
+                lastCapturedBitmap = bitmap
+                lastCapturedUri = uri
+                prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                if (!isShutterSoundEnabled) {
+                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_SYSTEM, originalVolume, 0)
                 }
             }
 
         } else {
             triggerVibe() // Vibrate both at the start and end of video recording
             if (isRecording) {
-                activeRecording?.stop()
+                val stopMethod = activeRecording?.javaClass?.getMethod("stop")
+                stopMethod?.invoke(activeRecording)
+                isRecording = false
             } else {
-                videoCaptureUseCase?.let { cap ->
-                    activeRecording = startVideoRecord(cap, context, videoAudioEnabled) { event ->
-
-                        if (event is VideoRecordEvent.Start) isRecording = true
-                        else if (event is VideoRecordEvent.Finalize) {
+                activeRecording = startVideoRecord(
+                    context = context,
+                    camera2Engine = camera2Engine,
+                    audioEnabled = videoAudioEnabled,
+                    onMediaSaved = { bitmap, uri ->
+                        lastCapturedUri = uri
+                        prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                    },
+                    onEvent = { event ->
+                        if (event == "Start") isRecording = true
+                        else if (event == "Finalize") {
                             isRecording = false
-                            val uri = event.outputResults.outputUri
-                            lastCapturedUri = uri
-                            prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
                         }
                     }
-                }
+                )
             }
         }
     }
@@ -726,19 +587,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(isProMode, iso, shutterSpeed, focusDistance, whiteBalance, manualKelvin, isIsoAuto, isShutterAuto, isFocusAuto, camera2Control) {
-        applyProCamera2Settings(
-            camera2Control = camera2Control,
+    LaunchedEffect(isProMode, iso, shutterSpeed, focusDistance, whiteBalance, manualKelvin, isIsoAuto, isShutterAuto, isFocusAuto) {
+        camera2Engine.setProSettings(
             isProMode = isProMode,
             isIsoAuto = isIsoAuto,
+            iso = iso.toInt(),
             isShutterAuto = isShutterAuto,
+            shutterSpeed = shutterSpeed.toLong(),
             isFocusAuto = isFocusAuto,
-            iso = iso,
-            shutterSpeed = shutterSpeed,
             focusDistance = focusDistance,
-            whiteBalance = whiteBalance,
-            manualKelvin = manualKelvin
+            whiteBalance = whiteBalance.toInt(),
+            manualKelvin = manualKelvin.toInt()
         )
+    }
+
+    LaunchedEffect(isNightModeEnabled, isHdrEnabled) {
+        camera2Engine.setSceneMode(isNightModeEnabled, isHdrEnabled)
     }
 
 
@@ -764,9 +628,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             .aspectRatio(animatedAspectRatio)
         ) {
             CameraViewfinder(
-                previewView = previewView,
+                previewView = textureView,
                 uiState = uiState,
                 coroutineScope = coroutineScope,
+                camera2Engine = camera2Engine,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -887,6 +752,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .border(2.dp, focusColor, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                 )
                 LaunchedEffect(focusState, focusOffset) {
+                    if (focusState == FocusState.SUCCESS || focusState == FocusState.FAILED) {
+                        coroutineScope.launch { delay(2000); focusState = FocusState.SEARCHING; showFocusBox = false }
+                    }
                     if (focusState != FocusState.SEARCHING) {
                         kotlinx.coroutines.delay(1000)
                         showFocusBox = false
@@ -975,10 +843,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         onValueChange = {
                             val newIdx = it.toInt()
                             exposureIndex = newIdx
-                            cameraControl?.setExposureCompensationIndex(newIdx)
-                            if (newIdx != 0) {
-                                isProMode = true
-                            }
                         },
                         valueRange = minExposureIndex.toFloat()..maxExposureIndex.toFloat(),
                         modifier = Modifier
@@ -996,7 +860,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .background(Color.Black.copy(alpha = 0.5f))
                         .clickable {
                             exposureIndex = 0
-                            cameraControl?.setExposureCompensationIndex(0)
+                            // cameraControl?.setExposureCompensationIndex(0)
                             showBrightnessSlider = false
                         }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1100,7 +964,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .background(Color.Yellow)
                         .clickable { 
                             isAeAfLocked = false
-                            cameraControl?.cancelFocusAndMetering()
+                            // cameraControl?.cancelFocusAndMetering()
                         }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
@@ -1197,7 +1061,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 context = context,
                 cameraMode = cameraMode,
                 isRecording = isRecording,
-                isFrontCamera = lensFacing == CameraSelector.LENS_FACING_FRONT,
+                isFrontCamera = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT,
                 onThumbnailClick = { showMediaPreviewDialog = true },
                 // Photo mode
                 onShutterTap = { initiateCapture() },
@@ -1220,7 +1084,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 },
                 onSwitchCamera = {
                     if (!isRecording) {
-                        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
+                        lensFacing = if (lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT else android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
                     }
                 }
             )

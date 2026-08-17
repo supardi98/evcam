@@ -4,18 +4,12 @@ package net.supardi.evcam.logic
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
-import androidx.camera.core.CameraControl
-import androidx.camera.core.ImageCapture
-import androidx.camera.video.VideoCapture
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.compose.runtime.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.camera.core.CameraSelector
-import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import android.hardware.camera2.CameraCharacteristics
 
 import androidx.compose.ui.geometry.Offset
 import net.supardi.evcam.*
@@ -28,15 +22,14 @@ class CameraUiState(
 ) {
     var cameraMode by mutableStateOf(CameraMode.PHOTO)
     var isProMode by mutableStateOf(false)
-    var lensFacing by mutableStateOf(CameraSelector.LENS_FACING_BACK)
+    var lensFacing by mutableStateOf(CameraCharacteristics.LENS_FACING_BACK)
     var isRecording by mutableStateOf(false)
-    var activeRecording by mutableStateOf<Recording?>(null)
+    var activeRecording by mutableStateOf<Any?>(null)
     
     var lastCapturedUri by mutableStateOf<Uri?>(null)
     var lastCapturedBitmap by mutableStateOf<android.graphics.Bitmap?>(null)
     
-    var cameraControl by mutableStateOf<CameraControl?>(null)
-    var camera2Control by mutableStateOf<Camera2CameraControl?>(null)
+    // Engine specific properties for manual control
     var iso by mutableFloatStateOf(100f)
     var minIso by mutableFloatStateOf(50f)
     var maxIso by mutableFloatStateOf(3200f)
@@ -127,8 +120,8 @@ class CameraUiState(
     var showFilterDialog by mutableStateOf(false)
     var imageFormat by mutableStateOf(ImageFormatMode.valueOf(prefs.getString("imageFormat", ImageFormatMode.JPEG.name) ?: ImageFormatMode.JPEG.name))
     
-    var imageCaptureUseCase by mutableStateOf<ImageCapture?>(null)
-    var videoCaptureUseCase by mutableStateOf<VideoCapture<Recorder>?>(null)
+    var imageCaptureUseCase by mutableStateOf<Any?>(null)
+    var videoCaptureUseCase by mutableStateOf<Any?>(null)
 }
 
 @Composable

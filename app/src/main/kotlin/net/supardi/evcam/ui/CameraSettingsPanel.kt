@@ -260,7 +260,7 @@ fun ModeSwitchAndProControls(
         
         // PRO Mode Button
         if (uiState.hasManualSensorSupport) {
-            val hasManualPro = !uiState.isIsoAuto || !uiState.isShutterAuto || !uiState.isFocusAuto || uiState.whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO || uiState.exposureIndex != 0
+            val hasManualPro = !uiState.isIsoAuto || !uiState.isShutterAuto || !uiState.isFocusAuto || uiState.whiteBalance != android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
 
             Box(
                 modifier = Modifier
@@ -297,7 +297,6 @@ fun ModeSwitchAndProControls(
                             uiState.isFocusAuto = true
                             uiState.whiteBalance = android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO
                             uiState.exposureIndex = 0
-                            uiState.cameraControl?.setExposureCompensationIndex(0)
                             uiState.isProMode = false
                         },
                     contentAlignment = Alignment.Center

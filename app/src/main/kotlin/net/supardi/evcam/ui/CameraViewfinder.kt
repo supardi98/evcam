@@ -8,8 +8,7 @@ import android.os.Build
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import androidx.camera.core.FocusMeteringAction
-import androidx.camera.view.PreviewView
+import net.supardi.evcam.ui.AutoFitTextureView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -36,12 +35,14 @@ import java.util.concurrent.TimeUnit
 
 @Composable
 fun CameraViewfinder(
-    previewView: PreviewView,
+    previewView: AutoFitTextureView,
     uiState: CameraUiState,
     coroutineScope: CoroutineScope,
+    camera2Engine: Camera2Engine,
     modifier: Modifier = Modifier
 ) {
     var evScrollAnchorY by remember { mutableFloatStateOf(0f) }
+    var isMultiTouch by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
         AndroidView(
@@ -76,7 +77,6 @@ fun CameraViewfinder(
                         override fun onSingleTapUp(e: MotionEvent): Boolean {
                             if (uiState.isAeAfLocked) {
                                 uiState.isAeAfLocked = false
-                                uiState.cameraControl?.cancelFocusAndMetering()
                             }
                             
                             if (uiState.isProMode && !uiState.isFocusAuto) {
@@ -89,32 +89,11 @@ fun CameraViewfinder(
                             uiState.showZoomSlider = true
                             uiState.showBrightnessSlider = true
                             uiState.focusState = FocusState.SEARCHING
-                            
-                            val factory = previewView.meteringPointFactory
-                            val point = factory.createPoint(e.x, e.y)
-                            val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
-                                .setAutoCancelDuration(2, TimeUnit.SECONDS)
-                                .build()
-                            
-                            val future = uiState.cameraControl?.startFocusAndMetering(action)
-                            future?.addListener({
-                                try {
-                                    val result = future.get()
-                                    uiState.focusState = if (result != null && result.isFocusSuccessful) FocusState.SUCCESS else FocusState.FAILED
-                                } catch (exc: Exception) {
-                                    uiState.focusState = FocusState.FAILED
-                                }
-                            }, ContextCompat.getMainExecutor(ctx))
+                            camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
                             return true
                         }
 
                         override fun onLongPress(e: MotionEvent) {
-                            val factory = previewView.meteringPointFactory
-                            val point = factory.createPoint(e.x, e.y)
-                            val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
-                                .disableAutoCancel()
-                                .build()
-                            uiState.cameraControl?.startFocusAndMetering(action)
                             uiState.isAeAfLocked = true
                             uiState.focusOffset = Offset(e.x, e.y)
                             uiState.showFocusBox = true
@@ -139,19 +118,25 @@ fun CameraViewfinder(
                     })
 
                     setOnTouchListener { _, event ->
+                        if (event.pointerCount > 1) {
+                            isMultiTouch = true
+                        }
+                        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                            isMultiTouch = false
+                            evScrollAnchorY = event.y
+                        }
+
                         scaleGestureDetector.onTouchEvent(event)
-                        if (!scaleGestureDetector.isInProgress) {
-                            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                                evScrollAnchorY = event.y
-                            } else if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode) {
+
+                        if (!scaleGestureDetector.isInProgress && !isMultiTouch && event.pointerCount == 1) {
+                            if (event.actionMasked == MotionEvent.ACTION_MOVE && !uiState.isProMode) {
                                 val deltaY = evScrollAnchorY - event.y
-                                val scrollStepThreshold = 50f
+                                val scrollStepThreshold = 80f
                                 val steps = (deltaY / scrollStepThreshold).toInt()
                                 if (steps != 0) {
                                     val newIdx = (uiState.exposureIndex + steps).coerceIn(uiState.minExposureIndex, uiState.maxExposureIndex)
                                     if (newIdx != uiState.exposureIndex) {
                                         uiState.exposureIndex = newIdx
-                                        uiState.cameraControl?.setExposureCompensationIndex(newIdx)
                                         uiState.showBrightnessSlider = true
                                     }
                                     evScrollAnchorY = event.y

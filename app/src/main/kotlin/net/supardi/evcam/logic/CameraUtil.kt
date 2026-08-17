@@ -20,14 +20,6 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.widget.Toast
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.video.MediaStoreOutputOptions
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
-import androidx.camera.video.VideoRecordEvent
 import androidx.core.content.ContextCompat
 import net.supardi.evcam.*
 import java.io.File
@@ -76,9 +68,8 @@ fun formatDateElement(format: String): String {
 }
 
 fun takePhoto(
-    imageCapture: ImageCapture, 
-    context: Context, 
-    executor: Executor,
+    context: Context,
+    camera2Engine: Camera2Engine,
     flashMode: FlashMode,
     selectedFilter: ColorFilterMode,
     showWatermark: Boolean,
@@ -88,214 +79,275 @@ fun takePhoto(
     enableGeotagging: Boolean,
     enableRawCapture: Boolean,
     aspectRatioMode: AspectRatioMode,
+    deviceRotation: Int,
     onPhotoSaved: (Bitmap, Uri) -> Unit
 ) {
-    if (enableRawCapture) {
-        Toast.makeText(context, "RAW Capture is enabled (Saving as DNG is experimental)", Toast.LENGTH_SHORT).show()
-    }
-    
-    val targetFlash = when (flashMode) {
-        FlashMode.ON -> ImageCapture.FLASH_MODE_ON
-        FlashMode.OFF -> ImageCapture.FLASH_MODE_OFF
-        FlashMode.AUTO -> ImageCapture.FLASH_MODE_AUTO
-    }
-    imageCapture.flashMode = targetFlash
+    camera2Engine.takePhoto(flashMode) { image ->
+        val buffer = image.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        var bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        image.close()
 
-    imageCapture.takePicture(
-        executor,
-        object : ImageCapture.OnImageCapturedCallback() {
-            override fun onCaptureSuccess(image: ImageProxy) {
-                try {
-                    var bitmap = image.toBitmap()
-                    image.close()
-                    
-                    if (selectedFilter != ColorFilterMode.NORMAL) {
-                        try {
-                            val filteredBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
-                            val canvas = Canvas(filteredBitmap)
-                            val paint = Paint().apply {
-                                colorFilter = android.graphics.ColorMatrixColorFilter(selectedFilter.matrixValues)
-                            }
-                            canvas.drawBitmap(bitmap, 0f, 0f, paint)
-                            bitmap = filteredBitmap
-                        } catch (e: Exception) {}
-                    }
-                    
-                    if (aspectRatioMode == AspectRatioMode.RATIO_1_1) {
-                        val size = Math.min(bitmap.width, bitmap.height)
-                        val cropX = (bitmap.width - size) / 2
-                        val cropY = (bitmap.height - size) / 2
-                        bitmap = Bitmap.createBitmap(bitmap, cropX, cropY, size, size)
-                    }
-                    
-                    var location: Location? = null
-                    if (enableGeotagging && ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
-                        location = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER) 
-                            ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
-                    }
-                    
-                    val resultBitmap = if (showWatermark) {
-                        val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-                        val canvas = Canvas(mutableBitmap)
-                        val paint = Paint().apply {
-                            color = Color.WHITE
-                            isAntiAlias = true
-                            setShadowLayer(5f, 2f, 2f, Color.BLACK)
-                        }
-                        
-                        val marginX = bitmap.width * 0.05f
-                        val marginY = bitmap.height * 0.05f
-                        val textSize = bitmap.height * 0.03f
-                        val lineSpacing = textSize * 1.2f
-                        paint.textSize = textSize
-                        
-                        WatermarkQuadrant.values().forEach { quadrant ->
-                            val elements = watermarkElements.filter { it.quadrant == quadrant }
-                            if (elements.isNotEmpty()) {
-                                var currentY = when (quadrant) {
-                                    WatermarkQuadrant.TOP_LEFT, WatermarkQuadrant.TOP_RIGHT -> marginY + textSize
-                                    WatermarkQuadrant.BOTTOM_LEFT, WatermarkQuadrant.BOTTOM_RIGHT -> bitmap.height - marginY
-                                }
-                                
-                                val quadrantElements = if (quadrant == WatermarkQuadrant.BOTTOM_LEFT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT) elements.reversed() else elements
-                                val maxTextWidth = (bitmap.width * 0.45f).toInt()
-                                val textPaint = TextPaint(paint)
-                                
-                                quadrantElements.forEach { element ->
-                                    val text = when (element.type) {
-                                        WatermarkElementType.TEXT -> element.content
-                                        WatermarkElementType.LOCATION -> formatLocationElement(element.content, location ?: liveLocation, liveAddress)
-                                        WatermarkElementType.DATE -> formatDateElement(element.content)
-                                    }
-                                    
-                                    textPaint.textSize = textSize * (element.size / 14f)
-                                    
-                                    val alignment = when (quadrant) {
-                                        WatermarkQuadrant.TOP_LEFT, WatermarkQuadrant.BOTTOM_LEFT -> Layout.Alignment.ALIGN_NORMAL
-                                        WatermarkQuadrant.TOP_RIGHT, WatermarkQuadrant.BOTTOM_RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
-                                    }
-                                    
-                                    val layout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                        StaticLayout.Builder.obtain(text, 0, text.length, textPaint, maxTextWidth).setAlignment(alignment).build()
-                                    } else {
-                                        @Suppress("DEPRECATION")
-                                        StaticLayout(text, textPaint, maxTextWidth, alignment, 1.0f, 0.0f, false)
-                                    }
-                                    
-                                    val currentX = when (quadrant) {
-                                        WatermarkQuadrant.TOP_LEFT, WatermarkQuadrant.BOTTOM_LEFT -> marginX
-                                        WatermarkQuadrant.TOP_RIGHT, WatermarkQuadrant.BOTTOM_RIGHT -> bitmap.width - marginX - maxTextWidth
-                                    }
-                                    
-                                    if (quadrant == WatermarkQuadrant.BOTTOM_LEFT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT) {
-                                        currentY -= layout.height
-                                    }
-                                    
-                                    canvas.save()
-                                    canvas.translate(currentX, currentY)
-                                    layout.draw(canvas)
-                                    canvas.restore()
-                                    
-                                    if (quadrant == WatermarkQuadrant.TOP_LEFT || quadrant == WatermarkQuadrant.TOP_RIGHT) {
-                                        currentY += layout.height + lineSpacing
-                                    } else {
-                                        currentY -= lineSpacing
-                                    }
-                                }
-                            }
-                        }
-                        mutableBitmap
-                    } else bitmap
-                    
-                    val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
-                    val contentValues = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/evcam")
-                        }
-                    }
-                    val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                    if (uri != null) {
-                        context.contentResolver.openOutputStream(uri)?.use { out ->
-                            resultBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-                        }
-                        if (enableGeotagging && location != null) {
-                            context.contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
-                                val exif = android.media.ExifInterface(pfd.fileDescriptor)
-                                fun convertLocationToExifFormat(coord: Double): String {
-                                    val absCoord = Math.abs(coord)
-                                    val degree = absCoord.toInt()
-                                    val minute = ((absCoord - degree) * 60).toInt()
-                                    val second = (((absCoord - degree) * 60) - minute) * 60
-                                    return "$degree/1,$minute/1,${(second * 1000).toInt()}/1000"
-                                }
-                                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE, convertLocationToExifFormat(location.latitude))
-                                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE_REF, if (location.latitude > 0) "N" else "S")
-                                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE, convertLocationToExifFormat(location.longitude))
-                                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE_REF, if (location.longitude > 0) "E" else "W")
-                                exif.saveAttributes()
-                            }
-                        }
-                        
-                        Handler(Looper.getMainLooper()).post {
-                            onPhotoSaved(resultBitmap, uri)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("Evcam", "Failed to save photo", e)
-                }
+        val chars = camera2Engine.cameraManager.getCameraCharacteristics(camera2Engine.cameraDevice!!.id)
+        val sensorOrientation = chars.get(android.hardware.camera2.CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
+        
+        val normalizedRotation = (deviceRotation % 360 + 360) % 360
+        val surfaceRotation = when {
+            normalizedRotation < 45 || normalizedRotation >= 315 -> 0
+            normalizedRotation < 135 -> 90
+            normalizedRotation < 225 -> 180
+            else -> 270
+        }
+        val facing = chars.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)
+        val rotation = if (facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) {
+            (sensorOrientation + surfaceRotation) % 360
+        } else {
+            (sensorOrientation - surfaceRotation + 360) % 360
+        }
+
+        if (rotation != 0) {
+            val matrix = android.graphics.Matrix()
+            matrix.postRotate(rotation.toFloat())
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }
+
+        // Apply Aspect Ratio Crop
+        val currentAspect = bitmap.width.toFloat() / bitmap.height.toFloat()
+        val targetAspect = when (aspectRatioMode) {
+            AspectRatioMode.RATIO_1_1 -> 1f
+            AspectRatioMode.RATIO_4_3 -> if (bitmap.width > bitmap.height) 4f / 3f else 3f / 4f
+            AspectRatioMode.RATIO_16_9 -> if (bitmap.width > bitmap.height) 16f / 9f else 9f / 16f
+        }
+
+        if (kotlin.math.abs(currentAspect - targetAspect) > 0.02f) {
+            var cropWidth = bitmap.width
+            var cropHeight = bitmap.height
+
+            if (currentAspect > targetAspect) {
+                cropWidth = (bitmap.height * targetAspect).toInt()
+            } else {
+                cropHeight = (bitmap.width / targetAspect).toInt()
             }
 
-            override fun onError(exception: ImageCaptureException) {
-                Log.e("Evcam", "Photo capture failed", exception)
+            val cropX = ((bitmap.width - cropWidth) / 2).coerceAtLeast(0)
+            val cropY = ((bitmap.height - cropHeight) / 2).coerceAtLeast(0)
+
+            if (cropWidth > 0 && cropHeight > 0 && (cropX + cropWidth <= bitmap.width) && (cropY + cropHeight <= bitmap.height)) {
+                bitmap = Bitmap.createBitmap(bitmap, cropX, cropY, cropWidth, cropHeight)
             }
         }
-    )
+
+        if (selectedFilter != ColorFilterMode.NORMAL) {
+            val filterMatrix = android.graphics.ColorMatrix()
+            when (selectedFilter) {
+                ColorFilterMode.MONO -> filterMatrix.setSaturation(0f)
+                ColorFilterMode.WARM -> {
+                    filterMatrix.set(floatArrayOf(
+                        1.1f, 0f,   0f,   0f, 0f,
+                        0f,   0.9f, 0f,   0f, 0f,
+                        0f,   0f,   0.8f, 0f, 0f,
+                        0f,   0f,   0f,   1f, 0f
+                    ))
+                }
+                ColorFilterMode.COLD -> {
+                    filterMatrix.set(floatArrayOf(
+                        0.8f, 0f,   0f,   0f, 0f,
+                        0f,   0.9f, 0f,   0f, 0f,
+                        0f,   0f,   1.2f, 0f, 0f,
+                        0f,   0f,   0f,   1f, 0f
+                    ))
+                }
+                ColorFilterMode.VINTAGE -> {
+                    filterMatrix.setSaturation(0.5f)
+                    val contrast = android.graphics.ColorMatrix(floatArrayOf(
+                        1.2f, 0f, 0f, 0f, 0f,
+                        0f, 1.2f, 0f, 0f, 0f,
+                        0f, 0f, 1.2f, 0f, 0f,
+                        0f, 0f, 0f, 1f, 0f
+                    ))
+                    filterMatrix.postConcat(contrast)
+                }
+                else -> {}
+            }
+            val filteredBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
+            val canvas = Canvas(filteredBitmap)
+            val paint = Paint().apply {
+                colorFilter = android.graphics.ColorMatrixColorFilter(filterMatrix)
+            }
+            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+            bitmap = filteredBitmap
+        }
+
+        if (showWatermark && watermarkElements.isNotEmpty()) {
+            val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+            val canvas = Canvas(mutableBitmap)
+            val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                setShadowLayer(5f, 0f, 0f, Color.BLACK)
+            }
+            
+            val padding = 32f
+            
+            WatermarkQuadrant.values().forEach { quadrant ->
+                val elements = watermarkElements.filter { it.quadrant == quadrant }
+                if (elements.isNotEmpty()) {
+                    var yOffset = if (quadrant == WatermarkQuadrant.TOP_LEFT || quadrant == WatermarkQuadrant.TOP_RIGHT) padding else mutableBitmap.height - padding
+                    val isBottom = quadrant == WatermarkQuadrant.BOTTOM_LEFT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT
+                    val isRight = quadrant == WatermarkQuadrant.TOP_RIGHT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT
+
+                    val drawElements = if (isBottom) elements.reversed() else elements
+
+                    for (element in drawElements) {
+                        paint.textSize = element.size * 4f
+                        paint.textAlign = if (isRight) Paint.Align.RIGHT else Paint.Align.LEFT
+                        
+                        val text = when (element.type) {
+                            WatermarkElementType.TEXT -> element.content
+                            WatermarkElementType.LOCATION -> formatLocationElement(element.content, liveLocation, liveAddress)
+                            WatermarkElementType.DATE -> formatDateElement(element.content)
+                        }
+                        
+                        if (isBottom) {
+                            yOffset -= paint.descent() - paint.ascent()
+                        }
+                        
+                        val x = if (isRight) mutableBitmap.width - padding else padding
+                        canvas.drawText(text, x, yOffset - paint.ascent(), paint)
+                        
+                        if (!isBottom) {
+                            yOffset += paint.descent() - paint.ascent()
+                        }
+                    }
+                }
+            }
+            bitmap = mutableBitmap
+        }
+
+        val filename = "IMG_${System.currentTimeMillis()}.jpg"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/EVCam")
+            }
+        }
+        Log.d("EVCAM", "Inserting image to MediaStore: $filename")
+        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        Log.d("EVCAM", "MediaStore insert result uri=$uri")
+        if (uri != null) {
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                val compressed = bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                Log.d("EVCAM", "Compressed bitmap write result=$compressed")
+            }
+            Handler(Looper.getMainLooper()).post {
+                Log.d("EVCAM", "Calling onPhotoSaved with uri=$uri")
+                onPhotoSaved(bitmap, uri)
+            }
+        } else {
+            Log.e("EVCAM", "MediaStore insert returned NULL uri!")
+        }
+    }
 }
 
 @android.annotation.SuppressLint("MissingPermission")
 fun startVideoRecord(
-    videoCapture: VideoCapture<Recorder>,
     context: Context,
+    camera2Engine: Camera2Engine,
     audioEnabled: Boolean,
-    onEvent: (VideoRecordEvent) -> Unit
-): Recording {
-    val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
-    val contentValues = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-        put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-            put(MediaStore.Video.Media.RELATIVE_PATH, "DCIM/Camera")
+    onMediaSaved: (Bitmap, Uri) -> Unit,
+    onEvent: (Any) -> Unit
+): Any? {
+    val tempFile = File(context.cacheDir, "temp_vid_${System.currentTimeMillis()}.mp4").absolutePath
+    camera2Engine.setupMediaRecorder(width = 1920, height = 1080, fps = 30, audioEnabled = audioEnabled, outputFile = tempFile)
+    
+    Log.d("EVCAM", "startVideoRecord called with file=$tempFile")
+    camera2Engine.startRecording {
+        Log.d("EVCAM", "Video recording started event received")
+        onEvent("Start")
+    }
+
+    return object {
+        fun stop() {
+            camera2Engine.stopRecording {
+                val fileObj = File(tempFile)
+                Log.d("EVCAM", "stopRecording callback executed, tempFile exists=${fileObj.exists()}, size=${fileObj.length()}")
+                
+                val filename = "VID_${System.currentTimeMillis()}.mp4"
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, "Movies/EVCam")
+                    }
+                }
+                val uri = context.contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    if (fileObj.exists() && fileObj.length() > 0) {
+                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                            fileObj.inputStream().use { input ->
+                                input.copyTo(out)
+                            }
+                        }
+                    } else {
+                        Log.e("EVCAM", "tempFile is empty or does not exist!")
+                    }
+
+                    // Generate video thumbnail for mini-preview
+                    val thumbBitmap = try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            android.media.ThumbnailUtils.createVideoThumbnail(fileObj, android.util.Size(300, 300), null)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            android.media.ThumbnailUtils.createVideoThumbnail(tempFile, MediaStore.Images.Thumbnails.MINI_KIND)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("EVCAM", "Failed creating video thumbnail", e)
+                        null
+                    }
+
+                    if (fileObj.exists()) fileObj.delete()
+
+                    Handler(Looper.getMainLooper()).post {
+                        if (thumbBitmap != null) {
+                            onMediaSaved(thumbBitmap, uri)
+                        }
+                        onEvent("Finalize")
+                    }
+                }
+            }
         }
     }
-
-    val mediaStoreOutputOptions = MediaStoreOutputOptions
-        .Builder(context.contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
-        .setContentValues(contentValues)
-        .build()
-
-    val pendingRecording = videoCapture.output
-        .prepareRecording(context, mediaStoreOutputOptions)
-        
-    if (audioEnabled && ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-        pendingRecording.withAudioEnabled()
-    }
-
-    return pendingRecording.start(ContextCompat.getMainExecutor(context), onEvent)
 }
 
 fun fetchLatestMediaUri(context: android.content.Context): android.net.Uri? {
     try {
-        val projection = arrayOf(android.provider.MediaStore.Images.Media._ID)
-        val sortOrder = "${android.provider.MediaStore.Images.Media.DATE_ADDED} DESC"
-        val queryUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        context.contentResolver.query(queryUri, projection, null, null, sortOrder)?.use { cursor ->
+        val proj = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DATE_ADDED)
+        val sortOrder = "${MediaStore.MediaColumns.DATE_ADDED} DESC"
+
+        var latestImgId = -1L
+        var latestImgTime = -1L
+        var latestVidId = -1L
+        var latestVidTime = -1L
+
+        context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, proj, null, null, sortOrder)?.use { cursor ->
             if (cursor.moveToFirst()) {
-                val id = cursor.getLong(cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media._ID))
-                return android.content.ContentUris.withAppendedId(queryUri, id)
+                latestImgId = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
+                latestImgTime = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED))
             }
+        }
+
+        context.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, proj, null, null, sortOrder)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                latestVidId = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
+                latestVidTime = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED))
+            }
+        }
+
+        if (latestVidTime > latestImgTime && latestVidId != -1L) {
+            return android.content.ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, latestVidId)
+        } else if (latestImgId != -1L) {
+            return android.content.ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, latestImgId)
         }
     } catch (e: Exception) {
         e.printStackTrace()
