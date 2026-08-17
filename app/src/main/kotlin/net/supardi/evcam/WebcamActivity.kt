@@ -276,7 +276,7 @@ fun WebcamDedicatedScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "⚡ $transferSpeedText",
+                                    text = transferSpeedText,
                                     color = Color.Yellow,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp
@@ -296,7 +296,7 @@ fun WebcamDedicatedScreen(
                     border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("⚙️ Stream Video Configuration", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Stream Video Configuration", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // 1. Resolution Selection
@@ -348,7 +348,7 @@ fun WebcamDedicatedScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val orientations = listOf("LANDSCAPE" to "🖼️ Landscape (16:9)", "PORTRAIT" to "📱 Portrait (9:16)")
+                            val orientations = listOf("LANDSCAPE" to "Landscape (16:9)", "PORTRAIT" to "Portrait (9:16)")
                             orientations.forEach { (mode, label) ->
                                 val isSelected = orientation == mode
                                 Surface(
@@ -485,7 +485,7 @@ fun WebcamDedicatedScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("🔋 Black Screen Power Saving", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Black Screen Power Saving", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Text(
                                 "Turn off screen preview to reduce heat and save maximum battery during live streaming.",
                                 color = Color.LightGray,
