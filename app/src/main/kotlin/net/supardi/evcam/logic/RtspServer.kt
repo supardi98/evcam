@@ -111,20 +111,56 @@ class RtspServer(
                 val inputBuffer = codec.getInputBuffer(inputIndex) ?: return
                 inputBuffer.clear()
 
-                val yBuffer = image.planes[0].buffer
-                val uBuffer = image.planes[1].buffer
-                val vBuffer = image.planes[2].buffer
-                val ySize = yBuffer.remaining()
-                val uSize = uBuffer.remaining()
-                val vSize = vBuffer.remaining()
+                val width = image.width
+                val height = image.height
+                val yPlane = image.planes[0]
+                val uPlane = image.planes[1]
+                val vPlane = image.planes[2]
 
-                val bytes = ByteArray(ySize + uSize + vSize)
-                yBuffer.get(bytes, 0, ySize)
-                vBuffer.get(bytes, ySize, vSize)
-                uBuffer.get(bytes, ySize + vSize, uSize)
+                val yBuffer = yPlane.buffer
+                val uBuffer = uPlane.buffer
+                val vBuffer = vPlane.buffer
 
-                inputBuffer.put(bytes, 0, Math.min(bytes.size, inputBuffer.capacity()))
-                codec.queueInputBuffer(inputIndex, 0, Math.min(bytes.size, inputBuffer.capacity()), System.nanoTime() / 1000, 0)
+                val nv12 = ByteArray(width * height * 3 / 2)
+                var position = 0
+
+                // Copy Y plane line by line
+                val yRowStride = yPlane.rowStride
+                val yPixelStride = yPlane.pixelStride
+                for (row in 0 until height) {
+                    if (yPixelStride == 1) {
+                        yBuffer.position(row * yRowStride)
+                        yBuffer.get(nv12, position, width)
+                        position += width
+                    } else {
+                        yBuffer.position(row * yRowStride)
+                        for (col in 0 until width) {
+                            nv12[position++] = yBuffer.get()
+                        }
+                    }
+                }
+
+                // Interleave UV planes for NV12
+                val uvRowStride = uPlane.rowStride
+                val uvPixelStride = uPlane.pixelStride
+                val uvHeight = height / 2
+                val uvWidth = width / 2
+
+                for (row in 0 until uvHeight) {
+                    val uRowPos = row * uvRowStride
+                    val vRowPos = row * vPlane.rowStride
+                    for (col in 0 until uvWidth) {
+                        val uVal = uBuffer.get(uRowPos + col * uvPixelStride)
+                        val vVal = vBuffer.get(vRowPos + col * vPlane.pixelStride)
+                        if (position < nv12.size - 1) {
+                            nv12[position++] = uVal
+                            nv12[position++] = vVal
+                        }
+                    }
+                }
+
+                inputBuffer.put(nv12, 0, Math.min(nv12.size, inputBuffer.capacity()))
+                codec.queueInputBuffer(inputIndex, 0, Math.min(nv12.size, inputBuffer.capacity()), System.nanoTime() / 1000, 0)
             }
 
             val bufferInfo = MediaCodec.BufferInfo()
@@ -140,22 +176,52 @@ class RtspServer(
                         Log.d("EVCAM_RTSP", "H.264 SPS/PPS Codec Config captured: ${h264Data.size} bytes")
                     } else {
                         val isKeyFrame = (bufferInfo.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0
+                        val nalUnits = splitAnnexBNals(h264Data)
                         clients.forEach { client ->
                             if (isKeyFrame && spsPpsBuffer != null) {
-                                client.sendRtpNalUnit(spsPpsBuffer!!, bufferInfo.presentationTimeUs)
+                                val configNals = splitAnnexBNals(spsPpsBuffer!!)
+                                configNals.forEach { client.sendRtpNalUnit(it, bufferInfo.presentationTimeUs) }
                             }
-                            client.sendRtpNalUnit(h264Data, bufferInfo.presentationTimeUs)
+                            nalUnits.forEach { client.sendRtpNalUnit(it, bufferInfo.presentationTimeUs) }
                         }
                     }
                 }
                 codec.releaseOutputBuffer(outputIndex, false)
                 outputIndex = codec.dequeueOutputBuffer(bufferInfo, 0)
             }
-
         } catch (e: Exception) {
             Log.e("EVCAM_RTSP", "Error encoding YUV to H264 NAL", e)
         }
     }
+
+    private fun splitAnnexBNals(data: ByteArray): List<ByteArray> {
+        val nals = mutableListOf<ByteArray>()
+        val offsets = mutableListOf<Int>()
+        var i = 0
+        while (i < data.size - 3) {
+            if (data[i] == 0.toByte() && data[i + 1] == 0.toByte() && data[i + 2] == 0.toByte() && data[i + 3] == 1.toByte()) {
+                offsets.add(i + 4)
+                i += 4
+            } else if (data[i] == 0.toByte() && data[i + 1] == 0.toByte() && data[i + 2] == 1.toByte()) {
+                offsets.add(i + 3)
+                i += 3
+            } else {
+                i++
+            }
+        }
+
+        for (j in 0 until offsets.size) {
+            val start = offsets[j]
+            val end = if (j < offsets.size - 1) offsets[j + 1] - (if (data[offsets[j + 1] - 4] == 0.toByte()) 4 else 3) else data.size
+            if (end > start) {
+                val nal = ByteArray(end - start)
+                System.arraycopy(data, start, nal, 0, end - start)
+                nals.add(nal)
+            }
+        }
+        return if (nals.isNotEmpty()) nals else listOf(data)
+    }
+
 
     @Volatile
     private var spsPpsBuffer: ByteArray? = null
