@@ -252,7 +252,8 @@ class Camera2Engine(private val context: Context) {
         imageReader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 2)
         
         analysisImageReader?.close()
-        analysisImageReader = ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 2)
+        analysisImageReader = ImageReader.newInstance(640, 360, ImageFormat.YUV_420_888, 2)
+
 
 
     }
