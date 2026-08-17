@@ -159,7 +159,14 @@ fun DialogContainers(
             isStreaming = uiState.isWebcamStreaming,
             serverIp = uiState.webcamServerIp,
             port = uiState.webcamHttpPort,
-            connectedClients = uiState.connectedWebcamClients,
+            webcamWidth = uiState.webcamResolutionWidth,
+            webcamHeight = uiState.webcamResolutionHeight,
+            onWebcamResolutionChange = { w, h ->
+                uiState.webcamResolutionWidth = w
+                uiState.webcamResolutionHeight = h
+            },
+            webcamOrientation = uiState.webcamOrientation,
+            onWebcamOrientationChange = { uiState.webcamOrientation = it },
             enableHttpMjpeg = uiState.enableHttpMjpeg,
             onEnableHttpMjpegChange = { uiState.enableHttpMjpeg = it },
             enableHttpSnapshot = uiState.enableHttpSnapshot,

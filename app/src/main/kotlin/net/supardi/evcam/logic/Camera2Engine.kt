@@ -247,12 +247,12 @@ class Camera2Engine(private val context: Context) {
         }
     }
 
-    fun setupImageReader(width: Int = 1920, height: Int = 1080) {
+    fun setupImageReader(width: Int = 1920, height: Int = 1080, streamWidth: Int = 1280, streamHeight: Int = 720) {
         imageReader?.close()
         imageReader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 2)
         
         analysisImageReader?.close()
-        analysisImageReader = ImageReader.newInstance(1280, 720, ImageFormat.YUV_420_888, 2)
+        analysisImageReader = ImageReader.newInstance(streamWidth, streamHeight, ImageFormat.YUV_420_888, 2)
     }
 
     private var lastRecordedWidth = 1920

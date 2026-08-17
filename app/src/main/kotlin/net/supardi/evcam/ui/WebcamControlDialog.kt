@@ -45,6 +45,11 @@ fun WebcamControlDialog(
     serverIp: String,
     port: Int,
     connectedClients: Int,
+    webcamWidth: Int,
+    webcamHeight: Int,
+    onWebcamResolutionChange: (Int, Int) -> Unit,
+    webcamOrientation: String,
+    onWebcamOrientationChange: (String) -> Unit,
     enableHttpMjpeg: Boolean,
     onEnableHttpMjpegChange: (Boolean) -> Unit,
     enableHttpSnapshot: Boolean,
@@ -138,7 +143,81 @@ fun WebcamControlDialog(
                     }
                 }
             } else {
-                Spacer(modifier = Modifier.height(8.dp))
+            // Stream Video Format & Orientation Configuration
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White.copy(alpha = 0.05f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("⚙️ Stream Video Configuration", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 1. Resolution Selection
+                    Text("Resolution Quality", color = Color.LightGray, fontSize = 11.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val resolutions = listOf(
+                            Triple("1080p (FHD)", 1920, 1080),
+                            Triple("720p (HD)", 1280, 720),
+                            Triple("480p (SD)", 640, 480)
+                        )
+                        resolutions.forEach { (label, w, h) ->
+                            val isSelected = webcamWidth == w && webcamHeight == h
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Color.Yellow else Color.DarkGray,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onWebcamResolutionChange(w, h) }
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 2. Orientation Selection
+                    Text("Stream Orientation", color = Color.LightGray, fontSize = 11.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val orientations = listOf("LANDSCAPE" to "🖼️ Landscape (16:9)", "PORTRAIT" to "📱 Portrait (9:16)")
+                        orientations.forEach { (mode, label) ->
+                            val isSelected = webcamOrientation == mode
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) Color(0xFF00E676) else Color.DarkGray,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onWebcamOrientationChange(mode) }
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Error Dialog Alert Box

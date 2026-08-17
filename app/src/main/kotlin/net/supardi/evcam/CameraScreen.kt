@@ -252,6 +252,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     val rtspServer = remember { RtspServer(8554) }
     val webRtcServer = remember { WebRtcServer(9090) }
 
+    LaunchedEffect(uiState.webcamResolutionWidth, uiState.webcamResolutionHeight) {
+        camera2Engine.setupImageReader(1920, 1080, uiState.webcamResolutionWidth, uiState.webcamResolutionHeight)
+    }
+
     val isHttpActive = uiState.enableHttpMjpeg || uiState.enableHttpSnapshot
 
     LaunchedEffect(isHttpActive) {
