@@ -845,12 +845,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             }
                         },
                         drawBlock = {
+                            // In rotated canvas space (90°):
+                            // bitmapW = YUV frame width (360), bitmapH = YUV frame height (640).
+                            // Screen container portrait dimensions: size.width (e.g. 1080), size.height (e.g. 1440 for 4:3, 1080 for 16:9, 1080 for 1:1).
+                            // In rotated space, the container height is size.width and container width is size.height.
+                            // Container aspect ratio in rotated bitmap space (H/W) = size.height / size.width.
                             val bitmapW = peakingBitmap!!.width.toFloat()
                             val bitmapH = peakingBitmap!!.height.toFloat()
-                            val containerAspect = size.width / size.height // e.g., 4/3, 16/9, 1/1
-
-                            val targetBitmapAspect = containerAspect
-                            val currentBitmapAspect = bitmapH / bitmapW
+                            val targetBitmapAspect = size.height / size.width // 1440/1080 = 1.333 (4:3), 1920/1080 = 1.777 (16:9), 1080/1080 = 1.0 (1:1)
+                            val currentBitmapAspect = bitmapH / bitmapW       // 640/360 = 1.777 (16:9)
 
                             var srcX = 0
                             var srcY = 0
@@ -858,12 +861,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             var srcH = bitmapH.toInt()
 
                             if (currentBitmapAspect > targetBitmapAspect) {
+                                // 16:9 bitmap (1.777) is taller than target (1.333 for 4:3 or 1.0 for 1:1)
+                                // Crop top and bottom of rotated YUV frame matching AutoFitTextureView
                                 srcH = (bitmapW * targetBitmapAspect).toInt()
                                 srcY = ((bitmapH - srcH) / 2f).toInt()
                             } else if (currentBitmapAspect < targetBitmapAspect) {
                                 srcW = (bitmapH / targetBitmapAspect).toInt()
                                 srcX = ((bitmapW - srcW) / 2f).toInt()
                             }
+
 
                             val drawW = size.height.toInt()
                             val drawH = size.width.toInt()
