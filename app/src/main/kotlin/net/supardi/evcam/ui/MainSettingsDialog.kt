@@ -257,6 +257,14 @@ fun SettingsPanel(
                 Text("IP Webcam & Live Stream", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.height(4.dp))
+            Button(
+                onClick = onOpenCameraInfo,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+            ) {
+                Text("Hardware Camera Info", color = Color.White, fontSize = 12.sp)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             // System Hardware Resource Performance Card
             SystemHardwareCard()
 
