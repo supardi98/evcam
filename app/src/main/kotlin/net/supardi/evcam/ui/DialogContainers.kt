@@ -153,42 +153,4 @@ fun DialogContainers(
     if (uiState.showCameraInfoDialog) {
         CameraInfoDialog(onDismiss = { uiState.showCameraInfoDialog = false })
     }
-
-    if (uiState.showWebcamDialog) {
-        WebcamControlDialog(
-            isStreaming = uiState.isWebcamStreaming,
-            serverIp = uiState.webcamServerIp,
-            port = uiState.webcamHttpPort,
-            connectedClients = uiState.connectedWebcamClients,
-            webcamWidth = uiState.webcamResolutionWidth,
-            webcamHeight = uiState.webcamResolutionHeight,
-            onWebcamResolutionChange = { w, h ->
-                uiState.webcamResolutionWidth = w
-                uiState.webcamResolutionHeight = h
-            },
-            webcamOrientation = uiState.webcamOrientation,
-            onWebcamOrientationChange = { uiState.webcamOrientation = it },
-            enableHttpMjpeg = uiState.enableHttpMjpeg,
-            onEnableHttpMjpegChange = { uiState.enableHttpMjpeg = it },
-            enableHttpSnapshot = uiState.enableHttpSnapshot,
-            onEnableHttpSnapshotChange = { uiState.enableHttpSnapshot = it },
-            enableRtspStream = uiState.enableRtspStream,
-            onEnableRtspStreamChange = { uiState.enableRtspStream = it },
-            enableWebRtc = uiState.enableWebRtc,
-            onEnableWebRtcChange = { uiState.enableWebRtc = it },
-            enableBlackScreenPowerSaving = uiState.enableBlackScreenPowerSaving,
-            onEnableBlackScreenPowerSavingChange = { uiState.enableBlackScreenPowerSaving = it },
-            onStartProtocol = { _ ->
-                uiState.isWebcamStreaming = true
-            },
-            onStopProtocol = { _ ->
-                if (!uiState.enableHttpMjpeg && !uiState.enableHttpSnapshot && !uiState.enableRtspStream && !uiState.enableWebRtc) {
-                    uiState.isWebcamStreaming = false
-                }
-            },
-            onClose = { uiState.showWebcamDialog = false }
-        )
-    }
-
-
 }
