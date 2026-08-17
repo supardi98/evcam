@@ -53,9 +53,24 @@ object Camera2Helper {
         return list.distinct().sorted()
     }
 
+    fun getShutterRange(chars: CameraCharacteristics): Pair<Float, Float>? {
+        val range = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) ?: return null
+        return Pair(range.lower.toFloat(), range.upper.toFloat())
+    }
+
+    fun getMinimumFocusDistance(chars: CameraCharacteristics): Float {
+        return chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+    }
+
+    fun getSupportedAwbModes(chars: CameraCharacteristics): List<Int> {
+        val modes = chars.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES) ?: return emptyList()
+        return modes.toList()
+    }
+
     fun getSupportedVideoResolutions(chars: CameraCharacteristics): List<Size> {
         val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return emptyList()
         val sizes = map.getOutputSizes(android.media.MediaRecorder::class.java) ?: emptyArray()
         return sizes.toList().sortedByDescending { it.width * it.height }
     }
 }
+

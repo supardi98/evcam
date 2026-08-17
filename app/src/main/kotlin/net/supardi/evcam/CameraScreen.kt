@@ -453,6 +453,34 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 uiState.videoFps = fpsList.firstOrNull() ?: VideoFpsMode.FPS_30
             }
 
+            // Query hardware characteristics for ISO, Shutter, Focus, and AWB
+            try {
+                val activeId = (cameraState as Camera2Engine.CameraState.Opened).device.id
+                val chars = camera2Engine.cameraManager.getCameraCharacteristics(activeId)
+
+                Camera2Helper.getIsoRange(chars)?.let { (min, max) ->
+                    uiState.minIso = min
+                    uiState.maxIso = max
+                }
+
+                Camera2Helper.getShutterRange(chars)?.let { (min, max) ->
+                    uiState.minShutterSpeed = min
+                    uiState.maxShutterSpeed = max
+                }
+
+                val minFocusDist = Camera2Helper.getMinimumFocusDistance(chars)
+                if (minFocusDist > 0f) {
+                    uiState.maxFocusDistance = minFocusDist
+                }
+
+                val awbModes = Camera2Helper.getSupportedAwbModes(chars)
+                if (awbModes.isNotEmpty()) {
+                    uiState.supportedAwbModes = awbModes
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("EVCAM", "Failed to query hardware characteristics", e)
+            }
+
             val device = (cameraState as Camera2Engine.CameraState.Opened).device
 
             // Encapsulate preview session creation so it can be re-called with different

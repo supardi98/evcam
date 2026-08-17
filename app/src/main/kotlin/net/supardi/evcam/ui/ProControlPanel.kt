@@ -37,10 +37,13 @@ fun ProControlPanel(
     onIsoChange: (Float) -> Unit,
     onIsoAutoToggle: () -> Unit,
     shutterSpeed: Float,
+    minShutterSpeed: Float = 100000f,
+    maxShutterSpeed: Float = 1000000000f,
     isShutterAuto: Boolean,
     onShutterChange: (Float) -> Unit,
     onShutterAutoToggle: () -> Unit,
     focusDistance: Float,
+    maxFocusDistance: Float = 10f,
     isFocusAuto: Boolean,
     onFocusChange: (Float) -> Unit,
     onFocusAutoToggle: () -> Unit,
@@ -52,6 +55,7 @@ fun ProControlPanel(
     isHdrEnabled: Boolean = false,
     isNightModeEnabled: Boolean = false
 ) {
+
     val isSceneLocked = isHdrEnabled || isNightModeEnabled
     val sceneName = when {
         isHdrEnabled -> "HDR"
@@ -113,7 +117,12 @@ fun ProControlPanel(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
                 Text("SHT", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-                Slider(value = shutterSpeed, onValueChange = onShutterChange, valueRange = 100000f..1000000000f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                Slider(
+                    value = shutterSpeed.coerceIn(minShutterSpeed, maxShutterSpeed),
+                    onValueChange = onShutterChange,
+                    valueRange = minShutterSpeed..maxShutterSpeed,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                )
                 Text(
                     text = if (isShutterAuto) "AUTO" else "1/${1_000_000_000L / shutterSpeed.toLong().coerceAtLeast(1)}",
                     color = if (isShutterAuto) Color.Yellow else Color.White,
@@ -147,7 +156,7 @@ fun ProControlPanel(
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    text = "ISO & Shutter dikontrol otomatis oleh mode $sceneName",
+                    text = "ISO & Shutter are automatically controlled by $sceneName mode",
                     color = Color(0xFFFF9800),
                     fontSize = 11.sp,
                     lineHeight = 14.sp
@@ -157,7 +166,12 @@ fun ProControlPanel(
 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(40.dp)) {
             Text("FOC", color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp)
-            Slider(value = focusDistance, onValueChange = onFocusChange, valueRange = 0f..10f, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+            Slider(
+                value = focusDistance.coerceIn(0f, maxFocusDistance),
+                onValueChange = onFocusChange,
+                valueRange = 0f..maxFocusDistance,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+            )
             Text(
                 text = if (isFocusAuto) "AUTO" else String.format(Locale.US, "%.1f", focusDistance), 
                 color = if (isFocusAuto) Color.Yellow else Color.White, 

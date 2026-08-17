@@ -34,8 +34,19 @@ class CameraUiState(
     var minIso by mutableFloatStateOf(50f)
     var maxIso by mutableFloatStateOf(3200f)
     var shutterSpeed by mutableFloatStateOf(10000000f) // 10ms
+    var minShutterSpeed by mutableFloatStateOf(100000f) // 1/10000s = 100µs
+    var maxShutterSpeed by mutableFloatStateOf(1000000000f) // 1s
     var focusDistance by mutableFloatStateOf(0f)
+    var maxFocusDistance by mutableFloatStateOf(10f)
     var whiteBalance by mutableIntStateOf(prefs.getInt("whiteBalance", android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO))
+    var supportedAwbModes by mutableStateOf<List<Int>>(listOf(
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_AUTO,
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT,
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT,
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT,
+        android.hardware.camera2.CaptureRequest.CONTROL_AWB_MODE_OFF
+    ))
     
     var isIsoAuto by mutableStateOf(true)
     var isShutterAuto by mutableStateOf(true)
