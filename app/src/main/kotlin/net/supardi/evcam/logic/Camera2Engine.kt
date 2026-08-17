@@ -743,7 +743,9 @@ class Camera2Engine(private val context: Context) {
             if (previewSurface != null) requestBuilder.addTarget(previewSurface)
             requestBuilder.addTarget(pSurface)
             
-            session.setRepeatingRequest(requestBuilder.build(), null, backgroundHandler)
+            previewRequestBuilder = requestBuilder
+            
+            session.setRepeatingRequest(requestBuilder.build(), repeatingCaptureCallback, backgroundHandler)
             mediaRecorder?.start()
             isRecordingVideo = true
             Log.d("EVCAM", "MediaRecorder started recording successfully")
@@ -762,6 +764,15 @@ class Camera2Engine(private val context: Context) {
             mediaRecorder?.release()
             mediaRecorder = null
             isRecordingVideo = false
+
+            // Re-create preview request builder targeting only previewSurface
+            val device = cameraDevice
+            val pSurface = currentPreviewSurface
+            if (device != null && pSurface != null) {
+                previewRequestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                    addTarget(pSurface)
+                }
+            }
 
             // Execute callback to copy temp file and generate thumbnail
             onStopped()
