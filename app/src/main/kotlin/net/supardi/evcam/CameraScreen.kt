@@ -580,6 +580,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         fps = vFps,
                         audioEnabled = videoAudioEnabled,
                         onMediaSaved = { bitmap, uri ->
+                            lastCapturedBitmap = null  // clear photo bitmap so thumbnail loads from video URI
                             lastCapturedUri = uri
                             prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
                         },
