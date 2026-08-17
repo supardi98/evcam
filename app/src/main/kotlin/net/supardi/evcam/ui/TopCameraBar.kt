@@ -22,13 +22,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.supardi.evcam.logic.*
 
-
 @Composable
 fun TopCameraBar(
     uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -36,79 +35,142 @@ fun TopCameraBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-        Row {
-            if (uiState.hasFlashSupport) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .pointerInput(uiState.cameraMode) {
-                            detectTapGestures(
-                                onTap = {
-                                    if (uiState.cameraMode == CameraMode.VIDEO) {
-                                        // In Video mode: simple Torch ON / OFF toggle
-                                        uiState.isTorchOn = !uiState.isTorchOn
-                                    } else {
-                                        // In Photo mode: cycle AUTO -> ON -> OFF or turn off torch if active
-                                        if (uiState.isTorchOn) {
-                                            uiState.isTorchOn = false
+            // Left Actions Group
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (uiState.hasFlashSupport) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .pointerInput(uiState.cameraMode) {
+                                detectTapGestures(
+                                    onTap = {
+                                        if (uiState.cameraMode == CameraMode.VIDEO) {
+                                            uiState.isTorchOn = !uiState.isTorchOn
                                         } else {
-                                            uiState.flashMode = when (uiState.flashMode) {
-                                                FlashMode.AUTO -> FlashMode.ON
-                                                FlashMode.ON -> FlashMode.OFF
-                                                FlashMode.OFF -> FlashMode.AUTO
+                                            if (uiState.isTorchOn) {
+                                                uiState.isTorchOn = false
+                                            } else {
+                                                uiState.flashMode = when (uiState.flashMode) {
+                                                    FlashMode.AUTO -> FlashMode.ON
+                                                    FlashMode.ON -> FlashMode.OFF
+                                                    FlashMode.OFF -> FlashMode.AUTO
+                                                }
                                             }
                                         }
+                                    },
+                                    onLongPress = {
+                                        if (uiState.cameraMode == CameraMode.PHOTO) {
+                                            uiState.isTorchOn = !uiState.isTorchOn
+                                        }
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val flashIcon = if (uiState.cameraMode == CameraMode.VIDEO) {
+                            if (uiState.isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff
+                        } else {
+                            if (uiState.isTorchOn) {
+                                Icons.Default.FlashOn
+                            } else {
+                                when (uiState.flashMode) {
+                                    FlashMode.AUTO -> Icons.Default.FlashAuto
+                                    FlashMode.ON -> Icons.Default.FlashOn
+                                    FlashMode.OFF -> Icons.Default.FlashOff
+                                }
+                            }
+                        }
+                        val iconTint = if (uiState.isTorchOn || (uiState.cameraMode == CameraMode.PHOTO && uiState.flashMode == FlashMode.ON)) Color.Yellow else Color.White
+                        Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
+                    }
+                }
+                
+                if (uiState.cameraMode == CameraMode.VIDEO && !uiState.isRecording) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { uiState.videoAudioEnabled = !uiState.videoAudioEnabled },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.videoAudioEnabled) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                            contentDescription = if (uiState.videoAudioEnabled) "Audio On" else "Audio Off",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                if (uiState.cameraMode == CameraMode.PHOTO) {
+                    if (uiState.hasNightExtension) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    uiState.isNightModeEnabled = !uiState.isNightModeEnabled
+                                    if (uiState.isNightModeEnabled) {
+                                        uiState.isHdrEnabled = false
+                                        uiState.isIsoAuto = true
+                                        uiState.isShutterAuto = true
                                     }
                                 },
-                                onLongPress = {
-                                    if (uiState.cameraMode == CameraMode.PHOTO) {
-                                        uiState.isTorchOn = !uiState.isTorchOn
-                                    }
-                                }
-                            )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    val flashIcon = if (uiState.cameraMode == CameraMode.VIDEO) {
-                        if (uiState.isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff
-                    } else {
-                        if (uiState.isTorchOn) {
-                            Icons.Default.FlashOn
-                        } else {
-                            when (uiState.flashMode) {
-                                FlashMode.AUTO -> Icons.Default.FlashAuto
-                                FlashMode.ON -> Icons.Default.FlashOn
-                                FlashMode.OFF -> Icons.Default.FlashOff
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val backgroundAlpha = if (uiState.isNightModeEnabled) 0.3f else 0f
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.DarkMode,
+                                    contentDescription = "Night Mode",
+                                    tint = if (uiState.isNightModeEnabled) Color.Yellow else Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
                         }
                     }
-                    val iconTint = if (uiState.isTorchOn || (uiState.cameraMode == CameraMode.PHOTO && uiState.flashMode == FlashMode.ON)) Color.Yellow else Color.White
-                    Icon(imageVector = flashIcon, contentDescription = "Flash", tint = iconTint)
+                    
+                    if (uiState.hasHdrExtension) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    uiState.isHdrEnabled = !uiState.isHdrEnabled
+                                    if (uiState.isHdrEnabled) {
+                                        uiState.isNightModeEnabled = false
+                                        uiState.isIsoAuto = true
+                                        uiState.isShutterAuto = true
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val backgroundAlpha = if (uiState.isHdrEnabled) 0.3f else 0f
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.HdrOn,
+                                    contentDescription = "HDR Mode",
+                                    tint = if (uiState.isHdrEnabled) Color.Yellow else Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                    }
                 }
-            }
-            
-            if (uiState.cameraMode == CameraMode.VIDEO && !uiState.isRecording) {
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable { uiState.videoAudioEnabled = !uiState.videoAudioEnabled },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (uiState.videoAudioEnabled) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
-                        contentDescription = if (uiState.videoAudioEnabled) "Audio On" else "Audio Off",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
 
-
-
-                
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
@@ -181,173 +243,95 @@ fun TopCameraBar(
                     )
                 }
             }
-        }
-        
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (uiState.cameraMode == CameraMode.PHOTO) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .clickable {
-                            uiState.aspectRatio = when (uiState.aspectRatio) {
-                                AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
-                                AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
-                                AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
-                            }
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = uiState.aspectRatio.label,
-                        color = Color.Yellow,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .clickable {
-                            if (uiState.supportedVideoQualities.isNotEmpty()) {
-                                val currentIndex = uiState.supportedVideoQualities.indexOf(uiState.videoQuality)
-                                val nextIndex = if (currentIndex != -1) (currentIndex + 1) % uiState.supportedVideoQualities.size else 0
-                                uiState.videoQuality = uiState.supportedVideoQualities[nextIndex]
-                            }
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = uiState.videoQuality.label,
-                        color = Color.Yellow,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .clickable {
-                            if (uiState.supportedFpsModes.isNotEmpty()) {
-                                val currentIndex = uiState.supportedFpsModes.indexOf(uiState.videoFps)
-                                val nextIndex = if (currentIndex == -1 || currentIndex >= uiState.supportedFpsModes.size - 1) 0 else currentIndex + 1
-                                uiState.videoFps = uiState.supportedFpsModes[nextIndex]
-                            }
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = uiState.videoFps.label,
-                        color = Color.Yellow,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                }
-            }
             
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = {
-                uiState.showSettings = !uiState.showSettings
-                if (uiState.showSettings) {
-                    uiState.showProPanel = false
-                    uiState.showLayerPanel = false
-                }
-            }) {
-                Icon(
-                    imageVector = Icons.Default.Settings, 
-                    contentDescription = "Settings", 
-                    tint = if (uiState.showSettings) Color.Yellow else Color.White
-                )
-            }
-        }
-    }
-
-
-    // ── Secondary Sub-Bar Row (Scene Extensions: OFF -> HDR -> NIGHT toggle chip) ──
-    if (uiState.cameraMode == CameraMode.PHOTO && (uiState.hasHdrExtension || uiState.hasNightExtension)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp, start = 24.dp, end = 24.dp),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val sceneModeText = when {
-                uiState.isHdrEnabled -> "HDR ON"
-                uiState.isNightModeEnabled -> "NIGHT ON"
-                else -> "SCENE OFF"
-            }
-            val sceneIcon = when {
-                uiState.isHdrEnabled -> Icons.Filled.HdrOn
-                uiState.isNightModeEnabled -> Icons.Filled.DarkMode
-                else -> Icons.Filled.MotionPhotosOff
-            }
-            val isActive = uiState.isHdrEnabled || uiState.isNightModeEnabled
-
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(if (isActive) Color.Yellow.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.4f))
-                    .clickable {
-                        // Cycle toggle: OFF -> HDR -> NIGHT -> OFF
-                        when {
-                            !uiState.isHdrEnabled && !uiState.isNightModeEnabled -> {
-                                if (uiState.hasHdrExtension) {
-                                    uiState.isHdrEnabled = true
-                                    uiState.isNightModeEnabled = false
-                                } else if (uiState.hasNightExtension) {
-                                    uiState.isNightModeEnabled = true
-                                    uiState.isHdrEnabled = false
+            // Right Actions Group
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (uiState.cameraMode == CameraMode.PHOTO) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                uiState.aspectRatio = when (uiState.aspectRatio) {
+                                    AspectRatioMode.RATIO_4_3 -> AspectRatioMode.RATIO_16_9
+                                    AspectRatioMode.RATIO_16_9 -> AspectRatioMode.RATIO_1_1
+                                    AspectRatioMode.RATIO_1_1 -> AspectRatioMode.RATIO_4_3
                                 }
                             }
-                            uiState.isHdrEnabled -> {
-                                if (uiState.hasNightExtension) {
-                                    uiState.isHdrEnabled = false
-                                    uiState.isNightModeEnabled = true
-                                } else {
-                                    uiState.isHdrEnabled = false
-                                    uiState.isNightModeEnabled = false
-                                }
-                            }
-                            else -> {
-                                uiState.isHdrEnabled = false
-                                uiState.isNightModeEnabled = false
-                            }
-                        }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.aspectRatio.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
                     }
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                if (uiState.supportedVideoQualities.isNotEmpty()) {
+                                    val currentIndex = uiState.supportedVideoQualities.indexOf(uiState.videoQuality)
+                                    val nextIndex = if (currentIndex != -1) (currentIndex + 1) % uiState.supportedVideoQualities.size else 0
+                                    uiState.videoQuality = uiState.supportedVideoQualities[nextIndex]
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.videoQuality.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                if (uiState.supportedFpsModes.isNotEmpty()) {
+                                    val currentIndex = uiState.supportedFpsModes.indexOf(uiState.videoFps)
+                                    val nextIndex = if (currentIndex == -1 || currentIndex >= uiState.supportedFpsModes.size - 1) 0 else currentIndex + 1
+                                    uiState.videoFps = uiState.supportedFpsModes[nextIndex]
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.videoFps.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(onClick = {
+                    uiState.showSettings = !uiState.showSettings
+                    if (uiState.showSettings) {
+                        uiState.showProPanel = false
+                        uiState.showLayerPanel = false
+                    }
+                }) {
                     Icon(
-                        imageVector = sceneIcon,
-                        contentDescription = "Scene Toggle",
-                        tint = if (isActive) Color.Yellow else Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = sceneModeText,
-                        color = if (isActive) Color.Yellow else Color.White.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp
+                        imageVector = Icons.Default.Settings, 
+                        contentDescription = "Settings", 
+                        tint = if (uiState.showSettings) Color.Yellow else Color.White
                     )
                 }
             }
         }
     }
 }
-
-
