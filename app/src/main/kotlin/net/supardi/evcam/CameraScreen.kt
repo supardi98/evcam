@@ -871,7 +871,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         val drawW = size.height.toInt()
                         val drawH = size.width.toInt()
 
-                        drawImage(
+                        this@Canvas.drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
                             srcOffset = androidx.compose.ui.unit.IntOffset(srcX, srcY),
                             srcSize = androidx.compose.ui.unit.IntSize(srcW, srcH),
@@ -881,7 +881,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             ),
                             dstSize = androidx.compose.ui.unit.IntSize(drawW, drawH)
                         )
-                    }
+                    })
+
 
 
 
