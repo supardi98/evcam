@@ -414,6 +414,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 minExposureIndex = aeRange.lower
                 maxExposureIndex = aeRange.upper
             }
+
+            // Dynamically check if active camera (Front or Back) has hardware LED Flash unit
+            uiState.hasFlashSupport = net.supardi.evcam.logic.Camera2Helper.hasFlashSupport(chars)
+            if (!uiState.hasFlashSupport) {
+                uiState.isTorchOn = false
+            }
             
             camera2Engine.closeCamera()
             camera2Engine.openCamera(camId)
