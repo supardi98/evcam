@@ -334,21 +334,18 @@ class Camera2Engine(private val context: Context) {
         }
     }
 
-    fun enableStabilization(builder: CaptureRequest.Builder, oisEnabled: Boolean = true, eisEnabled: Boolean = false) {
+    fun enableStabilization(builder: CaptureRequest.Builder, eisEnabled: Boolean = false) {
         val deviceId = cameraDevice?.id ?: return
         try {
             val chars = cameraManager.getCameraCharacteristics(deviceId)
             
+            // Hardware OIS is always automatically enabled if available on sensor
             val oisModes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
-            if (oisModes != null) {
-                val targetMode = if (oisEnabled && oisModes.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)) {
-                    CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON
-                } else {
-                    CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF
-                }
-                builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, targetMode)
+            if (oisModes?.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON) == true) {
+                builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
             }
             
+            // EIS Video Stabilization is toggled by user preference
             val videoStabModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)
             if (videoStabModes != null) {
                 val targetMode = if (eisEnabled && videoStabModes.contains(CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON)) {

@@ -34,6 +34,7 @@ import net.supardi.evcam.logic.*
 @Composable
 fun SettingsPopupPanels(
     uiState: CameraUiState,
+    isEisSupported: Boolean = true,
     onOpenWatermarkSettings: () -> Unit,
     onOpenPluginManager: () -> Unit,
     modifier: Modifier = Modifier
@@ -118,8 +119,7 @@ fun SettingsPopupPanels(
                 SettingsPanel(
                     enableRawCapture = uiState.enableRawCapture,
                     onEnableRawCaptureChange = { uiState.enableRawCapture = it },
-                    enableOis = uiState.enableOis,
-                    onEnableOisChange = { uiState.enableOis = it },
+                    isEisSupported = isEisSupported,
                     enableEis = uiState.enableEis,
                     onEnableEisChange = { uiState.enableEis = it },
                     keepScreenOn = uiState.keepScreenOn,

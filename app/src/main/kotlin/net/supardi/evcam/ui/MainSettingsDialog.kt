@@ -33,8 +33,7 @@ import androidx.compose.ui.unit.sp
 fun SettingsPanel(
     enableRawCapture: Boolean,
     onEnableRawCaptureChange: (Boolean) -> Unit,
-    enableOis: Boolean,
-    onEnableOisChange: (Boolean) -> Unit,
+    isEisSupported: Boolean = true,
     enableEis: Boolean,
     onEnableEisChange: (Boolean) -> Unit,
     keepScreenOn: Boolean,
@@ -169,22 +168,15 @@ fun SettingsPanel(
                 Switch(checked = isShutterSoundEnabled, onCheckedChange = onIsShutterSoundEnabledChange, modifier = Modifier.scale(0.8f))
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Optical Stabilization (OIS)", color = Color.White, fontSize = 13.sp)
-                Switch(checked = enableOis, onCheckedChange = onEnableOisChange, modifier = Modifier.scale(0.8f))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Digital Stabilization (EIS)", color = Color.White, fontSize = 13.sp)
-                Switch(checked = enableEis, onCheckedChange = onEnableEisChange, modifier = Modifier.scale(0.8f))
+            if (isEisSupported) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Video Stabilization (EIS)", color = Color.White, fontSize = 13.sp)
+                    Switch(checked = enableEis, onCheckedChange = onEnableEisChange, modifier = Modifier.scale(0.8f))
+                }
             }
 
             Row(

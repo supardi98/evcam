@@ -642,9 +642,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setSceneMode(isNightModeEnabled, isHdrEnabled)
     }
 
-    LaunchedEffect(uiState.enableOis, uiState.enableEis) {
+    LaunchedEffect(uiState.enableEis) {
         camera2Engine.previewRequestBuilder?.let { builder ->
-            camera2Engine.enableStabilization(builder, uiState.enableOis, uiState.enableEis)
+            camera2Engine.enableStabilization(builder, uiState.enableEis)
             camera2Engine.updatePreview()
         }
     }
