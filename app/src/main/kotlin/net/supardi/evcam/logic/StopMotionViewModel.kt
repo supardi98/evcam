@@ -23,10 +23,16 @@ enum class StopMotionFps(val label: String, val fps: Int) {
     FPS_30("30 fps", 30)
 }
 
-enum class StopMotionAspectRatio(val label: String, val width: Int, val height: Int) {
-    RATIO_1_1("1:1", 1088, 1088),
-    RATIO_4_3("4:3", 1440, 1088),
-    RATIO_16_9("16:9", 1920, 1088)
+enum class StopMotionResolution(val label: String, val baseHeight: Int) {
+    SD("SD 480p", 480),
+    HD("HD 720p", 720),
+    FHD("FHD 1080p", 1080)
+}
+
+enum class StopMotionAspectRatio(val label: String, val ratio: Float) {
+    RATIO_1_1("1:1", 1f),
+    RATIO_4_3("4:3", 4f / 3f),
+    RATIO_16_9("16:9", 16f / 9f)
 }
 
 enum class StopMotionOnionSkin(val label: String, val alpha: Float) {
@@ -68,6 +74,7 @@ class StopMotionViewModel(private val context: Context) {
     var customIntervalMs by mutableStateOf(1000L) // Default 1s for custom
 
     var outputFps by mutableStateOf(StopMotionFps.FPS_12)
+    var resolution by mutableStateOf(StopMotionResolution.HD)
     var aspectRatio by mutableStateOf(StopMotionAspectRatio.RATIO_16_9)
     var onionSkin by mutableStateOf(StopMotionOnionSkin.MEDIUM)
     var showSettings by mutableStateOf(false)
@@ -144,16 +151,19 @@ class StopMotionViewModel(private val context: Context) {
         val outputDir = File(context.cacheDir, "stopmotion_export").also { it.mkdirs() }
         val outputFile = File(outputDir, "stopmotion_${System.currentTimeMillis()}.mp4")
 
+        val baseWidth = (resolution.baseHeight * aspectRatio.ratio).toInt()
+        val baseHeight = resolution.baseHeight
+
         // Read first frame to detect orientation
-        var outWidth = aspectRatio.width
-        var outHeight = aspectRatio.height
+        var outWidth = baseWidth
+        var outHeight = baseHeight
         val firstFrame = frames.firstOrNull()
         if (firstFrame != null) {
             val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
             android.graphics.BitmapFactory.decodeFile(firstFrame.absolutePath, opts)
             if (opts.outHeight > opts.outWidth) { // It's portrait
-                outWidth = aspectRatio.height
-                outHeight = aspectRatio.width
+                outWidth = baseHeight
+                outHeight = baseWidth
             }
         }
 

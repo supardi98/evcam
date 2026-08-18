@@ -20,9 +20,8 @@ object StopMotionEncoder {
         onProgress: (Float) -> Unit,
         onDone: (Boolean) -> Unit
     ) {
-        // Enforce multiples of 16 for MediaCodec
-        val width = (originalWidth + 15) / 16 * 16
-        val height = (originalHeight + 15) / 16 * 16
+        val width = originalWidth
+        val height = originalHeight
 
         Thread {
             try {
@@ -51,12 +50,17 @@ object StopMotionEncoder {
 
                     val inputBufIdx = codec.dequeueInputBuffer(10_000)
                     if (inputBufIdx >= 0) {
-                        val inputBuf = codec.getInputBuffer(inputBufIdx)!!
-                        inputBuf.clear()
-                        val yuvBytes = bitmapToNv21(scaledBitmap)
-                        inputBuf.put(yuvBytes)
-                        val presentationTimeUs = index * frameDurationUs
-                        codec.queueInputBuffer(inputBufIdx, 0, yuvBytes.size, presentationTimeUs, 0)
+                        val inputImage = codec.getInputImage(inputBufIdx)
+                        if (inputImage != null) {
+                            copyBitmapToImage(scaledBitmap, inputImage)
+                            val presentationTimeUs = index * frameDurationUs
+                            // The buffer size is the total size of planes. But queueInputBuffer needs the size of the whole buffer, or 0 to capacity.
+                            // Better yet, just pass codec.getInputBuffer(inputBufIdx)!!.capacity() or similar. Wait, for COLOR_FormatYUV420Flexible, we can pass 0 for size?
+                            // Actually, queueInputBuffer for video encoders using Image usually uses the size of the buffer or 0 doesn't matter if it's Image.
+                            // But let's get the buffer and its capacity.
+                            val inputBuf = codec.getInputBuffer(inputBufIdx)!!
+                            codec.queueInputBuffer(inputBufIdx, 0, inputBuf.capacity(), presentationTimeUs, 0)
+                        }
                         scaledBitmap.recycle()
                     }
 
@@ -120,33 +124,53 @@ object StopMotionEncoder {
         }
     }
 
-    private fun bitmapToNv21(bitmap: Bitmap): ByteArray {
+    private fun copyBitmapToImage(bitmap: Bitmap, image: android.media.Image) {
         val width = bitmap.width
         val height = bitmap.height
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        val nv21 = ByteArray(width * height * 3 / 2)
-        val ySize = width * height
-        var yIdx = 0
-        var uvIdx = ySize
+        val yPlane = image.planes[0]
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+
+        val yBuffer = yPlane.buffer
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+
+        val yRowStride = yPlane.rowStride
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
 
         for (j in 0 until height) {
+            var yIdx = j * yRowStride
+            var uIdx = (j / 2) * uRowStride
+            var vIdx = (j / 2) * vRowStride
+
             for (i in 0 until width) {
                 val pixel = pixels[j * width + i]
                 val r = (pixel shr 16) and 0xFF
                 val g = (pixel shr 8) and 0xFF
                 val b = pixel and 0xFF
+
                 val y = ((66 * r + 129 * g + 25 * b + 128) shr 8) + 16
-                nv21[yIdx++] = y.coerceIn(0, 255).toByte()
+                yBuffer.put(yIdx++, y.coerceIn(0, 255).toByte())
+
                 if (j % 2 == 0 && i % 2 == 0) {
                     val u = ((-38 * r - 74 * g + 112 * b + 128) shr 8) + 128
                     val v = ((112 * r - 94 * g - 18 * b + 128) shr 8) + 128
-                    nv21[uvIdx++] = v.coerceIn(0, 255).toByte()
-                    nv21[uvIdx++] = u.coerceIn(0, 255).toByte()
+                    uBuffer.put(uIdx, u.coerceIn(0, 255).toByte())
+                    vBuffer.put(vIdx, v.coerceIn(0, 255).toByte())
+                }
+                
+                if (i % 2 == 1) { // Advance UV pointers every 2 pixels
+                    uIdx += uPixelStride
+                    vIdx += vPixelStride
                 }
             }
         }
-        return nv21
     }
 }

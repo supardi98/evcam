@@ -109,12 +109,14 @@ fun StopMotionScreen(onBack: () -> Unit) {
     }
 
     // Open camera when state is ready
-    LaunchedEffect(cameraState, textureReady, viewModel.aspectRatio) {
+    LaunchedEffect(cameraState, textureReady, viewModel.aspectRatio, viewModel.resolution) {
         if (cameraState is Camera2Engine.CameraState.Opened && textureReady) {
             val tv = textureViewRef.value ?: return@LaunchedEffect
-            tv.surfaceTexture?.setDefaultBufferSize(viewModel.aspectRatio.width, viewModel.aspectRatio.height)
+            val baseWidth = (viewModel.resolution.baseHeight * viewModel.aspectRatio.ratio).toInt()
+            val baseHeight = viewModel.resolution.baseHeight
+            tv.surfaceTexture?.setDefaultBufferSize(baseWidth, baseHeight)
             val surface = android.view.Surface(tv.surfaceTexture)
-            camera2Engine.setupImageReader(viewModel.aspectRatio.width, viewModel.aspectRatio.height)
+            camera2Engine.setupImageReader(baseWidth, baseHeight)
             camera2Engine.createPreviewSession(listOf(surface, camera2Engine.imageReader!!.surface)) {}
         }
     }
@@ -405,7 +407,7 @@ fun StopMotionScreen(onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Skin: ${viewModel.onionSkin.label}  •  FPS: ${viewModel.outputFps.label}  •  Timer: ${viewModel.interval.label}  •  Ratio: ${viewModel.aspectRatio.label}",
+                    text = "Skin: ${viewModel.onionSkin.label}  •  FPS: ${viewModel.outputFps.label}  •  Timer: ${viewModel.interval.label}  •  Res: ${viewModel.resolution.label} (${viewModel.aspectRatio.label})",
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 10.sp,
                     textAlign = TextAlign.Center
@@ -523,6 +525,14 @@ fun StopMotionScreen(onBack: () -> Unit) {
                             options = StopMotionOnionSkin.values().map { it.label },
                             selected = viewModel.onionSkin.ordinal,
                             onSelect = { viewModel.onionSkin = StopMotionOnionSkin.values()[it] }
+                        )
+
+                        // Resolution
+                        SettingRow(
+                            label = "Resolution",
+                            options = net.supardi.evcam.logic.StopMotionResolution.values().map { it.label },
+                            selected = viewModel.resolution.ordinal,
+                            onSelect = { viewModel.resolution = net.supardi.evcam.logic.StopMotionResolution.values()[it] }
                         )
 
                         // Aspect Ratio
