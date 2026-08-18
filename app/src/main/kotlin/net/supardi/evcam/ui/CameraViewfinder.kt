@@ -135,7 +135,15 @@ fun CameraViewfinder(
                             uiState.showZoomSlider = true
                             uiState.focusState = FocusState.TAP_INITIAL
                             uiState.focusTapCount++
-                            camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
+                            
+                            val pts = floatArrayOf(e.x, e.y)
+                            val m = android.graphics.Matrix()
+                            previewView.getTransform(m)
+                            val inv = android.graphics.Matrix()
+                            if (m.invert(inv)) {
+                                inv.mapPoints(pts)
+                            }
+                            camera2Engine.focusAt(pts[0], pts[1], previewView.width.toFloat(), previewView.height.toFloat())
                             return true
                         }
 
@@ -154,7 +162,15 @@ fun CameraViewfinder(
                             uiState.showFocusBox = true
                             uiState.focusState = FocusState.TAP_INITIAL
                             uiState.focusTapCount++
-                            camera2Engine.focusAt(e.x, e.y, previewView.width.toFloat(), previewView.height.toFloat())
+                            
+                            val pts = floatArrayOf(e.x, e.y)
+                            val m = android.graphics.Matrix()
+                            previewView.getTransform(m)
+                            val inv = android.graphics.Matrix()
+                            if (m.invert(inv)) {
+                                inv.mapPoints(pts)
+                            }
+                            camera2Engine.focusAt(pts[0], pts[1], previewView.width.toFloat(), previewView.height.toFloat())
                         }
 
                         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {

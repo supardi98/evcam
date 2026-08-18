@@ -590,12 +590,12 @@ class Camera2Engine(private val context: Context) {
 
         when (sensorOrientation) {
             90 -> {
-                normalizedX = y / height
-                normalizedY = if (isFront) x / width else 1f - (x / width)
-            }
-            270 -> {
                 normalizedX = 1f - (y / height)
                 normalizedY = if (isFront) 1f - (x / width) else x / width
+            }
+            270 -> {
+                normalizedX = y / height
+                normalizedY = if (isFront) x / width else 1f - (x / width)
             }
             180 -> {
                 normalizedX = 1f - (x / width)
@@ -627,10 +627,20 @@ class Camera2Engine(private val context: Context) {
         previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRectangle))
         previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRectangle))
         previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
         
+        // 1. Update the repeating request with the new regions and IDLE trigger
+        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
         updatePreview()
         
+        // 2. Submit a SINGLE capture request to trigger the AF scan
+        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+        try {
+            captureSession?.capture(previewRequestBuilder!!.build(), repeatingCaptureCallback, backgroundHandler)
+        } catch (e: Exception) {
+            Log.e("EVCAM", "Failed to trigger AF", e)
+        }
+        
+        // 3. Reset builder back to IDLE so future repeating requests don't re-trigger it
         previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
     }
 
