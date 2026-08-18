@@ -301,7 +301,8 @@ fun startVideoRecord(
     height: Int = 1080,
     fps: Int = 30,
     audioEnabled: Boolean,
-    onMediaSaved: (Bitmap, Uri) -> Unit,
+    recordSurface: android.view.Surface,
+    onMediaSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit,
     onEvent: (Any) -> Unit
 ): Any? {
     // Use the output file already configured by CameraScreen's setupMediaRecorder call.
@@ -310,7 +311,7 @@ fun startVideoRecord(
 
     Log.d("EVCAM", "startVideoRecord called with file=$tempFile w=$width h=$height")
 
-    camera2Engine.startRecording {
+    camera2Engine.startRecording(recordSurface) {
         Log.d("EVCAM", "Video recording started event received")
         onEvent("Start")
     }

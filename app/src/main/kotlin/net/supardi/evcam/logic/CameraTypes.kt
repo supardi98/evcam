@@ -18,25 +18,28 @@ enum class CustomSceneMode(
     val lockShutter: Boolean = false,
     val lockFocus: Boolean = false,
     val lockWhiteBalance: Boolean = false,
-    val lockEv: Boolean = false
+    val lockEv: Boolean = false,
+    val supportPhoto: Boolean = true,
+    val supportVideo: Boolean = true
 ) {
     AUTO("Auto / Normal", "Standard camera defaults"),
-    COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking. Captures 3 photos (dark, normal, bright) and merges them for maximum dynamic range and natural clarity.", lockEv = true),
-    PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast"),
-    NIGHT("Night Boost", "Longer exposure and increased ISO for low-light conditions", lockIso = true, lockShutter = true, lockEv = true),
-    MACRO("Macro Close-Up", "Locks focus to minimum distance for tiny subject details", lockFocus = true),
-    LANDSCAPE("Vibrant Landscape", "Vibrant green/blue color saturation boost with -0.3 EV", lockEv = true),
-    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze moving objects", lockShutter = true),
-    BACKLIGHT("HDR Backlight", "Balances exposure for subjects against strong light sources", lockIso = true, lockShutter = true, lockEv = true),
-    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true, lockEv = true),
-    DOCUMENT("Document B&W", "High contrast black and white for documents and text", lockEv = true),
-    CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone for cozy indoor scenes", lockWhiteBalance = true),
-    SNOW_BEACH("Snow / Beach", "+1.0 EV compensation to prevent underexposure on bright scenes", lockEv = true),
-    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s) with ISO 800 for starry night photography", lockIso = true, lockShutter = true, lockFocus = true, lockEv = true),
-    FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true, lockEv = true),
-    FOOD("Food / Culinary", "Enhances warm colors and adds slight brightness (+0.3 EV) to make food look appetizing", lockEv = true),
-    CONCERT("Concert / Stage", "Reduces exposure (-1.5 EV) and uses fast shutter to prevent blown-out faces from stage lights", lockEv = true),
-    WATERFALL("Silky Waterfall", "Low ISO and slow shutter (1/4s) to create silky smooth water movement", lockIso = true, lockShutter = true, lockEv = true)
+    COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking.", lockEv = true, supportVideo = false),
+    PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast", supportVideo = false),
+    NIGHT("Night Boost", "Longer exposure for low-light conditions", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),
+    MACRO("Macro Close-Up", "Locks focus to minimum distance", lockFocus = true),
+    LANDSCAPE("Vibrant Landscape", "Vibrant color boost with -0.3 EV", lockEv = true, supportVideo = false),
+    ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze objects", lockShutter = true),
+    BACKLIGHT("HDR Backlight", "Balances exposure against strong light", lockIso = true, lockShutter = true, lockEv = true),
+    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true, lockEv = true, supportVideo = false),
+    DOCUMENT("Document B&W", "High contrast black and white for documents", lockEv = true, supportVideo = false),
+    CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone", lockWhiteBalance = true, supportVideo = false),
+    SNOW_BEACH("Snow / Beach", "+1.0 EV compensation for bright scenes", lockEv = true),
+    ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s)", lockIso = true, lockShutter = true, lockFocus = true, lockEv = true, supportVideo = false),
+    FIREWORKS("Fireworks Trails", "Long exposure (2s) for light trails", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),
+    FOOD("Food / Culinary", "Enhances warm colors (+0.3 EV)", lockEv = true, supportVideo = false),
+    CONCERT("Concert / Stage", "Reduces exposure (-1.5 EV)", lockEv = true),
+    WATERFALL("Silky Waterfall", "Slow shutter (1/4s) for smooth water", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),
+    HORIZON_LOCK("Horizon Lock", "Real-time auto-crop and level stabilization", supportPhoto = false, supportVideo = true)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {

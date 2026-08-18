@@ -134,7 +134,19 @@ class CameraUiState(
     var hasManualFocusSupport by mutableStateOf(true)
     var supportedSceneModes by mutableStateOf<List<Int>>(emptyList())
     var selectedSceneMode by mutableIntStateOf(android.hardware.camera2.CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
-    var selectedCustomScene by mutableStateOf(CustomSceneMode.AUTO)
+    
+    var photoCustomScene by mutableStateOf(CustomSceneMode.valueOf(prefs.getString("photoCustomScene", CustomSceneMode.AUTO.name) ?: CustomSceneMode.AUTO.name))
+    var videoCustomScene by mutableStateOf(CustomSceneMode.valueOf(prefs.getString("videoCustomScene", CustomSceneMode.AUTO.name) ?: CustomSceneMode.AUTO.name))
+
+    var selectedCustomScene: CustomSceneMode
+        get() = if (cameraMode == CameraMode.PHOTO) photoCustomScene else videoCustomScene
+        set(value) {
+            if (cameraMode == CameraMode.PHOTO) {
+                photoCustomScene = value
+            } else {
+                videoCustomScene = value
+            }
+        }
 
 
 
@@ -196,6 +208,8 @@ fun rememberCameraUiState(
     LaunchedEffect(state.isNightModeEnabled) { prefs.edit().putBoolean("isNightModeEnabled", state.isNightModeEnabled).apply() }
     LaunchedEffect(state.selectedFilter) { prefs.edit().putString("selectedFilter", state.selectedFilter.name).apply() }
     LaunchedEffect(state.imageFormat) { prefs.edit().putString("imageFormat", state.imageFormat.name).apply() }
+    LaunchedEffect(state.photoCustomScene) { prefs.edit().putString("photoCustomScene", state.photoCustomScene.name).apply() }
+    LaunchedEffect(state.videoCustomScene) { prefs.edit().putString("videoCustomScene", state.videoCustomScene.name).apply() }
     
     LaunchedEffect(state.enableHistogram) { prefs.edit().putBoolean("enableHistogram", state.enableHistogram).apply() }
     LaunchedEffect(state.enableFocusPeaking) { prefs.edit().putBoolean("enableFocusPeaking", state.enableFocusPeaking).apply() }

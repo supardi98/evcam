@@ -120,35 +120,37 @@ fun TopCameraBar(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .clickable {
-                            uiState.showFilterDialog = !uiState.showFilterDialog
-                            if (uiState.showFilterDialog) {
-                                uiState.showProPanel = false
-                                uiState.showLayerPanel = false
-                                uiState.showSettings = false
-                            }
-                        },
-
-                    contentAlignment = Alignment.Center
-                ) {
-                    val backgroundAlpha = if (uiState.selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
+                if (uiState.cameraMode == CameraMode.PHOTO) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                uiState.showFilterDialog = !uiState.showFilterDialog
+                                if (uiState.showFilterDialog) {
+                                    uiState.showProPanel = false
+                                    uiState.showLayerPanel = false
+                                    uiState.showSettings = false
+                                }
+                            },
+
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Palette,
-                            contentDescription = "Color Filter",
-                            tint = if (uiState.selectedFilter != ColorFilterMode.NORMAL) Color.Yellow else Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        val backgroundAlpha = if (uiState.selectedFilter != ColorFilterMode.NORMAL) 0.3f else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Yellow.copy(alpha = backgroundAlpha)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Palette,
+                                contentDescription = "Color Filter",
+                                tint = if (uiState.selectedFilter != ColorFilterMode.NORMAL) Color.Yellow else Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
                 
@@ -348,8 +350,8 @@ fun TopCameraBar(
         }
 
         // ── Baris Kedua: Expandable Scene Selector Pill (Kiri) & Histogram (Kanan) ──
-        if (uiState.cameraMode == CameraMode.PHOTO) {
-            Spacer(modifier = Modifier.height(6.dp))
+        // ── Baris Kedua: Expandable Scene Selector Pill (Kiri) & Histogram (Kanan) ──
+        Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -412,23 +414,26 @@ fun TopCameraBar(
                                 .horizontalScroll(scrollState)
                         ) {
                             CustomSceneMode.values().forEach { mode ->
-                                val isSelected = activeScene == mode
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.15f))
-                                        .clickable {
-                                            uiState.selectedCustomScene = mode
-                                            isSceneOptionsExpanded = false
-                                        }
-                                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = mode.label,
-                                        color = if (isSelected) Color.Black else Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
+                                val isSupported = if (uiState.cameraMode == CameraMode.PHOTO) mode.supportPhoto else mode.supportVideo
+                                if (isSupported) {
+                                    val isSelected = activeScene == mode
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                            .clickable {
+                                                uiState.selectedCustomScene = mode
+                                                isSceneOptionsExpanded = false
+                                            }
+                                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                                    ) {
+                                        Text(
+                                            text = mode.label,
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -467,7 +472,6 @@ fun TopCameraBar(
                     }
                 }
             }
-        }
     }
 }
 

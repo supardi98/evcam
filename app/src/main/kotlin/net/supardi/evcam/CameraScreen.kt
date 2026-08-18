@@ -376,6 +376,20 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     var isAppInForeground by remember { mutableStateOf(false) }
     var previewSessionTrigger by remember { mutableStateOf(0) }
+    var cameraRenderThread by remember { mutableStateOf<net.supardi.evcam.gl.CameraRenderThread?>(null) }
+    val rotationSensorHelper = remember { net.supardi.evcam.logic.RotationSensorHelper(context) }
+    
+    DisposableEffect(uiState.selectedCustomScene) {
+        val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK
+        if (isHorizonLock) {
+            rotationSensorHelper.start()
+        } else {
+            rotationSensorHelper.stop()
+        }
+        onDispose {
+            rotationSensorHelper.stop()
+        }
+    }
     
     DisposableEffect(lifecycleOwner) {
         camera2Engine.startBackgroundThread()
@@ -404,6 +418,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
 
     LaunchedEffect(uiState.selectedCustomScene) {
+        val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK
+        camera2Engine.isHorizonLockEnabled = isHorizonLock
         camera2Engine.applyCustomSceneMode(uiState.selectedCustomScene)
     }
 
@@ -720,6 +736,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 val stopMethod = activeRecording?.javaClass?.getMethod("stop")
                 stopMethod?.invoke(activeRecording)
                 isRecording = false
+                cameraRenderThread?.stopRecording()
+                cameraRenderThread = null
                 textureView.setSensorAspectRatio(3f / 4f)
                 previewSessionTrigger++
             } else {
@@ -743,7 +761,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
                 val texSurface = android.view.Surface(textureView.surfaceTexture)
                 val newTargets = mutableListOf<android.view.Surface>(texSurface)
-                camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
+                
+                val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK
+                if (isHorizonLock) {
+                    val crt = net.supardi.evcam.gl.CameraRenderThread(vWidth, vHeight, rotationSensorHelper)
+                    cameraRenderThread = crt
+                    crt.start()
+                    crt.awaitSurfaceReady()
+                    
+                    val pSurface = camera2Engine.getOrCreatePersistentSurface()
+                    crt.setOutputSurface(pSurface, vWidth, vHeight)
+                    
+                    newTargets.add(crt.cameraSurface!!)
+                } else {
+                    camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
+                }
+                
                 camera2Engine.imageReader?.surface?.let { newTargets.add(it) }
                 camera2Engine.analysisImageReader?.surface?.let { newTargets.add(it) }
                 camera2Engine.createPreviewSession(newTargets) { _ ->
@@ -754,6 +787,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         height = vHeight,
                         fps = vFps,
                         audioEnabled = videoAudioEnabled,
+                        recordSurface = if (isHorizonLock) cameraRenderThread!!.cameraSurface!! else camera2Engine.getOrCreatePersistentSurface(),
                         onMediaSaved = { bitmap, uri ->
                             lastCapturedBitmap = null  // clear photo bitmap so thumbnail loads from video URI
                             lastCapturedUri = uri
@@ -908,6 +942,46 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 camera2Engine = camera2Engine,
                 modifier = Modifier.fillMaxSize()
             )
+            
+            val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK
+            if (isHorizonLock) {
+                val horizonState by rotationSensorHelper.horizonState.collectAsState()
+                
+                val displayRotation = (androidx.compose.ui.platform.LocalContext.current.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay.rotation
+                val uiRollOffset = when (displayRotation) {
+                    android.view.Surface.ROTATION_90 -> 90f
+                    android.view.Surface.ROTATION_180 -> 180f
+                    android.view.Surface.ROTATION_270 -> -90f // or 270f
+                    else -> 0f
+                }
+                
+                // Adjust effective roll relative to current UI orientation
+                var effectiveRoll = horizonState.rollAngle + uiRollOffset
+                if (effectiveRoll > 180f) effectiveRoll -= 360f
+                if (effectiveRoll < -180f) effectiveRoll += 360f
+
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    withTransform({
+                        rotate(-effectiveRoll)
+                    }) {
+                        // The recorded video is 16:9 Landscape.
+                        // We use the Canvas width as the base width for the 16:9 box.
+                        val baseW = size.width
+                        val baseH = size.width * (9f / 16f)
+                        
+                        val boxW = baseW / horizonState.zoomScale
+                        val boxH = baseH / horizonState.zoomScale
+                        
+                        // Draw bounding box border
+                        drawRect(
+                            color = Color.Green.copy(alpha = 0.8f),
+                            topLeft = androidx.compose.ui.geometry.Offset((size.width - boxW) / 2f, (size.height - boxH) / 2f),
+                            size = androidx.compose.ui.geometry.Size(boxW, boxH),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
+                        )
+                    }
+                }
+            }
 
             if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO && lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK && !isFlippingCamera && flipRotationAnim.value == 0f) {
 

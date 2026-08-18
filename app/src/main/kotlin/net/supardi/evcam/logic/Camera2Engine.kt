@@ -339,8 +339,11 @@ class Camera2Engine(private val context: Context) {
     fun setDeviceOrientation(degrees: Int) {
         currentDeviceOrientationDegrees = degrees
     }
+    var isHorizonLockEnabled: Boolean = false
 
     fun getOrientationHint(): Int {
+        if (isHorizonLockEnabled) return 0
+        
         val deviceId = cameraDevice?.id ?: return 90
         val chars = try {
             cameraManager.getCameraCharacteristics(deviceId)
@@ -429,6 +432,8 @@ class Camera2Engine(private val context: Context) {
             recorder.setVideoSize(lastRecordedWidth, lastRecordedHeight)
             recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
             if (lastAudioEnabled) recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            val hint = getOrientationHint()
+            recorder.setOrientationHint(hint)
             recorder.prepare()
             Log.d("EVCAM", "MediaRecorder successfully re-prepared for next recording")
         } catch (e: Exception) {
@@ -855,6 +860,10 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             }
+            CustomSceneMode.HORIZON_LOCK -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            }
         }
         if (update) updatePreview()
     }
@@ -1097,11 +1106,10 @@ class Camera2Engine(private val context: Context) {
         }
     }
 
-    fun startRecording(onStarted: () -> Unit) {
+    fun startRecording(recordSurface: Surface, onStarted: () -> Unit) {
         if (isRecordingVideo) return
         val device = cameraDevice ?: run { Log.e("EVCAM", "startRecording failed: cameraDevice is null"); return }
         val session = captureSession ?: run { Log.e("EVCAM", "startRecording failed: captureSession is null"); return }
-        val pSurface = persistentSurface ?: run { Log.e("EVCAM", "startRecording failed: persistentSurface is null"); return }
 
         try {
             val requestBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
@@ -1141,7 +1149,7 @@ class Camera2Engine(private val context: Context) {
             
             val previewSurface = currentPreviewSurface
             if (previewSurface != null) requestBuilder.addTarget(previewSurface)
-            requestBuilder.addTarget(pSurface)
+            requestBuilder.addTarget(recordSurface)
             
             previewRequestBuilder = requestBuilder
             
