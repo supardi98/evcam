@@ -155,7 +155,10 @@ fun StopMotionScreen(onBack: () -> Unit) {
 
         // ── Camera Preview ──────────────────────────────────────────
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .align(Alignment.Center)
+                .aspectRatio(1f / viewModel.aspectRatio.ratio, matchHeightConstraintsFirst = false),
             factory = { ctx ->
                 TextureView(ctx).also { tv ->
                     textureViewRef.value = tv
@@ -178,6 +181,8 @@ fun StopMotionScreen(onBack: () -> Unit) {
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
+                    .align(Alignment.Center)
+                    .aspectRatio(1f / viewModel.aspectRatio.ratio, matchHeightConstraintsFirst = false)
                     .graphicsLayer(alpha = viewModel.onionSkin.alpha * 0.8f),
                 contentScale = ContentScale.Crop
             )

@@ -20,8 +20,8 @@ object StopMotionEncoder {
         onProgress: (Float) -> Unit,
         onDone: (Boolean) -> Unit
     ) {
-        val width = originalWidth
-        val height = originalHeight
+        val width = (originalWidth + 15) / 16 * 16
+        val height = (originalHeight + 15) / 16 * 16
 
         Thread {
             try {

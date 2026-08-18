@@ -70,13 +70,71 @@ class StopMotionViewModel(private val context: Context) {
     var exportSuccess by mutableStateOf<Boolean?>(null)
 
     // Settings
-    var interval by mutableStateOf(StopMotionInterval.MANUAL)
-    var customIntervalMs by mutableStateOf(1000L) // Default 1s for custom
+    private val prefs = context.getSharedPreferences("evcam_stopmotion", android.content.Context.MODE_PRIVATE)
 
-    var outputFps by mutableStateOf(StopMotionFps.FPS_12)
-    var resolution by mutableStateOf(StopMotionResolution.HD)
-    var aspectRatio by mutableStateOf(StopMotionAspectRatio.RATIO_16_9)
-    var onionSkin by mutableStateOf(StopMotionOnionSkin.MEDIUM)
+    var interval: StopMotionInterval
+        get() = _interval
+        set(value) {
+            _interval = value
+            prefs.edit().putString("interval", value.name).apply()
+        }
+    private var _interval by mutableStateOf(
+        runCatching { StopMotionInterval.valueOf(prefs.getString("interval", StopMotionInterval.MANUAL.name)!!) }
+            .getOrDefault(StopMotionInterval.MANUAL)
+    )
+
+    var customIntervalMs: Long
+        get() = _customIntervalMs
+        set(value) {
+            _customIntervalMs = value
+            prefs.edit().putLong("customIntervalMs", value).apply()
+        }
+    private var _customIntervalMs by mutableStateOf(prefs.getLong("customIntervalMs", 1000L))
+
+    var outputFps: StopMotionFps
+        get() = _outputFps
+        set(value) {
+            _outputFps = value
+            prefs.edit().putString("outputFps", value.name).apply()
+        }
+    private var _outputFps by mutableStateOf(
+        runCatching { StopMotionFps.valueOf(prefs.getString("outputFps", StopMotionFps.FPS_12.name)!!) }
+            .getOrDefault(StopMotionFps.FPS_12)
+    )
+
+    var resolution: StopMotionResolution
+        get() = _resolution
+        set(value) {
+            _resolution = value
+            prefs.edit().putString("resolution", value.name).apply()
+        }
+    private var _resolution by mutableStateOf(
+        runCatching { StopMotionResolution.valueOf(prefs.getString("resolution", StopMotionResolution.HD.name)!!) }
+            .getOrDefault(StopMotionResolution.HD)
+    )
+
+    var aspectRatio: StopMotionAspectRatio
+        get() = _aspectRatio
+        set(value) {
+            _aspectRatio = value
+            prefs.edit().putString("aspectRatio", value.name).apply()
+        }
+    private var _aspectRatio by mutableStateOf(
+        runCatching { StopMotionAspectRatio.valueOf(prefs.getString("aspectRatio", StopMotionAspectRatio.RATIO_16_9.name)!!) }
+            .getOrDefault(StopMotionAspectRatio.RATIO_16_9)
+    )
+
+    var onionSkin: StopMotionOnionSkin
+        get() = _onionSkin
+        set(value) {
+            _onionSkin = value
+            prefs.edit().putString("onionSkin", value.name).apply()
+        }
+    private var _onionSkin by mutableStateOf(
+        runCatching { StopMotionOnionSkin.valueOf(prefs.getString("onionSkin", StopMotionOnionSkin.MEDIUM.name)!!) }
+            .getOrDefault(StopMotionOnionSkin.MEDIUM)
+    )
+
     var showSettings by mutableStateOf(false)
 
 
