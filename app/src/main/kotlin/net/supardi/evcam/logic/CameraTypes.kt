@@ -24,6 +24,7 @@ enum class CustomSceneMode(
 ) {
     AUTO("Auto / Normal", "Standard camera defaults"),
     HORIZON_LOCK("Horizon Lock", "Real-time auto-crop and level stabilization", supportPhoto = false, supportVideo = true),
+    SLOW_MOTION("Slow Motion", "Requires 120fps or 240fps selected", supportPhoto = false, supportVideo = true),
     COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking.", lockEv = true, supportVideo = false),
     PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast", supportVideo = false),
     NIGHT("Night Boost", "Longer exposure for low-light conditions", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),

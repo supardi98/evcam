@@ -302,6 +302,7 @@ fun startVideoRecord(
     fps: Int = 30,
     audioEnabled: Boolean,
     recordSurface: android.view.Surface,
+    useHighSpeed: Boolean = false,
     onMediaSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit,
     onEvent: (Any) -> Unit
 ): Any? {
@@ -309,11 +310,18 @@ fun startVideoRecord(
     val tempFile = camera2Engine.lastOutputFile
         ?: File(context.cacheDir, "temp_vid_${System.currentTimeMillis()}.mp4").absolutePath
 
-    Log.d("EVCAM", "startVideoRecord called with file=$tempFile w=$width h=$height")
+    Log.d("EVCAM", "startVideoRecord called with file=$tempFile w=$width h=$height useHighSpeed=$useHighSpeed")
 
-    camera2Engine.startRecording(recordSurface) {
-        Log.d("EVCAM", "Video recording started event received")
-        onEvent("Start")
+    if (useHighSpeed) {
+        camera2Engine.startHighSpeedRecording(recordSurface, fps) {
+            Log.d("EVCAM", "High speed video recording started event received")
+            onEvent("Start")
+        }
+    } else {
+        camera2Engine.startRecording(recordSurface) {
+            Log.d("EVCAM", "Video recording started event received")
+            onEvent("Start")
+        }
     }
 
     return object {

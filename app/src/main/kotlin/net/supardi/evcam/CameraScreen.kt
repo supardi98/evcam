@@ -728,79 +728,124 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
-
-
         } else {
             triggerVibe() // Vibrate both at the start and end of video recording
-            if (isRecording) {
-                val stopMethod = activeRecording?.javaClass?.getMethod("stop")
-                stopMethod?.invoke(activeRecording)
-                isRecording = false
-                cameraRenderThread?.stopRecording()
-                cameraRenderThread = null
-                textureView.setSensorAspectRatio(3f / 4f)
-                previewSessionTrigger++
-            } else {
-                val (vWidth, vHeight) = when (uiState.videoQuality) {
-                    VideoQualityMode.UHD -> Pair(3840, 2160)
-                    VideoQualityMode.QHD -> Pair(2560, 1440)
-                    VideoQualityMode.FHD -> Pair(1920, 1080)
-                    VideoQualityMode.HD -> Pair(1280, 720)
-                    VideoQualityMode.SD -> Pair(640, 480)
-                }
-                val vFps = uiState.videoFps.fps
-
-                // Restart camera session with the correct video dimensions so the persistent
-                // surface is bound at the right size before recording starts.
-                val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
-                camera2Engine.setupMediaRecorder(
-                    width = vWidth, height = vHeight, fps = vFps,
-                    audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
-                )
-                textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
-                textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
-                val texSurface = android.view.Surface(textureView.surfaceTexture)
-                val newTargets = mutableListOf<android.view.Surface>(texSurface)
-                
-                val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK
-                if (isHorizonLock) {
-                    val crt = net.supardi.evcam.gl.CameraRenderThread(vWidth, vHeight, rotationSensorHelper)
-                    cameraRenderThread = crt
-                    crt.start()
-                    crt.awaitSurfaceReady()
-                    
-                    val pSurface = camera2Engine.getOrCreatePersistentSurface()
-                    crt.setOutputSurface(pSurface, vWidth, vHeight)
-                    
-                    newTargets.add(crt.cameraSurface!!)
+                if (isRecording) {
+                    val stopMethod = activeRecording?.javaClass?.getMethod("stop")
+                    stopMethod?.invoke(activeRecording)
+                    isRecording = false
+                    cameraRenderThread?.stopRecording()
+                    cameraRenderThread = null
+                    textureView.setSensorAspectRatio(3f / 4f)
+                    previewSessionTrigger++
                 } else {
-                    camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
-                }
-                
-                camera2Engine.imageReader?.surface?.let { newTargets.add(it) }
-                camera2Engine.analysisImageReader?.surface?.let { newTargets.add(it) }
-                camera2Engine.createPreviewSession(newTargets) { _ ->
-                    activeRecording = startVideoRecord(
-                        context = context,
-                        camera2Engine = camera2Engine,
-                        width = vWidth,
-                        height = vHeight,
-                        fps = vFps,
-                        audioEnabled = videoAudioEnabled,
-                        recordSurface = if (isHorizonLock) cameraRenderThread!!.cameraSurface!! else camera2Engine.getOrCreatePersistentSurface(),
-                        onMediaSaved = { bitmap, uri ->
-                            lastCapturedBitmap = null  // clear photo bitmap so thumbnail loads from video URI
-                            lastCapturedUri = uri
-                            prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
-                        },
-                        onEvent = { event ->
-                            if (event == "Start") isRecording = true
-                            else if (event == "Finalize") {
-                                isRecording = false
-                            }
+                    val (vWidth, vHeight) = when (uiState.videoQuality) {
+                        VideoQualityMode.UHD -> Pair(3840, 2160)
+                        VideoQualityMode.QHD -> Pair(2560, 1440)
+                        VideoQualityMode.FHD -> Pair(1920, 1080)
+                        VideoQualityMode.HD -> Pair(1280, 720)
+                        VideoQualityMode.SD -> Pair(640, 480)
+                    }
+                    val vFps = uiState.videoFps.fps
+                    val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
+
+                    val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK
+                    val isSlowMotion = uiState.selectedCustomScene == CustomSceneMode.SLOW_MOTION
+
+                    if (isSlowMotion && vFps < 120) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Slow Motion butuh FPS 120 atau 240. Ubah FPS dulu di pengaturan video.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } else if (isSlowMotion) {
+                        // Slow motion: pakai regular session, MediaRecorder sudah set
+                        // setCaptureRate(120) + setVideoFrameRate(30) → 4x slow saat diputar.
+                        // Jauh lebih kompatibel daripada ConstrainedHighSpeedCaptureSession.
+
+                        // Shutter speed enforcement: cap ke 1/fps jika manual terlalu lambat
+                        val maxShutterNs = 1_000_000_000L / vFps
+                        if (!isShutterAuto && shutterSpeed.toLong() > maxShutterNs) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Shutter speed dikap ke 1/${vFps}s untuk slow motion",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         }
-                    )
-                }
+
+                        camera2Engine.setupMediaRecorder(
+                            width = vWidth, height = vHeight, fps = vFps,
+                            audioEnabled = false, outputFile = tempVideoFile
+                        )
+                        textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
+                        textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
+                        val texSurface = android.view.Surface(textureView.surfaceTexture)
+                        val slowTargets = mutableListOf<android.view.Surface>(texSurface)
+                        slowTargets.add(camera2Engine.getOrCreatePersistentSurface())
+                        camera2Engine.imageReader?.surface?.let { slowTargets.add(it) }
+                        camera2Engine.analysisImageReader?.surface?.let { slowTargets.add(it) }
+
+                        camera2Engine.createPreviewSession(slowTargets, targetFps = vFps) { _ ->
+                            activeRecording = startVideoRecord(
+                                context = context,
+                                camera2Engine = camera2Engine,
+                                width = vWidth, height = vHeight, fps = vFps,
+                                audioEnabled = false,
+                                recordSurface = camera2Engine.getOrCreatePersistentSurface(),
+                                onMediaSaved = { _, uri ->
+                                    lastCapturedBitmap = null
+                                    lastCapturedUri = uri
+                                    prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                                },
+                                onEvent = { event ->
+                                    if (event == "Start") isRecording = true
+                                    else if (event == "Finalize") isRecording = false
+                                }
+                            )
+                        }
+                    } else {
+                        camera2Engine.setupMediaRecorder(
+                            width = vWidth, height = vHeight, fps = vFps,
+                            audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
+                        )
+                        textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
+                        textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
+                        val texSurface = android.view.Surface(textureView.surfaceTexture)
+                        val newTargets = mutableListOf<android.view.Surface>(texSurface)
+
+                        if (isHorizonLock) {
+                            val crt = net.supardi.evcam.gl.CameraRenderThread(vWidth, vHeight, rotationSensorHelper)
+                            cameraRenderThread = crt
+                            crt.start()
+                            crt.awaitSurfaceReady()
+                            val pSurface = camera2Engine.getOrCreatePersistentSurface()
+                            crt.setOutputSurface(pSurface, vWidth, vHeight)
+                            newTargets.add(crt.cameraSurface!!)
+                        } else {
+                            camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
+                        }
+
+                        camera2Engine.imageReader?.surface?.let { newTargets.add(it) }
+                        camera2Engine.analysisImageReader?.surface?.let { newTargets.add(it) }
+                        camera2Engine.createPreviewSession(newTargets) { _ ->
+                            activeRecording = startVideoRecord(
+                                context = context,
+                                camera2Engine = camera2Engine,
+                                width = vWidth, height = vHeight, fps = vFps,
+                                audioEnabled = videoAudioEnabled,
+                                recordSurface = if (isHorizonLock) cameraRenderThread!!.cameraSurface!! else camera2Engine.getOrCreatePersistentSurface(),
+                                onMediaSaved = { _, uri ->
+                                    lastCapturedBitmap = null
+                                    lastCapturedUri = uri
+                                    prefs.edit().putString("lastCapturedUri", uri.toString()).apply()
+                                },
+                                onEvent = { event ->
+                                    if (event == "Start") isRecording = true
+                                    else if (event == "Finalize") isRecording = false
+                                }
+                            )
+                        }
+                    }
             }
         }
     }

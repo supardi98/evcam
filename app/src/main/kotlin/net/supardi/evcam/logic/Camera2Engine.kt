@@ -376,14 +376,18 @@ class Camera2Engine(private val context: Context) {
                 setVideoSource(MediaRecorder.VideoSource.SURFACE)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setOutputFile(outputFile)
-                setVideoEncodingBitRate(if (fps >= 60) 25000000 else 10000000)
-                setVideoFrameRate(fps)
-                if (fps > 30) {
+                setVideoEncodingBitRate(if (fps >= 120) 40000000 else if (fps >= 60) 25000000 else 10000000)
+                if (fps >= 120) {
+                    // Slow motion: capture at high fps but tell player to play at 30fps
+                    setVideoFrameRate(30)
                     setCaptureRate(fps.toDouble())
+                } else {
+                    setVideoFrameRate(fps)
+                    if (fps > 30) setCaptureRate(fps.toDouble())
                 }
                 setVideoSize(width, height)
                 setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-                if (audioEnabled) setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                if (audioEnabled && fps < 120) setAudioEncoder(MediaRecorder.AudioEncoder.AAC) // no audio in slow motion
                 val hint = getOrientationHint()
                 setOrientationHint(hint)
                 Log.d("EVCAM", "MediaRecorder orientationHint=$hint device=$currentDeviceOrientationDegrees size=${width}x${height}")
@@ -490,6 +494,7 @@ class Camera2Engine(private val context: Context) {
                 override fun onConfigured(session: CameraCaptureSession) {
                     if (cameraDevice == null) return
                     captureSession = session
+                    isHighSpeedSession = false
                     updatePreview()
                     onConfigured(session)
                 }
@@ -501,6 +506,111 @@ class Camera2Engine(private val context: Context) {
         } catch (e: CameraAccessException) {
             e.printStackTrace()
         }
+    }
+
+    var isHighSpeedSession = false
+        private set
+
+    fun createHighSpeedSession(
+        previewSurface: Surface,
+        recordSurface: Surface,
+        fps: Int,
+        shutterSpeedNs: Long = 0L, // 0 = auto; >0 = manual (will be capped to 1/fps)
+        onConfigured: (CameraCaptureSession) -> Unit,
+        onFailed: () -> Unit
+    ) {
+        val device = cameraDevice ?: return
+        // Max allowed exposure at this fps (1 frame period in nanoseconds)
+        val maxExposureNs = 1_000_000_000L / fps
+        // 180-degree rule: recommended exposure = 1/(fps*2)
+        val recommendedExposureNs = maxExposureNs / 2
+        // Actual exposure to use: cap manual shutter; use 180-rule for auto
+        val effectiveShutterNs = when {
+            shutterSpeedNs > 0 -> shutterSpeedNs.coerceAtMost(maxExposureNs)
+            else -> recommendedExposureNs
+        }
+        Log.d("EVCAM", "SlowMo shutter: fps=$fps maxExposure=${maxExposureNs}ns effective=${effectiveShutterNs}ns")
+        try {
+            currentPreviewSurface = previewSurface
+            val targets = listOf(previewSurface, recordSurface)
+
+            @Suppress("DEPRECATION")
+            device.createConstrainedHighSpeedCaptureSession(targets, object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    if (cameraDevice == null) return
+                    captureSession = session
+                    isHighSpeedSession = true
+
+                    // Build high speed preview request
+                    try {
+                        val builder = device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
+                        builder.addTarget(previewSurface)
+                        builder.addTarget(recordSurface)
+                        builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, android.util.Range(fps, fps))
+                        // Enforce shutter speed: disable AE and set manual exposure + auto ISO
+                        builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                        builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, effectiveShutterNs)
+                        // Use a reasonable ISO; ideally read from last AE estimate but default to 400
+                        val isoToUse = try {
+                            val chars = cameraManager.getCameraCharacteristics(device.id)
+                            val range = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                            range?.clamp(400) ?: 400
+                        } catch (e: Exception) { 400 }
+                        builder.set(CaptureRequest.SENSOR_SENSITIVITY, isoToUse)
+                        previewRequestBuilder = builder
+
+                        val highSpeedSession = session as android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession
+                        val burstRequests = highSpeedSession.createHighSpeedRequestList(builder.build())
+                        session.setRepeatingBurst(burstRequests, null, backgroundHandler)
+                        Log.d("EVCAM", "High speed session configured at ${fps}fps with ${burstRequests.size} burst requests")
+                        onConfigured(session)
+                    } catch (e: Exception) {
+                        Log.e("EVCAM", "Failed to set up high speed repeating burst", e)
+                        onFailed()
+                    }
+                }
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    Log.e("EVCAM", "Failed to configure high speed capture session")
+                    onFailed()
+                }
+            }, backgroundHandler)
+        } catch (e: Exception) {
+            Log.e("EVCAM", "createConstrainedHighSpeedCaptureSession failed", e)
+            onFailed()
+        }
+    }
+
+    fun startHighSpeedRecording(recordSurface: Surface, fps: Int, onStarted: () -> Unit) {
+        if (isRecordingVideo) return
+        val device = cameraDevice ?: return
+        val session = captureSession ?: return
+        try {
+            val builder = device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
+            val previewSurface = currentPreviewSurface
+            if (previewSurface != null) builder.addTarget(previewSurface)
+            builder.addTarget(recordSurface)
+            builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, android.util.Range(fps, fps))
+            previewRequestBuilder = builder
+
+            val highSpeedSession = session as android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession
+            val burstRequests = highSpeedSession.createHighSpeedRequestList(builder.build())
+            session.setRepeatingBurst(burstRequests, null, backgroundHandler)
+            mediaRecorder?.start()
+            isRecordingVideo = true
+            Log.d("EVCAM", "High speed MediaRecorder started at ${fps}fps")
+            onStarted()
+        } catch (e: Exception) {
+            Log.e("EVCAM", "Exception during startHighSpeedRecording", e)
+        }
+    }
+
+    fun getSupportedHighSpeedSizes(cameraId: String): List<Pair<Int, Int>> {
+        return try {
+            val chars = cameraManager.getCameraCharacteristics(cameraId)
+            val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return emptyList()
+            map.highSpeedVideoSizes?.map { Pair(it.width, it.height) } ?: emptyList()
+        } catch (e: Exception) { emptyList() }
     }
     
     var isAfTriggered = false
@@ -861,6 +971,11 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             }
             CustomSceneMode.HORIZON_LOCK -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            }
+            CustomSceneMode.SLOW_MOTION -> {
+                // High speed session handles its own capture; no special params needed here
                 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             }
