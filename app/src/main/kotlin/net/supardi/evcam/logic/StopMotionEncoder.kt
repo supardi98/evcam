@@ -14,12 +14,16 @@ object StopMotionEncoder {
     fun encode(
         frames: List<File>,
         fps: Int,
-        width: Int,
-        height: Int,
+        originalWidth: Int,
+        originalHeight: Int,
         outputPath: String,
         onProgress: (Float) -> Unit,
         onDone: (Boolean) -> Unit
     ) {
+        // Enforce multiples of 16 for MediaCodec
+        val width = (originalWidth + 15) / 16 * 16
+        val height = (originalHeight + 15) / 16 * 16
+
         Thread {
             try {
                 val mime = MediaFormat.MIMETYPE_VIDEO_AVC

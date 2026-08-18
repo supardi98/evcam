@@ -160,8 +160,8 @@ class StopMotionViewModel(private val context: Context) {
         StopMotionEncoder.encode(
             frames = frames,
             fps = outputFps.fps,
-            width = outWidth,
-            height = outHeight,
+            originalWidth = outWidth,
+            originalHeight = outHeight,
             outputPath = outputFile.absolutePath,
             onProgress = { p ->
                 handler.post { exportProgress = p }
