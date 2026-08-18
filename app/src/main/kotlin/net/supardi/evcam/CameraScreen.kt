@@ -694,7 +694,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
                     liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
                     isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
-                    customSceneMode = uiState.selectedCustomScene
+                    customSceneMode = uiState.selectedCustomScene,
+                    isUltraMode = camera2Engine.isUltraMode,
+                    isIsoAuto = isIsoAuto,
+                    iso = iso.toInt(),
+                    isShutterAuto = isShutterAuto,
+                    shutterSpeed = shutterSpeed.toLong()
                 ) { bitmap, uri ->
                     lastCapturedBitmap = bitmap
                     lastCapturedUri = uri
@@ -830,7 +835,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
         camera2Engine.onAfStateCallback = { afState ->
-
+            android.util.Log.d("EVCAM_AF", "afState changed: $afState focusState: ${uiState.focusState}")
             if (showFocusBox) {
                 when (afState) {
                     android.hardware.camera2.CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN,

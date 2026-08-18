@@ -85,10 +85,23 @@ fun takePhoto(
     isFrontCamera: Boolean = false,
     mirrorSelfie: Boolean = true,
     customSceneMode: CustomSceneMode = CustomSceneMode.AUTO,
+    isUltraMode: Boolean = false,
+    isIsoAuto: Boolean = true,
+    iso: Int = 100,
+    isShutterAuto: Boolean = true,
+    shutterSpeed: Long = 10000000L,
     onPhotoSaved: (Bitmap, Uri) -> Unit
 ) {
 
-    camera2Engine.takePhoto(flashMode, customSceneMode) { image ->
+    camera2Engine.capturePhoto(
+        isUltraMode = isUltraMode,
+        activeCustomScene = customSceneMode,
+        flashMode = flashMode,
+        isIsoAuto = isIsoAuto,
+        iso = iso,
+        isShutterAuto = isShutterAuto,
+        shutterSpeed = shutterSpeed
+    ) { image ->
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)

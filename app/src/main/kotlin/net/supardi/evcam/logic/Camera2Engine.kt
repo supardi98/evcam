@@ -23,6 +23,7 @@ import kotlin.math.pow
 
 class Camera2Engine(private val context: Context) {
     val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    var isTouchFocusActive = false
 
     fun getCameraIdForFacing(lensFacing: Int): String {
         try {
@@ -576,6 +577,7 @@ class Camera2Engine(private val context: Context) {
     }
     
     fun focusAt(x: Float, y: Float, width: Float, height: Float) {
+        isTouchFocusActive = true
         isAfTriggered = true
         val chars = cameraManager.getCameraCharacteristics(cameraDevice?.id ?: return)
         val sensorRect = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) ?: return
@@ -585,35 +587,26 @@ class Camera2Engine(private val context: Context) {
         val sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
         val isFront = chars.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
 
-        val normalizedX: Float
-        val normalizedY: Float
-
-        when (sensorOrientation) {
-            90 -> {
-                normalizedX = 1f - (y / height)
-                normalizedY = if (isFront) 1f - (x / width) else x / width
-            }
-            270 -> {
-                normalizedX = y / height
-                normalizedY = if (isFront) x / width else 1f - (x / width)
-            }
-            180 -> {
-                normalizedX = 1f - (x / width)
-                normalizedY = 1f - (y / height)
-            }
-            else -> {
-                normalizedX = if (isFront) 1f - (x / width) else x / width
-                normalizedY = y / height
-            }
+        val uiPt = floatArrayOf(x / width, y / height)
+        val matrix = android.graphics.Matrix()
+        // Rotate the normalized UI coordinates back to the sensor coordinate space
+        matrix.postRotate(-sensorOrientation.toFloat(), 0.5f, 0.5f)
+        if (isFront) {
+            // Front camera preview is mirrored horizontally
+            matrix.postScale(-1f, 1f, 0.5f, 0.5f)
         }
+        matrix.mapPoints(uiPt)
+        
+        val normalizedX = uiPt[0].coerceIn(0f, 1f)
+        val normalizedY = uiPt[1].coerceIn(0f, 1f)
 
         val mappedX = cropRegion.left + (normalizedX.coerceIn(0f, 1f)) * cropRegion.width()
         val mappedY = cropRegion.top + (normalizedY.coerceIn(0f, 1f)) * cropRegion.height()
 
         Log.d("EVCAM_TOUCH", "Touch ($x, $y) on View ($width x $height) -> Sensor Mapped ($mappedX, $mappedY) Orient: $sensorOrientation")
         
-        val halfTouchWidth = 150
-        val halfTouchHeight = 150
+        val halfTouchWidth = (cropRegion.width() * 0.08f).toInt().coerceAtLeast(150)
+        val halfTouchHeight = (cropRegion.height() * 0.08f).toInt().coerceAtLeast(150)
         
         val focusRect = Rect(
             max(cropRegion.left, (mappedX - halfTouchWidth).toInt()),
@@ -623,28 +616,34 @@ class Camera2Engine(private val context: Context) {
         )
         
         val meteringRectangle = MeteringRectangle(focusRect, MeteringRectangle.METERING_WEIGHT_MAX)
+        val builder = previewRequestBuilder ?: return
         
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRectangle))
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRectangle))
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-        
-        // 1. Update the repeating request with the new regions and IDLE trigger
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
-        updatePreview()
-        
-        // 2. Submit a SINGLE capture request to trigger the AF scan
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+        builder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(meteringRectangle))
+        builder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(meteringRectangle))
+
         try {
-            captureSession?.capture(previewRequestBuilder!!.build(), repeatingCaptureCallback, backgroundHandler)
+            captureSession?.stopRepeating()
+        } catch (e: Exception) { }
+
+        builder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
+        try {
+            captureSession?.capture(builder.build(), repeatingCaptureCallback, backgroundHandler)
+        } catch (e: Exception) { }
+
+        builder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+        try {
+            captureSession?.capture(builder.build(), repeatingCaptureCallback, backgroundHandler)
         } catch (e: Exception) {
             Log.e("EVCAM", "Failed to trigger AF", e)
         }
         
-        // 3. Reset builder back to IDLE so future repeating requests don't re-trigger it
-        previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+        builder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+        updatePreview()
     }
 
     fun resetFocusToContinuous() {
+        isTouchFocusActive = false
         if (isRecordingVideo) {
             try {
                 previewRequestBuilder?.set(CaptureRequest.CONTROL_AF_REGIONS, null)
@@ -678,7 +677,9 @@ class Camera2Engine(private val context: Context) {
             applyCustomSceneModeInternal(activeCustomScene, update = false)
         } else {
             builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            if (!isTouchFocusActive) {
+                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            }
             builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
             builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
@@ -859,7 +860,16 @@ class Camera2Engine(private val context: Context) {
     }
 
 
-    fun takePhoto(flashMode: FlashMode, activeCustomScene: CustomSceneMode = CustomSceneMode.AUTO, onImageCaptured: (Image) -> Unit) {
+    fun capturePhoto(
+        isUltraMode: Boolean,
+        activeCustomScene: CustomSceneMode,
+        flashMode: FlashMode,
+        isIsoAuto: Boolean = true,
+        iso: Int = 100,
+        isShutterAuto: Boolean = true,
+        shutterSpeed: Long = 10000000L,
+        onImageCaptured: (Image) -> Unit
+    ) {
         Log.d("EVCAM", "takePhoto() called, cameraDevice=$cameraDevice, imageReader=$imageReader, captureSession=$captureSession")
         val device = cameraDevice ?: run { Log.e("EVCAM", "cameraDevice is null"); return }
         val reader = imageReader ?: run { Log.e("EVCAM", "imageReader is null"); return }
@@ -937,7 +947,19 @@ class Camera2Engine(private val context: Context) {
             }
             
             val isoVal = previewRequestBuilder?.get(CaptureRequest.SENSOR_SENSITIVITY)
-            if (isoVal != null) captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, isoVal)
+            
+            // Apply Manual Exposure overrides explicitly (so true shutter is used, not the clamped preview one)
+            if (!isIsoAuto || !isShutterAuto) {
+                if (!activeCustomScene.lockIso && !activeCustomScene.lockShutter) {
+                    captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    if (!isIsoAuto) captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+                    if (!isShutterAuto) captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterSpeed)
+                }
+            } else {
+                if (isoVal != null) captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, isoVal)
+                val shutterVal = previewRequestBuilder?.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
+                if (shutterVal != null) captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterVal)
+            }
             
             // For long exposure scenes, apply true capture shutter speed instead of the limited preview shutter speed
             when (activeCustomScene) {
@@ -950,8 +972,7 @@ class Camera2Engine(private val context: Context) {
                     captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                 }
                 else -> {
-                    val shutterVal = previewRequestBuilder?.get(CaptureRequest.SENSOR_EXPOSURE_TIME)
-                    if (shutterVal != null) captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterVal)
+                    // Handled above in the Manual Exposure override
                 }
             }
             enableStabilization(captureBuilder)
