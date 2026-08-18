@@ -547,6 +547,14 @@ class Camera2Engine(private val context: Context) {
             android.util.Log.e("EVCAM", "Error during updatePreview", e)
         }
     }
+
+    fun pausePreview() {
+        try {
+            captureSession?.stopRepeating()
+        } catch (e: Exception) {
+            android.util.Log.e("EVCAM", "Error pausing preview", e)
+        }
+    }
     
     fun setZoomRatio(zoomRatio: Float) {
         val chars = cameraManager.getCameraCharacteristics(cameraDevice?.id ?: return)

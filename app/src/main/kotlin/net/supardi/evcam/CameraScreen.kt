@@ -624,6 +624,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 camera2Engine.setZoomRatio(value)
             }
     }
+
+    // Save power by pausing the preview if the media preview dialog is open for more than 10 seconds
+    LaunchedEffect(showMediaPreviewDialog) {
+        if (showMediaPreviewDialog) {
+            delay(10000)
+            if (showMediaPreviewDialog) {
+                camera2Engine.pausePreview()
+            }
+        } else {
+            camera2Engine.updatePreview()
+        }
+    }
     // Also re-apply when cameraControl changes (new camera bound)
     // LaunchedEffect(cameraControl) {
     //     cameraControl?.setZoomRatio(zoomAnim.value)
