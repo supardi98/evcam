@@ -4,10 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,9 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -55,6 +55,8 @@ fun CameraBottomBar(
     cameraMode: CameraMode,
     isRecording: Boolean,
     isFrontCamera: Boolean,
+    isProcessingHdr: Boolean = false,
+    hdrProgress: Int = 0,
     // Photo mode
     onShutterTap: () -> Unit,
     onBurstStart: () -> Unit,
@@ -144,6 +146,53 @@ fun CameraBottomBar(
                         contentDescription = "Video Badge",
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            // ── HDR shimmer + badge overlay ─────────────────────────────────
+            if (isProcessingHdr) {
+                val shimmerTranslate = rememberInfiniteTransition(label = "shimmer")
+                val shimmerX by shimmerTranslate.animateFloat(
+                    initialValue = -200f,
+                    targetValue = 200f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(900, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "shimmerX"
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.Transparent
+                                ),
+                                start = Offset(shimmerX - 100f, 0f),
+                                end = Offset(shimmerX + 100f, 200f)
+                            )
+                        )
+                )
+                // Badge pojok kanan atas
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFFFD600)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.Text(
+                        text = if (hdrProgress > 0) "HDR $hdrProgress%" else "HDR+",
+                        color = Color.Black,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
                     )
                 }
             }

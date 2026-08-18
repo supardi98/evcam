@@ -23,6 +23,7 @@ enum class CustomSceneMode(
     val supportVideo: Boolean = true
 ) {
     AUTO("Auto / Normal", "Standard camera defaults"),
+    HORIZON_LOCK("Horizon Lock", "Real-time auto-crop and level stabilization", supportPhoto = false, supportVideo = true),
     COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking.", lockEv = true, supportVideo = false),
     PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast", supportVideo = false),
     NIGHT("Night Boost", "Longer exposure for low-light conditions", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),
@@ -38,8 +39,7 @@ enum class CustomSceneMode(
     FIREWORKS("Fireworks Trails", "Long exposure (2s) for light trails", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),
     FOOD("Food / Culinary", "Enhances warm colors (+0.3 EV)", lockEv = true, supportVideo = false),
     CONCERT("Concert / Stage", "Reduces exposure (-1.5 EV)", lockEv = true),
-    WATERFALL("Silky Waterfall", "Slow shutter (1/4s) for smooth water", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false),
-    HORIZON_LOCK("Horizon Lock", "Real-time auto-crop and level stabilization", supportPhoto = false, supportVideo = true)
+    WATERFALL("Silky Waterfall", "Slow shutter (1/4s) for smooth water", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {

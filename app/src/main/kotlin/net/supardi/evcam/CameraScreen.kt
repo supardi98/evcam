@@ -1429,6 +1429,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 cameraMode = cameraMode,
                 isRecording = isRecording,
                 isFrontCamera = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT,
+                isProcessingHdr = isProcessingHdr,
+                hdrProgress = hdrProgress,
                 onThumbnailClick = { showMediaPreviewDialog = true },
                 // Photo mode
                 onShutterTap = { initiateCapture() },
@@ -1472,34 +1474,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
         DialogContainers(uiState = uiState)
         
-        if (isProcessingHdr) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .pointerInput(Unit) { }, // Block touches
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        color = Color.Yellow,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Processing HDR+ Pro...",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "$hdrProgress%",
-                        color = Color.Yellow,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-        }
     }
 }
 
