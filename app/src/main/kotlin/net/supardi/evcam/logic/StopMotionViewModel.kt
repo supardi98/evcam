@@ -144,11 +144,24 @@ class StopMotionViewModel(private val context: Context) {
         val outputDir = File(context.cacheDir, "stopmotion_export").also { it.mkdirs() }
         val outputFile = File(outputDir, "stopmotion_${System.currentTimeMillis()}.mp4")
 
+        // Read first frame to detect orientation
+        var outWidth = resolution.width
+        var outHeight = resolution.height
+        val firstFrame = frames.firstOrNull()
+        if (firstFrame != null) {
+            val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeFile(firstFrame.absolutePath, opts)
+            if (opts.outHeight > opts.outWidth) { // It's portrait
+                outWidth = resolution.height
+                outHeight = resolution.width
+            }
+        }
+
         StopMotionEncoder.encode(
             frames = frames,
             fps = outputFps.fps,
-            width = resolution.width,
-            height = resolution.height,
+            width = outWidth,
+            height = outHeight,
             outputPath = outputFile.absolutePath,
             onProgress = { p ->
                 handler.post { exportProgress = p }
