@@ -384,88 +384,28 @@ fun MediaPreviewDialog(
             contentAlignment = Alignment.Center
         ) {
             if (actualCount > 0) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Top bar — counter & close
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        var fastJumpDragAccum by remember { mutableFloatStateOf(0f) }
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color.Black.copy(alpha = 0.6f))
-                                .clickable { showGalleryGrid = true }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                .pointerInput(actualCount) {
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { fastJumpDragAccum = 0f },
-                                        onHorizontalDrag = { _, dragAmount ->
-                                            fastJumpDragAccum += dragAmount
-                                            val steps = (fastJumpDragAccum / 30f).toInt()
-                                            if (steps != 0) {
-                                                fastJumpDragAccum -= steps * 30f
-                                                val targetPage = pagerState.currentPage - steps * 5
-                                                scope.launch { pagerState.scrollToPage(targetPage) }
-                                            }
-                                        }
-                                    )
-                                },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.GridView,
-                                contentDescription = "Gallery Grid",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "${currentActualIndex + 1} / $actualCount",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                HorizontalPager(
+                    state = pagerState,
+                    userScrollEnabled = true,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    val itemIndex = if (actualCount > 0) page % actualCount else 0
+                    val item = mediaList.getOrNull(itemIndex)
+                    val isCurrentVideo = item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // Delete button
-                            IconButton(
-                                onClick = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                        deleteCurrentItem()
-                                    } else {
-                                        showDeleteConfirm = true
-                                    }
-                                },
-                                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+                    val pageInfo by produceState(initialValue = MediaInfo(), item) {
+                        value = if (item != null) {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                fetchMediaInfo(context, item.uri, item.isVideo)
                             }
-                            // Close button
-                            IconButton(
-                                onClick = onDismiss,
-                                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
-                            ) {
-                                Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(20.dp))
-                            }
-                        }
+                        } else MediaInfo()
                     }
 
-                    // Native HorizontalPager with infinite smooth swiping
-                    HorizontalPager(
-                        state = pagerState,
-                        userScrollEnabled = true,
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).wrapContentHeight()
-                    ) { page ->
-                        val itemIndex = if (actualCount > 0) page % actualCount else 0
-                        val item = mediaList.getOrNull(itemIndex)
-                        val isCurrentVideo = item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)
-
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         val openActiveMedia = {
                             val activeUri = item?.uri ?: lastCapturedUri ?: fetchLatestMediaUri(context)
                             if (activeUri != null) {
@@ -475,23 +415,9 @@ fun MediaPreviewDialog(
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     })
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "No Gallery or Video Player app found", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "No Gallery app found", Toast.LENGTH_SHORT).show()
                                 }
                             } else Toast.makeText(context, "Media not found", Toast.LENGTH_SHORT).show()
-                        }
-
-                        // Parse dynamic aspect ratio float value. Fallback to 1f if invalid or not loaded yet.
-                        val parsedRatio = remember(currentInfo.aspectRatioStr) {
-                            if (currentInfo.aspectRatioStr.isNotEmpty()) {
-                                try {
-                                    val parts = currentInfo.aspectRatioStr.split(':')
-                                    if (parts.size == 2) {
-                                        parts[0].toFloat() / parts[1].toFloat()
-                                    } else 1f
-                                } catch(e: Exception) { 1f }
-                            } else {
-                                if (cameraMode == CameraMode.VIDEO) 16f/9f else 4f/3f
-                            }
                         }
 
                         Box(
@@ -501,9 +427,6 @@ fun MediaPreviewDialog(
                                 .clip(RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-
-
-
                             if (page == 0 && lastCapturedBitmap != null) {
                                 Image(
                                     bitmap = lastCapturedBitmap.asImageBitmap(),
@@ -538,83 +461,154 @@ fun MediaPreviewDialog(
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Media info card
-                    if (currentInfo.fileName.isNotEmpty() || currentInfo.fileSize.isNotEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.Black.copy(alpha = 0.65f))
-                                .clickable { showExifDialog = true }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (currentInfo.fileName.isNotEmpty()) {
-                                MediaInfoRow(label = "File", value = currentInfo.fileName)
-                            }
-                            if (currentInfo.dateTime.isNotEmpty()) {
-                                MediaInfoRow(label = "Date", value = currentInfo.dateTime)
-                            }
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                        // Media info card
+                        if (pageInfo.fileName.isNotEmpty() || pageInfo.fileSize.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.Black.copy(alpha = 0.65f))
+                                    .clickable { showExifDialog = true }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                if (currentInfo.resolution.isNotEmpty()) {
-                                    MediaInfoPill(label = currentInfo.resolution)
+                                if (pageInfo.fileName.isNotEmpty()) {
+                                    MediaInfoRow(label = "File", value = pageInfo.fileName)
                                 }
-                                if (currentInfo.aspectRatioStr.isNotEmpty()) {
-                                    MediaInfoPill(label = currentInfo.aspectRatioStr, highlight = true)
+                                if (pageInfo.dateTime.isNotEmpty()) {
+                                    MediaInfoRow(label = "Date", value = pageInfo.dateTime)
                                 }
-                                if (currentInfo.fileSize.isNotEmpty()) {
-                                    MediaInfoPill(label = currentInfo.fileSize)
-                                }
-                                if (currentInfo.mp.isNotEmpty()) {
-                                    MediaInfoPill(label = currentInfo.mp)
-                                }
-                                if (currentInfo.fps.isNotEmpty()) {
-                                    MediaInfoPill(label = currentInfo.fps, highlight = true)
-                                }
-
-                                if (currentInfo.duration.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(Color.Yellow.copy(alpha = 0.15f))
-                                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Timer,
-                                            contentDescription = null,
-                                            tint = Color.Yellow,
-                                            modifier = Modifier.size(11.dp)
-                                        )
-                                        Text(
-                                            text = currentInfo.duration,
-                                            color = Color.Yellow,
-                                            fontSize = 11.sp
-                                        )
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (pageInfo.resolution.isNotEmpty()) {
+                                        MediaInfoPill(label = pageInfo.resolution)
                                     }
-                                }
-                                if (currentInfo.mimeType.isNotEmpty()) {
-                                    MediaInfoPill(label = currentInfo.mimeType)
+                                    if (pageInfo.aspectRatioStr.isNotEmpty()) {
+                                        MediaInfoPill(label = pageInfo.aspectRatioStr, highlight = true)
+                                    }
+                                    if (pageInfo.fileSize.isNotEmpty()) {
+                                        MediaInfoPill(label = pageInfo.fileSize)
+                                    }
+                                    if (pageInfo.mp.isNotEmpty()) {
+                                        MediaInfoPill(label = pageInfo.mp)
+                                    }
+                                    if (pageInfo.fps.isNotEmpty()) {
+                                        MediaInfoPill(label = pageInfo.fps, highlight = true)
+                                    }
+
+                                    if (pageInfo.duration.isNotEmpty()) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color.Yellow.copy(alpha = 0.15f))
+                                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Timer,
+                                                contentDescription = null,
+                                                tint = Color.Yellow,
+                                                modifier = Modifier.size(11.dp)
+                                            )
+                                            Text(
+                                                text = pageInfo.duration,
+                                                color = Color.Yellow,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                    if (pageInfo.mimeType.isNotEmpty()) {
+                                        MediaInfoPill(label = pageInfo.mimeType)
+                                    }
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Swipe anywhere to browse  •  Tap image to open",
+                            color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                }
+
+                // Top bar overlay pinned to top
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 24.dp)
+                        .align(Alignment.TopCenter),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    var fastJumpDragAccum by remember { mutableFloatStateOf(0f) }
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .clickable { showGalleryGrid = true }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .pointerInput(actualCount) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = { fastJumpDragAccum = 0f },
+                                    onHorizontalDrag = { _, dragAmount ->
+                                        fastJumpDragAccum += dragAmount
+                                        val steps = (fastJumpDragAccum / 30f).toInt()
+                                        if (steps != 0) {
+                                            fastJumpDragAccum -= steps * 30f
+                                            val targetPage = pagerState.currentPage - steps * 5
+                                            scope.launch { pagerState.scrollToPage(targetPage) }
+                                        }
+                                    }
+                                )
+                            },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.GridView,
+                            contentDescription = "Gallery Grid",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "${currentActualIndex + 1} / $actualCount",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Swipe image to browse  •  Tap to open  •  Tap outside to dismiss",
-                        color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // Delete button
+                        IconButton(
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    deleteCurrentItem()
+                                } else {
+                                    showDeleteConfirm = true
+                                }
+                            },
+                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(20.dp))
+                        }
+                        // Close button
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.6f))
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(20.dp))
+                        }
+                    }
                 }
             }
         }

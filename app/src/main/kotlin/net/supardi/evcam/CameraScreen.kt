@@ -548,7 +548,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         PhotoQualityMode.MAX -> photoSizes.first()
                         PhotoQualityMode.HIGH -> if (photoSizes.size > 1) photoSizes[1] else photoSizes.first()
                         PhotoQualityMode.MEDIUM -> photoSizes.firstOrNull { maxOf(it.second, it.third) <= 2560 } ?: photoSizes[photoSizes.size / 2]
-                        PhotoQualityMode.LOW -> photoSizes[photoSizes.size / 2] ?: photoSizes.last()
+                        PhotoQualityMode.LOW -> photoSizes.last()
                     }
                 } else Triple("1080p", 1920, 1080)
                 
