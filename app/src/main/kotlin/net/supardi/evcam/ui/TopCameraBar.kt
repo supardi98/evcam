@@ -251,6 +251,33 @@ fun TopCameraBar(
                             fontSize = 12.sp
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable {
+                                uiState.photoQuality = when (uiState.photoQuality) {
+                                    PhotoQualityMode.ULTRA -> PhotoQualityMode.MAX
+                                    PhotoQualityMode.MAX -> PhotoQualityMode.HIGH
+                                    PhotoQualityMode.HIGH -> PhotoQualityMode.MEDIUM
+                                    PhotoQualityMode.MEDIUM -> PhotoQualityMode.LOW
+                                    PhotoQualityMode.LOW -> PhotoQualityMode.ULTRA
+                                }
+                                uiState.prefs.edit().putString("photoQuality", uiState.photoQuality.name).apply()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.photoQuality.label,
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 } else {
                     Box(
                         modifier = Modifier

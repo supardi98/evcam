@@ -14,26 +14,29 @@ object HdrProcessor {
         images: List<ByteArray>,
         onProgress: (Int) -> Unit
     ): Bitmap? = withContext(Dispatchers.Default) {
-        if (images.size < 3) {
-            Log.e("HdrProcessor", "Not enough images for HDR: ${images.size}")
+        if (images.size < 5) {
+            Log.e("HdrProcessor", "Not enough images for true HDR: ${images.size}")
             return@withContext null
         }
 
         try {
             onProgress(10)
             
-            // Decode the JPEGs
-            val bitmaps = images.map { bytes ->
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            val options = BitmapFactory.Options().apply {
+                inMutable = false
+                inPreferredConfig = Bitmap.Config.ARGB_8888
             }
             
-            onProgress(30)
+            val bitmaps = images.map { bytes ->
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+            }
+            
+            onProgress(20)
             
             val width = bitmaps[0].width
             val height = bitmaps[0].height
-            val totalPixels = width * height
 
-            // Sort bitmaps by brightness: [0] = dark, [1] = normal, [2] = bright
+            // Sort bitmaps by brightness
             val sortedBitmaps = bitmaps.sortedBy { bmp ->
                 var lumaSum = 0L
                 val samplePixels = IntArray(1000)
@@ -47,21 +50,21 @@ object HdrProcessor {
                 lumaSum
             }
 
-            val darkBmp = sortedBitmaps[0]
-            val normBmp = sortedBitmaps[1]
-            val brightBmp = sortedBitmaps[2]
+            // [0]=Darkest (-4), [1]=Dark (-2), [2]=Normal (0), [3]=Bright (+2), [4]=Brightest (+4)
+            val bmpD2 = sortedBitmaps[0]
+            val bmpD1 = sortedBitmaps[1]
+            val bmpN = sortedBitmaps[2]
+            val bmpB1 = sortedBitmaps[3]
+            val bmpB2 = sortedBitmaps[4]
 
-            val darkPixels = IntArray(totalPixels)
-            val normPixels = IntArray(totalPixels)
-            val brightPixels = IntArray(totalPixels)
-            val resultPixels = IntArray(totalPixels)
-
-            onProgress(40)
-            darkBmp.getPixels(darkPixels, 0, width, 0, 0, width, height)
-            normBmp.getPixels(normPixels, 0, width, 0, 0, width, height)
-            brightBmp.getPixels(brightPixels, 0, width, 0, 0, width, height)
+            onProgress(30)
             
-            onProgress(50)
+            val rowD2 = IntArray(width)
+            val rowD1 = IntArray(width)
+            val rowN = IntArray(width)
+            val rowB1 = IntArray(width)
+            val rowB2 = IntArray(width)
+            val rowResult = IntArray(width)
 
             val sigma = 50.0
             val twoSigmaSq = 2.0 * sigma * sigma
@@ -70,57 +73,89 @@ object HdrProcessor {
                 weightTable[i] = exp(-((i - 128.0).pow(2)) / twoSigmaSq).toFloat()
             }
 
-            val batchSize = totalPixels / 10
-            for (i in 0 until totalPixels) {
-                if (i % batchSize == 0) {
-                    val progress = 50 + ((i.toFloat() / totalPixels) * 40).toInt()
+            val finalBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+            for (y in 0 until height) {
+                if (y % 100 == 0) {
+                    val progress = 30 + ((y.toFloat() / height) * 60).toInt()
                     onProgress(progress)
                 }
 
-                val pDark = darkPixels[i]
-                val pNorm = normPixels[i]
-                val pBright = brightPixels[i]
+                bmpD2.getPixels(rowD2, 0, width, 0, y, width, 1)
+                bmpD1.getPixels(rowD1, 0, width, 0, y, width, 1)
+                bmpN.getPixels(rowN, 0, width, 0, y, width, 1)
+                bmpB1.getPixels(rowB1, 0, width, 0, y, width, 1)
+                bmpB2.getPixels(rowB2, 0, width, 0, y, width, 1)
 
-                val rD = (pDark shr 16) and 0xFF
-                val gD = (pDark shr 8) and 0xFF
-                val bD = pDark and 0xFF
-                
-                val rN = (pNorm shr 16) and 0xFF
-                val gN = (pNorm shr 8) and 0xFF
-                val bN = pNorm and 0xFF
-                
-                val rB = (pBright shr 16) and 0xFF
-                val gB = (pBright shr 8) and 0xFF
-                val bB = pBright and 0xFF
+                for (x in 0 until width) {
+                    val pN = rowN[x]
+                    val rN = (pN shr 16) and 0xFF
+                    val gN = (pN shr 8) and 0xFF
+                    val bN = pN and 0xFF
+                    val lumaN = (rN * 0.299f + gN * 0.587f + bN * 0.114f).toInt()
 
-                val lumaD = (rD * 0.299f + gD * 0.587f + bD * 0.114f).toInt().coerceIn(0, 255)
-                val lumaN = (rN * 0.299f + gN * 0.587f + bN * 0.114f).toInt().coerceIn(0, 255)
-                val lumaB = (rB * 0.299f + gB * 0.587f + bB * 0.114f).toInt().coerceIn(0, 255)
+                    var sumR = 0f
+                    var sumG = 0f
+                    var sumB = 0f
+                    var sumW = 0f
 
-                val wD = weightTable[lumaD] + 1e-5f
-                val wN = weightTable[lumaN] + 1e-5f
-                val wB = weightTable[lumaB] + 1e-5f
-                
-                var finalWd = wD
-                var finalWn = wN * 1.5f 
-                var finalWb = wB
+                    // Process each frame
+                    val frames = arrayOf(rowD2[x], rowD1[x], rowN[x], rowB1[x], rowB2[x])
+                    val baseWeights = arrayOf(0.8f, 1.2f, 2.0f, 1.2f, 0.8f) // Favor normal
+                    
+                    for (f in 0 until 5) {
+                        val pF = frames[f]
+                        val rF = (pF shr 16) and 0xFF
+                        val gF = (pF shr 8) and 0xFF
+                        val bF = pF and 0xFF
+                        val lumaF = (rF * 0.299f + gF * 0.587f + bF * 0.114f).toInt()
+                        
+                        var wF = weightTable[lumaF] * baseWeights[f]
+                        
+                        // Ghosting reduction: if color difference from Normal is extreme, kill weight
+                        if (f != 2) {
+                            val colorDiff = kotlin.math.abs(rF - rN) + kotlin.math.abs(gF - gN) + kotlin.math.abs(bF - bN)
+                            if (colorDiff > 120) {
+                                wF *= 0.05f // heavy penalty for ghosts
+                            }
+                        }
+                        
+                        // Local contrast trick: boost midtones based on reference
+                        if (f == 2) {
+                            wF *= 1.5f
+                        } else if (f < 2 && lumaN > 180) { // Recovery from darks
+                            wF *= 4f
+                        } else if (f > 2 && lumaN < 70) { // Recovery from brights
+                            wF *= 4f
+                        }
 
-                if (lumaN > 220) finalWd *= 3f
-                if (lumaN < 40) finalWb *= 3f
+                        wF += 1e-5f
+                        sumR += rF * wF
+                        sumG += gF * wF
+                        sumB += bF * wF
+                        sumW += wF
+                    }
 
-                val sumW = finalWd + finalWn + finalWb
+                    // Clarity injection (boost contrast slightly)
+                    var finalR = sumR / sumW
+                    var finalG = sumG / sumW
+                    var finalB = sumB / sumW
+                    
+                    val contrast = 1.15f
+                    finalR = (((finalR / 255f) - 0.5f) * contrast + 0.5f) * 255f
+                    finalG = (((finalG / 255f) - 0.5f) * contrast + 0.5f) * 255f
+                    finalB = (((finalB / 255f) - 0.5f) * contrast + 0.5f) * 255f
 
-                val rFinal = ((rD * finalWd + rN * finalWn + rB * finalWb) / sumW).toInt().coerceIn(0, 255)
-                val gFinal = ((gD * finalWd + gN * finalWn + gB * finalWb) / sumW).toInt().coerceIn(0, 255)
-                val bFinal = ((bD * finalWd + bN * finalWn + bB * finalWb) / sumW).toInt().coerceIn(0, 255)
-
-                resultPixels[i] = (0xFF shl 24) or (rFinal shl 16) or (gFinal shl 8) or bFinal
+                    val outR = finalR.toInt().coerceIn(0, 255)
+                    val outG = finalG.toInt().coerceIn(0, 255)
+                    val outB = finalB.toInt().coerceIn(0, 255)
+                    
+                    rowResult[x] = (0xFF shl 24) or (outR shl 16) or (outG shl 8) or outB
+                }
+                finalBitmap.setPixels(rowResult, 0, width, 0, y, width, 1)
             }
 
             onProgress(95)
-            val finalBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            finalBitmap.setPixels(resultPixels, 0, width, 0, 0, width, height)
-            
             bitmaps.forEach { it.recycle() }
             
             onProgress(100)

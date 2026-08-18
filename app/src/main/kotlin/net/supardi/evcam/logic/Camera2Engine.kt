@@ -50,6 +50,8 @@ class Camera2Engine(private val context: Context) {
     var mediaRecorder: MediaRecorder? = null
     private var isRecordingVideo = false
     
+    var isUltraMode = false
+    
     var previewRequestBuilder: CaptureRequest.Builder? = null
     var currentPreviewSurface: Surface? = null
     var persistentSurface: Surface? = null
@@ -267,11 +269,16 @@ class Camera2Engine(private val context: Context) {
         analysisImageReader = ImageReader.newInstance(streamWidth, streamHeight, ImageFormat.YUV_420_888, 4)
     }
 
-    fun getSupportedStreamResolutions(cameraId: String = "0", aspectRatio: String = "ALL"): List<Triple<String, Int, Int>> {
+    fun getSupportedStreamResolutions(cameraId: String = "0", aspectRatio: String = "ALL", useMaximumResolution: Boolean = false): List<Triple<String, Int, Int>> {
         try {
             val chars = cameraManager.getCameraCharacteristics(cameraId)
-            val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return defaultResolutions()
-            val sizes = map.getOutputSizes(ImageFormat.YUV_420_888) ?: map.getOutputSizes(ImageFormat.JPEG) ?: return defaultResolutions()
+            val map = if (useMaximumResolution && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION) ?: chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            } else {
+                chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            } ?: return defaultResolutions()
+            
+            val sizes = map.getOutputSizes(android.graphics.ImageFormat.JPEG) ?: map.getOutputSizes(android.graphics.ImageFormat.YUV_420_888) ?: return defaultResolutions()
 
             val list = mutableListOf<Triple<String, Int, Int>>()
             val sortedSizes = sizes.sortedByDescending { it.width * it.height }
@@ -282,9 +289,9 @@ class Camera2Engine(private val context: Context) {
                 val ratio = w.toFloat() / h.toFloat()
 
                 val matchesRatio = when (aspectRatio) {
-                    "16:9" -> kotlin.math.abs(ratio - (16f / 9f)) < 0.05f
-                    "4:3" -> kotlin.math.abs(ratio - (4f / 3f)) < 0.05f
-                    "1:1" -> kotlin.math.abs(ratio - 1.0f) < 0.05f
+                    "RATIO_16_9" -> kotlin.math.abs(ratio - (16f / 9f)) < 0.05f
+                    "RATIO_4_3" -> kotlin.math.abs(ratio - (4f / 3f)) < 0.05f
+                    "RATIO_1_1" -> kotlin.math.abs(ratio - 1.0f) < 0.05f
                     else -> true
                 }
 
@@ -533,6 +540,11 @@ class Camera2Engine(private val context: Context) {
             session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, backgroundHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
+        } catch (e: IllegalStateException) {
+            // Session is closed, ignore
+            android.util.Log.e("EVCAM", "Session closed during updatePreview", e)
+        } catch (e: Exception) {
+            android.util.Log.e("EVCAM", "Error during updatePreview", e)
         }
     }
     
@@ -820,6 +832,10 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.SENSOR_SENSITIVITY, 50) // Absolute minimum ISO
                 builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, 250_000_000L) // 1/4 second shutter
             }
+            CustomSceneMode.COMPUTATIONAL_HDR -> {
+                builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            }
         }
         if (update) updatePreview()
     }
@@ -857,18 +873,48 @@ class Camera2Engine(private val context: Context) {
             
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, previewRequestBuilder?.get(CaptureRequest.CONTROL_AF_MODE) ?: CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             
+            if (isUltraMode && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                captureBuilder.set(CaptureRequest.SENSOR_PIXEL_MODE, CameraMetadata.SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION)
+            }
+            
             val controlMode = previewRequestBuilder?.get(CaptureRequest.CONTROL_MODE)
             if (controlMode != null) captureBuilder.set(CaptureRequest.CONTROL_MODE, controlMode)
             
             val sceneMode = previewRequestBuilder?.get(CaptureRequest.CONTROL_SCENE_MODE)
             if (sceneMode != null) captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, sceneMode)
             
-            when (flashMode) {
-                FlashMode.AUTO -> captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
-                FlashMode.ON -> captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
-                FlashMode.OFF -> {
-                    captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            val focusDist = previewRequestBuilder?.get(CaptureRequest.LENS_FOCUS_DISTANCE)
+            if (focusDist != null) captureBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDist)
+            
+            val awbMode = previewRequestBuilder?.get(CaptureRequest.CONTROL_AWB_MODE)
+            if (awbMode != null) captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, awbMode)
+            
+            val colorMode = previewRequestBuilder?.get(CaptureRequest.COLOR_CORRECTION_MODE)
+            if (colorMode != null) captureBuilder.set(CaptureRequest.COLOR_CORRECTION_MODE, colorMode)
+            
+            val colorGains = previewRequestBuilder?.get(CaptureRequest.COLOR_CORRECTION_GAINS)
+            if (colorGains != null) captureBuilder.set(CaptureRequest.COLOR_CORRECTION_GAINS, colorGains)
+            
+            val colorTransform = previewRequestBuilder?.get(CaptureRequest.COLOR_CORRECTION_TRANSFORM)
+            if (colorTransform != null) captureBuilder.set(CaptureRequest.COLOR_CORRECTION_TRANSFORM, colorTransform)
+
+            val aeMode = previewRequestBuilder?.get(CaptureRequest.CONTROL_AE_MODE)
+            if (aeMode != null) captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, aeMode)
+
+            if (aeMode == CaptureRequest.CONTROL_AE_MODE_OFF) {
+                if (flashMode == FlashMode.ON) {
+                    captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
+                } else {
                     captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                }
+            } else {
+                when (flashMode) {
+                    FlashMode.AUTO -> captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                    FlashMode.ON -> captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
+                    FlashMode.OFF -> {
+                        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                        captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                    }
                 }
             }
             
@@ -890,9 +936,6 @@ class Camera2Engine(private val context: Context) {
                     if (shutterVal != null) captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, shutterVal)
                 }
             }
-            val focusDist = previewRequestBuilder?.get(CaptureRequest.LENS_FOCUS_DISTANCE)
-            if (focusDist != null) captureBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDist)
-            
             enableStabilization(captureBuilder)
             Log.d("EVCAM", "Sending capture STILL_CAPTURE request to session")
             session.capture(captureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
@@ -943,6 +986,10 @@ class Camera2Engine(private val context: Context) {
             session.captureBurst(requests, null, backgroundHandler)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
+        } catch (e: IllegalStateException) {
+            Log.e("EVCAM", "Session closed during takeBurst", e)
+        } catch (e: Exception) {
+            Log.e("EVCAM", "Error during takeBurst", e)
         }
     }
 
@@ -968,7 +1015,7 @@ class Camera2Engine(private val context: Context) {
                 }
                 
                 receivedCount++
-                if (receivedCount >= 3) {
+                if (receivedCount >= 5) {
                     ir.setOnImageAvailableListener(null, null)
                     onImagesCaptured(imagesList)
                 }
@@ -977,7 +1024,7 @@ class Camera2Engine(private val context: Context) {
 
         try {
             val requests = mutableListOf<CaptureRequest>()
-            val evOffsets = listOf(-6, 0, 6) // -2.0 EV, 0 EV, +2.0 EV (assuming 1/3 step)
+            val evOffsets = listOf(-12, -6, 0, 6, 12) // -4.0, -2.0, 0, +2.0, +4.0 EV (assuming 1/3 step)
             for (evOffset in evOffsets) {
                 val captureBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 captureBuilder.addTarget(reader.surface)

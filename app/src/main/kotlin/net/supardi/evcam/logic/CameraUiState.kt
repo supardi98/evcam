@@ -119,6 +119,7 @@ class CameraUiState(
     var enableEis by mutableStateOf(prefs.getBoolean("enableEis", false))
     var aspectRatio by mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_16_9.name) ?: AspectRatioMode.RATIO_16_9.name))
     var videoQuality by mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name))
+    var photoQuality by mutableStateOf(PhotoQualityMode.valueOf(prefs.getString("photoQuality", PhotoQualityMode.MAX.name) ?: PhotoQualityMode.MAX.name))
     var videoFps by mutableStateOf(VideoFpsMode.valueOf(prefs.getString("videoFps", VideoFpsMode.FPS_30.name) ?: VideoFpsMode.FPS_30.name))
     var videoAudioEnabled by mutableStateOf(true)
     var isNightModeEnabled by mutableStateOf(prefs.getBoolean("isNightModeEnabled", false))

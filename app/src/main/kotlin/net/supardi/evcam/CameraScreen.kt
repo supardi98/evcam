@@ -197,6 +197,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     var aspectRatio by uiState::aspectRatio
     var videoQuality by uiState::videoQuality
+    var photoQuality by uiState::photoQuality
     var videoFps by uiState::videoFps
     var videoAudioEnabled by uiState::videoAudioEnabled
     var isNightModeEnabled by uiState::isNightModeEnabled
@@ -471,7 +472,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    LaunchedEffect(cameraState) {
+    LaunchedEffect(cameraState, aspectRatio, photoQuality, videoQuality) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
             uiState.supportedVideoQualities = videoCaps.supportedQualities
@@ -531,10 +532,27 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             // Encapsulate preview session creation so it can be re-called with different
             // video dimensions when the user starts recording at a different quality.
-            fun startPreviewSession(recW: Int = 1920, recH: Int = 1080, recFps: Int = 30) {
-                textureView.surfaceTexture?.setDefaultBufferSize(1920, 1080)
+            fun startPreviewSession(recW: Int = 1440, recH: Int = 1080, recFps: Int = 30) {
+                textureView.surfaceTexture?.setDefaultBufferSize(1440, 1080)
                 val surface = android.view.Surface(textureView.surfaceTexture)
-                camera2Engine.setupImageReader(1920, 1080)
+                
+                // Always request ALL sizes (uncropped 4:3 from sensor) so we can software-crop it 
+                // perfectly to maximize Megapixels instead of relying on HAL's limited 16:9 sizes.
+                val isUltra = uiState.photoQuality == PhotoQualityMode.ULTRA
+                camera2Engine.isUltraMode = isUltra
+                val photoSizes = camera2Engine.getSupportedStreamResolutions(activeCamId, "ALL", isUltra)
+                
+                val targetPhotoSize = if (photoSizes.isNotEmpty()) {
+                    when (uiState.photoQuality) {
+                        PhotoQualityMode.ULTRA -> photoSizes.first()
+                        PhotoQualityMode.MAX -> photoSizes.first()
+                        PhotoQualityMode.HIGH -> if (photoSizes.size > 1) photoSizes[1] else photoSizes.first()
+                        PhotoQualityMode.MEDIUM -> photoSizes.firstOrNull { maxOf(it.second, it.third) <= 2560 } ?: photoSizes[photoSizes.size / 2]
+                        PhotoQualityMode.LOW -> photoSizes[photoSizes.size / 2] ?: photoSizes.last()
+                    }
+                } else Triple("1080p", 1920, 1080)
+                
+                camera2Engine.setupImageReader(targetPhotoSize.second, targetPhotoSize.third)
                 val tempVideoFile = java.io.File(context.cacheDir, "temp_video.mp4").absolutePath
                 camera2Engine.setupMediaRecorder(width = recW, height = recH, fps = recFps, audioEnabled = true, outputFile = tempVideoFile)
 
@@ -771,7 +789,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(isProMode, iso, shutterSpeed, focusDistance, whiteBalance, manualKelvin, isIsoAuto, isShutterAuto, isFocusAuto, uiState.selectedCustomScene) {
+    LaunchedEffect(cameraState, isProMode, iso, shutterSpeed, focusDistance, whiteBalance, manualKelvin, isIsoAuto, isShutterAuto, isFocusAuto, uiState.selectedCustomScene) {
         camera2Engine.setProSettings(
             isProMode = isProMode,
             isIsoAuto = isIsoAuto,

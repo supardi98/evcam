@@ -7,6 +7,7 @@ enum class FlashMode { AUTO, ON, OFF }
 enum class TimerMode(val seconds: Int) { OFF(0), SEC_3(3), SEC_10(10), SEC_15(15), SEC_20(20), PEACE(3) }
 enum class AspectRatioMode(val value: Int, val label: String) { RATIO_4_3(0, "4:3"), RATIO_16_9(1, "16:9"), RATIO_1_1(2, "1:1") }
 enum class VideoQualityMode(val quality: Int, val label: String) { SD(480, "480p"), HD(720, "720p"), FHD(1080, "1080p"), QHD(1440, "2K"), UHD(2160, "4K") }
+enum class PhotoQualityMode(val label: String) { ULTRA("Ultra"), MAX("Max"), HIGH("High"), MEDIUM("Med"), LOW("Low") }
 enum class VideoFpsMode(val fps: Int, val label: String) { FPS_24(24, "24 FPS"), FPS_30(30, "30 FPS"), FPS_60(60, "60 FPS"), FPS_120(120, "120 FPS"), FPS_240(240, "240 FPS") }
 enum class ImageFormatMode(val label: String) { JPEG("JPEG"), RAW("RAW+JPEG") }
 
@@ -20,6 +21,7 @@ enum class CustomSceneMode(
     val lockEv: Boolean = false
 ) {
     AUTO("Auto / Normal", "Standard camera defaults"),
+    COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking. Captures 3 photos (dark, normal, bright) and merges them for maximum dynamic range and natural clarity.", lockEv = true),
     PORTRAIT("Portrait Soft", "Warm skin tone with softer contrast"),
     NIGHT("Night Boost", "Longer exposure and increased ISO for low-light conditions", lockIso = true, lockShutter = true, lockEv = true),
     MACRO("Macro Close-Up", "Locks focus to minimum distance for tiny subject details", lockFocus = true),
@@ -34,8 +36,7 @@ enum class CustomSceneMode(
     FIREWORKS("Fireworks Trails", "Long exposure (2s) with ISO 100 for light trails", lockIso = true, lockShutter = true, lockEv = true),
     FOOD("Food / Culinary", "Enhances warm colors and adds slight brightness (+0.3 EV) to make food look appetizing", lockEv = true),
     CONCERT("Concert / Stage", "Reduces exposure (-1.5 EV) and uses fast shutter to prevent blown-out faces from stage lights", lockEv = true),
-    WATERFALL("Silky Waterfall", "Low ISO and slow shutter (1/4s) to create silky smooth water movement", lockIso = true, lockShutter = true, lockEv = true),
-    COMPUTATIONAL_HDR("HDR+ Pro", "Software multi-frame stacking. Captures 3 photos (dark, normal, bright) and merges them for maximum dynamic range and natural clarity.", lockEv = true)
+    WATERFALL("Silky Waterfall", "Low ISO and slow shutter (1/4s) to create silky smooth water movement", lockIso = true, lockShutter = true, lockEv = true)
 }
 
 enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
