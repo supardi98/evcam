@@ -44,6 +44,9 @@ class StopMotionViewModel(private val context: Context) {
 
     var isCapturing by mutableStateOf(false)
         private set
+        
+    var remainingMs by mutableLongStateOf(0L)
+        private set
 
     var isExporting by mutableStateOf(false)
         private set
@@ -68,7 +71,7 @@ class StopMotionViewModel(private val context: Context) {
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private var autoCapureRunnable: Runnable? = null
+    private var countDownTimer: android.os.CountDownTimer? = null
     var onCaptureRequest: (() -> Unit)? = null
 
     /** Called from camera - saves the JPEG bytes as a frame file */
@@ -97,24 +100,35 @@ class StopMotionViewModel(private val context: Context) {
         val ms = if (interval == StopMotionInterval.CUSTOM) customIntervalMs else interval.ms
         if (ms <= 0) return
         isCapturing = true
+        remainingMs = ms
         scheduleNext(ms)
     }
 
     fun stopAutoCapture() {
         isCapturing = false
-        autoCapureRunnable?.let { handler.removeCallbacks(it) }
-        autoCapureRunnable = null
+        countDownTimer?.cancel()
+        countDownTimer = null
+        remainingMs = 0L
     }
 
     private fun scheduleNext(intervalMs: Long) {
-        val r = Runnable {
-            if (isCapturing) {
-                onCaptureRequest?.invoke()
-                scheduleNext(intervalMs)
+        countDownTimer?.cancel()
+        countDownTimer = object : android.os.CountDownTimer(intervalMs, 100) {
+            override fun onTick(millisUntilFinished: Long) {
+                if (isCapturing) {
+                    remainingMs = millisUntilFinished
+                } else {
+                    cancel()
+                }
             }
-        }
-        autoCapureRunnable = r
-        handler.postDelayed(r, intervalMs)
+            override fun onFinish() {
+                if (isCapturing) {
+                    remainingMs = 0L
+                    onCaptureRequest?.invoke()
+                    scheduleNext(intervalMs)
+                }
+            }
+        }.start()
     }
 
     fun exportToVideo(onDone: (String?) -> Unit) {

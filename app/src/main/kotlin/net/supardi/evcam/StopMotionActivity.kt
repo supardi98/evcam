@@ -233,7 +233,11 @@ fun StopMotionScreen(onBack: () -> Unit) {
                     ) {
                         Icon(Icons.Default.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                         Text(
-                            text = if (viewModel.isCapturing) "Auto ${viewModel.interval.label}" else viewModel.interval.label,
+                            text = if (viewModel.isCapturing) {
+                                String.format(java.util.Locale.US, "%.1fs", viewModel.remainingMs / 1000f)
+                            } else {
+                                if (viewModel.interval == StopMotionInterval.CUSTOM) "Custom (${viewModel.customIntervalMs / 1000f}s)" else viewModel.interval.label
+                            },
                             color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold
                         )
                     }
