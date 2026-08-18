@@ -375,6 +375,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     }
     
     var isAppInForeground by remember { mutableStateOf(false) }
+    var previewSessionTrigger by remember { mutableStateOf(0) }
     
     DisposableEffect(lifecycleOwner) {
         camera2Engine.startBackgroundThread()
@@ -474,7 +475,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         }
     }
     
-    LaunchedEffect(cameraState, aspectRatio, photoQuality, videoQuality) {
+    LaunchedEffect(cameraState, aspectRatio, photoQuality, videoQuality, previewSessionTrigger) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
             uiState.supportedVideoQualities = videoCaps.supportedQualities
@@ -719,6 +720,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 val stopMethod = activeRecording?.javaClass?.getMethod("stop")
                 stopMethod?.invoke(activeRecording)
                 isRecording = false
+                textureView.setSensorAspectRatio(3f / 4f)
+                previewSessionTrigger++
             } else {
                 val (vWidth, vHeight) = when (uiState.videoQuality) {
                     VideoQualityMode.UHD -> Pair(3840, 2160)
@@ -736,6 +739,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     width = vWidth, height = vHeight, fps = vFps,
                     audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
                 )
+                textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
+                textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
                 val texSurface = android.view.Surface(textureView.surfaceTexture)
                 val newTargets = mutableListOf<android.view.Surface>(texSurface)
                 camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }

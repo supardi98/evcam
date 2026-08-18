@@ -11,6 +11,16 @@ class AutoFitTextureView @JvmOverloads constructor(
     defStyle: Int = 0
 ) : TextureView(context, attrs, defStyle) {
 
+    private var sensorAspect: Float = 3f / 4f
+
+    fun setSensorAspectRatio(aspectRatio: Float) {
+        if (Math.abs(this.sensorAspect - aspectRatio) > 0.01f) {
+            this.sensorAspect = aspectRatio
+            requestLayout()
+            configureTransform()
+        }
+    }
+
     fun setAspectRatio(width: Int, height: Int) {
         requestLayout()
         configureTransform()
@@ -25,7 +35,6 @@ class AutoFitTextureView @JvmOverloads constructor(
         if (w == 0 || h == 0) return
 
         val viewAspect = w.toFloat() / h.toFloat()
-        val sensorAspect = 3f / 4f // Native sensor aspect in portrait
 
         val matrix = android.graphics.Matrix()
 
