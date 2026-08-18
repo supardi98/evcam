@@ -494,7 +494,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(cameraState, aspectRatio, photoQuality, videoQuality, previewSessionTrigger) {
         if (cameraState is Camera2Engine.CameraState.Opened) {
             val videoCaps = camera2Engine.queryVideoCapabilities(activeCamId)
-            uiState.supportedVideoQualities = videoCaps.supportedQualities
+            uiState.supportedVideoQualities = videoCaps.supportedQualities.sortedBy { it.quality }
             val fpsList = camera2Engine.getSupportedFpsForQuality(activeCamId, uiState.videoQuality)
             uiState.supportedFpsModes = fpsList
             uiState.supportedVideoProfiles = videoCaps.profileDescriptions

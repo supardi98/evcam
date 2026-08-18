@@ -263,11 +263,11 @@ fun TopCameraBar(
                             .background(Color.Black.copy(alpha = 0.4f))
                             .clickable {
                                 uiState.photoQuality = when (uiState.photoQuality) {
-                                    PhotoQualityMode.ULTRA -> PhotoQualityMode.MAX
-                                    PhotoQualityMode.MAX -> PhotoQualityMode.HIGH
-                                    PhotoQualityMode.HIGH -> PhotoQualityMode.MEDIUM
-                                    PhotoQualityMode.MEDIUM -> PhotoQualityMode.LOW
-                                    PhotoQualityMode.LOW -> PhotoQualityMode.ULTRA
+                                    PhotoQualityMode.LOW -> PhotoQualityMode.MEDIUM
+                                    PhotoQualityMode.MEDIUM -> PhotoQualityMode.HIGH
+                                    PhotoQualityMode.HIGH -> PhotoQualityMode.MAX
+                                    PhotoQualityMode.MAX -> PhotoQualityMode.ULTRA
+                                    PhotoQualityMode.ULTRA -> PhotoQualityMode.LOW
                                 }
                                 uiState.prefs.edit().putString("photoQuality", uiState.photoQuality.name).apply()
                             }
