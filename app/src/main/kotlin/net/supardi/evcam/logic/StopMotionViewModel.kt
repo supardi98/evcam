@@ -39,8 +39,15 @@ enum class StopMotionOnionSkin(val label: String, val alpha: Float) {
 
 class StopMotionViewModel(private val context: Context) {
 
+    // Dir to store frames
+    private val framesDir = File(context.cacheDir, "stopmotion_frames").also { it.mkdirs() }
+
     var frames by mutableStateOf<List<File>>(emptyList())
         private set
+
+    init {
+        frames = framesDir.listFiles()?.filter { it.isFile && it.name.startsWith("frame_") }?.sortedBy { it.name } ?: emptyList()
+    }
 
     var isCapturing by mutableStateOf(false)
         private set
@@ -65,10 +72,7 @@ class StopMotionViewModel(private val context: Context) {
     var onionSkin by mutableStateOf(StopMotionOnionSkin.MEDIUM)
     var showSettings by mutableStateOf(false)
 
-    // Dir to store frames
-    private val framesDir: File by lazy {
-        File(context.cacheDir, "stopmotion_frames").also { it.mkdirs() }
-    }
+
 
     private val handler = Handler(Looper.getMainLooper())
     private var countDownTimer: android.os.CountDownTimer? = null
@@ -166,6 +170,5 @@ class StopMotionViewModel(private val context: Context) {
 
     fun cleanup() {
         stopAutoCapture()
-        framesDir.deleteRecursively()
     }
 }
