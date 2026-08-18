@@ -411,6 +411,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     
     LaunchedEffect(lensFacing, isAppInForeground) {
         if (isAppInForeground) {
+            // Small delay to ensure HAL has finished releasing the camera from ON_PAUSE
+            kotlinx.coroutines.delay(200)
             val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
         
         val camId = manager.cameraIdList.firstOrNull { id ->

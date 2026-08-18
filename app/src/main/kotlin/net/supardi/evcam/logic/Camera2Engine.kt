@@ -892,6 +892,16 @@ class Camera2Engine(private val context: Context) {
             currentPreviewSurface?.let { captureBuilder.addTarget(it) }
             captureBuilder.set(CaptureRequest.JPEG_QUALITY, 95.toByte())
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientationHint())
+
+            // Explicitly request high quality post-processing for still captures
+            // to ensure noise reduction and sharpness are better than the real-time preview
+            captureBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
+            captureBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
+            captureBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                captureBuilder.set(CaptureRequest.SHADING_MODE, CaptureRequest.SHADING_MODE_HIGH_QUALITY)
+                captureBuilder.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_HIGH_QUALITY)
+            }
             
             // Copy settings from previewRequestBuilder
             val cropRegion = previewRequestBuilder?.get(CaptureRequest.SCALER_CROP_REGION)
