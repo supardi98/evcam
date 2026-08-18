@@ -1389,7 +1389,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        TopCameraBar(uiState = uiState)
+        TopCameraBar(
+            uiState = uiState,
+            onOpenStopMotion = {
+                context.startActivity(android.content.Intent(context, StopMotionActivity::class.java))
+            }
+        )
 
 
         

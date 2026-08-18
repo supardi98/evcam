@@ -34,7 +34,8 @@ import net.supardi.evcam.logic.*
 @Composable
 fun TopCameraBar(
     uiState: CameraUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenStopMotion: () -> Unit = {}
 ) {
     var isSceneOptionsExpanded by remember { mutableStateOf(false) }
 
@@ -329,6 +330,20 @@ fun TopCameraBar(
                 }
                 
                 Spacer(modifier = Modifier.width(6.dp))
+
+                // Stop Motion button
+                IconButton(
+                    onClick = onOpenStopMotion,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Theaters,
+                        contentDescription = "Stop Motion",
+                        tint = Color.White
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(2.dp))
 
                 IconButton(
                     onClick = {

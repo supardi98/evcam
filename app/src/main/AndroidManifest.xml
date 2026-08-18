@@ -39,5 +39,10 @@
             android:name=".WebcamActivity"
             android:exported="false"
             android:theme="@style/Theme.evcam.Webcam" />
+        <activity
+            android:name=".StopMotionActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.evcam" />
     </application>
 </manifest>
