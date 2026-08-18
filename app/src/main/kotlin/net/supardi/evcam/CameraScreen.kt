@@ -625,15 +625,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
     }
 
-    // Save power by pausing the preview if the media preview dialog is open for more than 10 seconds
+    // Save power by closing the camera completely if the media preview dialog is open for more than 10 seconds
     LaunchedEffect(showMediaPreviewDialog) {
         if (showMediaPreviewDialog) {
             delay(10000)
             if (showMediaPreviewDialog) {
-                camera2Engine.pausePreview()
+                camera2Engine.closeCamera()
             }
         } else {
-            camera2Engine.updatePreview()
+            if (camera2Engine.cameraState.value is Camera2Engine.CameraState.Closed) {
+                if (activeCamId.isNotEmpty()) {
+                    camera2Engine.openCamera(activeCamId)
+                }
+            } else {
+                camera2Engine.updatePreview()
+            }
         }
     }
     // Also re-apply when cameraControl changes (new camera bound)
