@@ -399,7 +399,7 @@ fun StopMotionScreen(onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "👻 ${viewModel.onionSkin.label}  •  🎬 ${viewModel.outputFps.label}  •  ⏱ ${viewModel.interval.label}  •  📐 ${viewModel.resolution.label}",
+                    text = "Skin: ${viewModel.onionSkin.label}  •  FPS: ${viewModel.outputFps.label}  •  Timer: ${viewModel.interval.label}  •  Res: ${viewModel.resolution.label}",
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 10.sp,
                     textAlign = TextAlign.Center
@@ -536,7 +536,7 @@ fun StopMotionScreen(onBack: () -> Unit) {
                                     viewModel.showSettings = false
                                 }
                             ) {
-                                Text("🗑  Clear all ${viewModel.frames.size} frames", color = Color(0xFFFF3B30))
+                                Text("Clear all ${viewModel.frames.size} frames", color = Color(0xFFFF3B30))
                             }
                         }
 
