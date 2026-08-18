@@ -82,7 +82,8 @@ fun StopMotionScreen(onBack: () -> Unit) {
     // Last frame bitmap for onion skin
     var onionBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
 
-    // Frame strip scroll
+    // Frame list state
+    var selectedFrameIndex by remember { mutableStateOf<Int?>(null) }
     val frameListState = rememberLazyListState()
 
     // Auto scroll to latest frame
@@ -234,7 +235,7 @@ fun StopMotionScreen(onBack: () -> Unit) {
                         Icon(Icons.Default.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                         Text(
                             text = if (viewModel.isCapturing) {
-                                String.format(java.util.Locale.US, "%.1fs", viewModel.remainingMs / 1000f)
+                                "${kotlin.math.ceil(viewModel.remainingMs / 1000f).toInt()}s"
                             } else {
                                 if (viewModel.interval == StopMotionInterval.CUSTOM) "Custom (${viewModel.customIntervalMs / 1000f}s)" else viewModel.interval.label
                             },
@@ -277,6 +278,7 @@ fun StopMotionScreen(onBack: () -> Unit) {
                                 .size(64.dp, 64.dp)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(Color(0xFF2C2C2E))
+                                .clickable { selectedFrameIndex = index }
                                 .border(
                                     if (index == viewModel.frames.size - 1) 2.dp else 0.dp,
                                     if (index == viewModel.frames.size - 1) Color(0xFFFFD60A) else Color.Transparent,
@@ -545,6 +547,56 @@ fun StopMotionScreen(onBack: () -> Unit) {
                         }
 
                         Spacer(Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+
+        // ── Selected Frame Full Screen ───────────────────────────────
+        if (selectedFrameIndex != null && selectedFrameIndex!! < viewModel.frames.size) {
+            val idx = selectedFrameIndex!!
+            val file = viewModel.frames[idx]
+            val fullBmp = remember(file.lastModified()) {
+                runCatching {
+                    android.graphics.BitmapFactory.decodeFile(file.absolutePath)
+                }.getOrNull()
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .clickable { selectedFrameIndex = null } // Click anywhere to close
+            ) {
+                if (fullBmp != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = fullBmp.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                
+                // Top bar for preview
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = { selectedFrameIndex = null }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                    Text(
+                        "Frame ${idx + 1}/${viewModel.frames.size}",
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp
+                    )
+                    IconButton(onClick = {
+                        viewModel.deleteFrame(idx)
+                        selectedFrameIndex = null
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF3B30))
                     }
                 }
             }
