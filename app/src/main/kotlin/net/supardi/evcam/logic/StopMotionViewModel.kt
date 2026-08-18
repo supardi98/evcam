@@ -12,7 +12,8 @@ enum class StopMotionInterval(val label: String, val ms: Long) {
     ONE_SEC("1s", 1000L),
     TWO_SEC("2s", 2000L),
     FIVE_SEC("5s", 5000L),
-    TEN_SEC("10s", 10_000L)
+    TEN_SEC("10s", 10_000L),
+    CUSTOM("Custom", -1L)
 }
 
 enum class StopMotionFps(val label: String, val fps: Int) {
@@ -54,6 +55,8 @@ class StopMotionViewModel(private val context: Context) {
 
     // Settings
     var interval by mutableStateOf(StopMotionInterval.MANUAL)
+    var customIntervalMs by mutableStateOf(1000L) // Default 1s for custom
+
     var outputFps by mutableStateOf(StopMotionFps.FPS_12)
     var resolution by mutableStateOf(StopMotionResolution.HD)
     var onionSkin by mutableStateOf(StopMotionOnionSkin.MEDIUM)
@@ -90,9 +93,11 @@ class StopMotionViewModel(private val context: Context) {
     }
 
     fun startAutoCapture() {
-        if (interval == StopMotionInterval.MANUAL || interval.ms <= 0) return
+        if (interval == StopMotionInterval.MANUAL) return
+        val ms = if (interval == StopMotionInterval.CUSTOM) customIntervalMs else interval.ms
+        if (ms <= 0) return
         isCapturing = true
-        scheduleNext()
+        scheduleNext(ms)
     }
 
     fun stopAutoCapture() {
@@ -101,15 +106,15 @@ class StopMotionViewModel(private val context: Context) {
         autoCapureRunnable = null
     }
 
-    private fun scheduleNext() {
+    private fun scheduleNext(intervalMs: Long) {
         val r = Runnable {
             if (isCapturing) {
                 onCaptureRequest?.invoke()
-                scheduleNext()
+                scheduleNext(intervalMs)
             }
         }
         autoCapureRunnable = r
-        handler.postDelayed(r, interval.ms)
+        handler.postDelayed(r, intervalMs)
     }
 
     fun exportToVideo(onDone: (String?) -> Unit) {

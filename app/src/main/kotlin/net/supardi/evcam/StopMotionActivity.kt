@@ -454,12 +454,54 @@ fun StopMotionScreen(onBack: () -> Unit) {
                         Text("Settings", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
                         // Interval
+                        var showCustomDialog by remember { mutableStateOf(false) }
+                        
                         SettingRow(
                             label = "Capture Mode",
-                            options = StopMotionInterval.values().map { it.label },
+                            options = StopMotionInterval.values().map { 
+                                if (it == StopMotionInterval.CUSTOM) "Custom (${viewModel.customIntervalMs / 1000f}s)" else it.label 
+                            },
                             selected = viewModel.interval.ordinal,
-                            onSelect = { viewModel.interval = StopMotionInterval.values()[it] }
+                            onSelect = { 
+                                val selected = StopMotionInterval.values()[it]
+                                viewModel.interval = selected
+                                if (selected == StopMotionInterval.CUSTOM) {
+                                    showCustomDialog = true
+                                }
+                            }
                         )
+
+                        if (showCustomDialog) {
+                            var customInput by remember { mutableStateOf((viewModel.customIntervalMs / 1000f).toString()) }
+                            AlertDialog(
+                                onDismissRequest = { showCustomDialog = false },
+                                title = { Text("Custom Interval (seconds)") },
+                                text = {
+                                    OutlinedTextField(
+                                        value = customInput,
+                                        onValueChange = { customInput = it },
+                                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        customInput.toFloatOrNull()?.let { sec ->
+                                            if (sec > 0) {
+                                                viewModel.customIntervalMs = (sec * 1000).toLong()
+                                            }
+                                        }
+                                        showCustomDialog = false
+                                    }) {
+                                        Text("Save")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showCustomDialog = false }) {
+                                        Text("Cancel")
+                                    }
+                                }
+                            )
+                        }
 
                         // Output FPS
                         SettingRow(
@@ -510,8 +552,9 @@ fun StopMotionScreen(onBack: () -> Unit) {
 private fun SettingRow(label: String, options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(label, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            options.forEachIndexed { idx, opt ->
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(options.size) { idx ->
+                val opt = options[idx]
                 val isSelected = idx == selected
                 Surface(
                     shape = RoundedCornerShape(20.dp),
