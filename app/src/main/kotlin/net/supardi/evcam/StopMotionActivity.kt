@@ -109,12 +109,12 @@ fun StopMotionScreen(onBack: () -> Unit) {
     }
 
     // Open camera when state is ready
-    LaunchedEffect(cameraState, textureReady) {
+    LaunchedEffect(cameraState, textureReady, viewModel.aspectRatio) {
         if (cameraState is Camera2Engine.CameraState.Opened && textureReady) {
             val tv = textureViewRef.value ?: return@LaunchedEffect
-            tv.surfaceTexture?.setDefaultBufferSize(viewModel.resolution.width, viewModel.resolution.height)
+            tv.surfaceTexture?.setDefaultBufferSize(viewModel.aspectRatio.width, viewModel.aspectRatio.height)
             val surface = android.view.Surface(tv.surfaceTexture)
-            camera2Engine.setupImageReader(viewModel.resolution.width, viewModel.resolution.height)
+            camera2Engine.setupImageReader(viewModel.aspectRatio.width, viewModel.aspectRatio.height)
             camera2Engine.createPreviewSession(listOf(surface, camera2Engine.imageReader!!.surface)) {}
         }
     }
@@ -405,7 +405,7 @@ fun StopMotionScreen(onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Skin: ${viewModel.onionSkin.label}  •  FPS: ${viewModel.outputFps.label}  •  Timer: ${viewModel.interval.label}  •  Res: ${viewModel.resolution.label}",
+                    text = "Skin: ${viewModel.onionSkin.label}  •  FPS: ${viewModel.outputFps.label}  •  Timer: ${viewModel.interval.label}  •  Ratio: ${viewModel.aspectRatio.label}",
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 10.sp,
                     textAlign = TextAlign.Center
@@ -525,12 +525,12 @@ fun StopMotionScreen(onBack: () -> Unit) {
                             onSelect = { viewModel.onionSkin = StopMotionOnionSkin.values()[it] }
                         )
 
-                        // Resolution
+                        // Aspect Ratio
                         SettingRow(
-                            label = "Resolution",
-                            options = StopMotionResolution.values().map { it.label },
-                            selected = viewModel.resolution.ordinal,
-                            onSelect = { viewModel.resolution = StopMotionResolution.values()[it] }
+                            label = "Aspect Ratio",
+                            options = net.supardi.evcam.logic.StopMotionAspectRatio.values().map { it.label },
+                            selected = viewModel.aspectRatio.ordinal,
+                            onSelect = { viewModel.aspectRatio = net.supardi.evcam.logic.StopMotionAspectRatio.values()[it] }
                         )
 
                         // Clear all frames
@@ -612,7 +612,7 @@ private fun SettingRow(label: String, options: List<String>, selected: Int, onSe
             items(options.size) { idx ->
                 val opt = options[idx]
                 val isSelected = idx == selected
-                Surface(
+                androidx.compose.material3.Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = if (isSelected) Color(0xFFFFD60A) else Color(0xFF2C2C2E),
                     modifier = Modifier.clickable { onSelect(idx) }

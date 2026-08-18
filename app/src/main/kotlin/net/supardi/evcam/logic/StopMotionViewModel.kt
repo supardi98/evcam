@@ -23,10 +23,10 @@ enum class StopMotionFps(val label: String, val fps: Int) {
     FPS_30("30 fps", 30)
 }
 
-enum class StopMotionResolution(val label: String, val width: Int, val height: Int) {
-    SD("SD 640p", 640, 480),
-    HD("HD 720p", 1280, 720),
-    FHD("FHD 1080p", 1920, 1080)
+enum class StopMotionAspectRatio(val label: String, val width: Int, val height: Int) {
+    RATIO_1_1("1:1", 1088, 1088),
+    RATIO_4_3("4:3", 1440, 1088),
+    RATIO_16_9("16:9", 1920, 1088)
 }
 
 enum class StopMotionOnionSkin(val label: String, val alpha: Float) {
@@ -68,7 +68,7 @@ class StopMotionViewModel(private val context: Context) {
     var customIntervalMs by mutableStateOf(1000L) // Default 1s for custom
 
     var outputFps by mutableStateOf(StopMotionFps.FPS_12)
-    var resolution by mutableStateOf(StopMotionResolution.HD)
+    var aspectRatio by mutableStateOf(StopMotionAspectRatio.RATIO_16_9)
     var onionSkin by mutableStateOf(StopMotionOnionSkin.MEDIUM)
     var showSettings by mutableStateOf(false)
 
@@ -145,15 +145,15 @@ class StopMotionViewModel(private val context: Context) {
         val outputFile = File(outputDir, "stopmotion_${System.currentTimeMillis()}.mp4")
 
         // Read first frame to detect orientation
-        var outWidth = resolution.width
-        var outHeight = resolution.height
+        var outWidth = aspectRatio.width
+        var outHeight = aspectRatio.height
         val firstFrame = frames.firstOrNull()
         if (firstFrame != null) {
             val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
             android.graphics.BitmapFactory.decodeFile(firstFrame.absolutePath, opts)
             if (opts.outHeight > opts.outWidth) { // It's portrait
-                outWidth = resolution.height
-                outHeight = resolution.width
+                outWidth = aspectRatio.height
+                outHeight = aspectRatio.width
             }
         }
 
