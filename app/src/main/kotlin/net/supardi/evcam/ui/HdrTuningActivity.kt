@@ -1,5 +1,6 @@
 package net.supardi.evcam.ui
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -66,6 +67,8 @@ fun HdrTuningScreen() {
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
 
+    val initialBurstTs = (context as? Activity)?.intent?.getStringExtra("burst_ts")
+
     // Load available bursts on start
     LaunchedEffect(Unit) {
         val picsDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
@@ -74,7 +77,9 @@ fun HdrTuningScreen() {
             if (files != null) {
                 val bursts = files.map { it.name.removePrefix("IMG_HDR_").substringBefore("_EV0.jpg") }
                 availableBursts = bursts.sortedDescending()
-                if (bursts.isNotEmpty()) {
+                if (initialBurstTs != null && availableBursts.contains(initialBurstTs)) {
+                    selectedBurst = initialBurstTs
+                } else if (bursts.isNotEmpty()) {
                     selectedBurst = availableBursts.first()
                 }
             }

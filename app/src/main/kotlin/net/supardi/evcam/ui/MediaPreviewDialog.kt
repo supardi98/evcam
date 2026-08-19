@@ -39,6 +39,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridView
@@ -332,6 +333,10 @@ fun MediaPreviewDialog(
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteItem by remember { mutableStateOf<MediaItem?>(null) }
+    
+    var isReprocessingHdr by remember { mutableStateOf(false) }
+    var reprocessProgress by remember { mutableIntStateOf(0) }
+    var imageRefreshKey by remember { mutableStateOf(System.currentTimeMillis()) }
 
     // Shared post-delete navigation — called after item is confirmed deleted
     fun onItemDeleted(item: MediaItem) {
@@ -392,7 +397,7 @@ fun MediaPreviewDialog(
                 context.contentResolver.delete(item.uri, null, null)
                 onItemDeleted(item)
             } catch (e: Exception) {
-                Toast.makeText(context, "Gagal menghapus file", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Failed to delete file", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -517,7 +522,12 @@ fun MediaPreviewDialog(
                                 )
                             } else if (item != null) {
                                 AsyncImage(
-                                    model = item.uri, imageLoader = imageLoader,
+                                    model = coil.request.ImageRequest.Builder(context)
+                                        .data(item.uri)
+                                        .memoryCacheKey(item.uri.toString() + "_" + imageRefreshKey)
+                                        .diskCacheKey(item.uri.toString() + "_" + imageRefreshKey)
+                                        .build(),
+                                    imageLoader = imageLoader,
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier
@@ -544,13 +554,20 @@ fun MediaPreviewDialog(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text("Raw HDR Components (Tap to preview)", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
                             Spacer(modifier = Modifier.height(4.dp))
+                            
                             Row(
                                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 // Main thumbnail
                                 Box(modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)).clickable { selectedRawUri = null }.border(1.dp, if (selectedRawUri == null) Color.Yellow else Color.Transparent, RoundedCornerShape(8.dp))) {
-                                    AsyncImage(model = item?.uri, contentDescription = "Final", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    AsyncImage(
+                                        model = coil.request.ImageRequest.Builder(context)
+                                            .data(item?.uri)
+                                            .memoryCacheKey(item?.uri.toString() + "_" + imageRefreshKey)
+                                            .diskCacheKey(item?.uri.toString() + "_" + imageRefreshKey)
+                                            .build(),
+                                        contentDescription = "Final", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     Text("Final", color = Color.White, fontSize = 9.sp, modifier = Modifier.align(Alignment.BottomCenter).background(Color.Black.copy(alpha = 0.6f)).fillMaxWidth(), textAlign = TextAlign.Center)
                                 }
                                 // Components
@@ -563,6 +580,195 @@ fun MediaPreviewDialog(
                                     }
                                 }
                             }
+                            
+                            // Sleek HDR Action Buttons
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            var showReHdrConfirm by remember { mutableStateOf(false) }
+                            var showDeleteRawConfirm by remember { mutableStateOf(false) }
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Re-process Button
+                                androidx.compose.material3.OutlinedButton(
+                                    onClick = { showReHdrConfirm = true },
+                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color.Yellow),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.Yellow.copy(alpha = 0.5f)),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Re-HDR", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                
+                                // Hapus Raw Button
+                                androidx.compose.material3.OutlinedButton(
+                                    onClick = { showDeleteRawConfirm = true },
+                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF5252).copy(alpha = 0.5f)),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Delete Raw", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }
+
+                                if (selectedRawUri != null) {
+                                    androidx.compose.material3.OutlinedButton(
+                                        onClick = {
+                                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                                try {
+                                                    val rawFile = java.io.File(selectedRawUri!!.path!!)
+                                                    if (rawFile.exists()) {
+                                                        val destName = "IMG_" + SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(Date()) + "_RAW_EXTRACT.jpg"
+                                                        val values = android.content.ContentValues().apply {
+                                                            put(MediaStore.Images.Media.DISPLAY_NAME, destName)
+                                                            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                                                            put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+                                                        }
+                                                        val destUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                                                        if (destUri != null) {
+                                                            context.contentResolver.openOutputStream(destUri)?.use { outStream ->
+                                                                java.io.FileInputStream(rawFile).use { inStream ->
+                                                                    inStream.copyTo(outStream)
+                                                                }
+                                                            }
+                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                Toast.makeText(context, "Raw photo saved to gallery", Toast.LENGTH_SHORT).show()
+                                                                val fetched = fetchRecentMediaList(context, limit = 500)
+                                                                mediaList.clear()
+                                                                mediaList.addAll(fetched)
+                                                                
+                                                                val newIndex = mediaList.indexOfFirst { it.uri == destUri }
+                                                                if (newIndex >= 0) {
+                                                                    pagerState.scrollToPage(newIndex)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                }
+                                            }
+                                        },
+                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Text("Save Extract", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                            
+                            // Re-HDR Confirm Dialog
+                            if (showReHdrConfirm) {
+                                androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { showReHdrConfirm = false },
+                                    containerColor = Color(0xFF1E1E1E),
+                                    title = { Text("Re-HDR Photo?", color = Color.White, fontWeight = FontWeight.Bold) },
+                                    text = { Text("This will overwrite the current HDR photo using your latest Tuning Studio settings. Proceed?", color = Color.Gray) },
+                                    confirmButton = {
+                                        androidx.compose.material3.TextButton(onClick = {
+                                            showReHdrConfirm = false
+                                            val timestampStr = pageInfo.fileName.removePrefix("IMG_HDR_").substringBefore(".jpg")
+                                            val picsDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+                                            if (picsDir != null && timestampStr.isNotEmpty() && item?.uri != null) {
+                                                isReprocessingHdr = true
+                                                reprocessProgress = 0
+                                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                                    try {
+                                                        val bytesList = mutableListOf<ByteArray>()
+                                                        for (i in 0..4) {
+                                                            val f = java.io.File(picsDir, "IMG_HDR_${timestampStr}_EV${i}.jpg")
+                                                            if (f.exists()) bytesList.add(f.readBytes())
+                                                        }
+                                                        if (bytesList.size == 5) {
+                                                            val prefs = context.getSharedPreferences("evcam_prefs", Context.MODE_PRIVATE)
+                                                            val params = net.supardi.evcam.logic.HdrParams(
+                                                                exposednessSigma = prefs.getFloat("hdr_exposedness_sigma", 0.4f).toDouble(),
+                                                                saturationBoost = prefs.getFloat("hdr_saturation_boost", 1.0f),
+                                                                normalBias = prefs.getFloat("hdr_normal_bias", 1.5f),
+                                                                contrastIntensity = prefs.getFloat("hdr_contrast_intensity", 1.0f)
+                                                            )
+                                                            val finalBmp = net.supardi.evcam.logic.HdrProcessor.processHdrBurst(bytesList, params, null) { progress ->
+                                                                reprocessProgress = progress
+                                                            }
+                                                            
+                                                            context.contentResolver.openOutputStream(item.uri, "wt")?.use { out ->
+                                                                finalBmp?.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                                                            }
+                                                            
+                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                Toast.makeText(context, "HDR reprocessed successfully!", Toast.LENGTH_SHORT).show()
+                                                                isReprocessingHdr = false
+                                                                imageRefreshKey = System.currentTimeMillis()
+                                                            }
+                                                        } else {
+                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                                Toast.makeText(context, "Raw components missing", Toast.LENGTH_SHORT).show()
+                                                                isReprocessingHdr = false
+                                                            }
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                            Toast.makeText(context, "Failed to re-process HDR", Toast.LENGTH_SHORT).show()
+                                                            isReprocessingHdr = false
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }) {
+                                            Text("Yes", color = Color.Yellow, fontWeight = FontWeight.Bold)
+                                        }
+                                    },
+                                    dismissButton = {
+                                        androidx.compose.material3.TextButton(onClick = { showReHdrConfirm = false }) {
+                                            Text("Cancel", color = Color.White)
+                                        }
+                                    }
+                                )
+                            }
+                            
+                            // Delete Raw Confirm Dialog
+                            if (showDeleteRawConfirm) {
+                                androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { showDeleteRawConfirm = false },
+                                    containerColor = Color(0xFF1E1E1E),
+                                    title = { Text("Delete Raw Components?", color = Color.White, fontWeight = FontWeight.Bold) },
+                                    text = { Text("This will permanently delete the 5 hidden raw EV photos to save space. You will no longer be able to Re-HDR this photo later.", color = Color.Gray) },
+                                    confirmButton = {
+                                        androidx.compose.material3.TextButton(onClick = {
+                                            showDeleteRawConfirm = false
+                                            val timestampStr = pageInfo.fileName.removePrefix("IMG_HDR_").substringBefore(".jpg")
+                                            val picsDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+                                            if (picsDir != null && timestampStr.isNotEmpty()) {
+                                                for (i in 0..4) {
+                                                    val f = java.io.File(picsDir, "IMG_HDR_${timestampStr}_EV${i}.jpg")
+                                                    if (f.exists()) f.delete()
+                                                }
+                                            }
+                                            rawComponents = emptyList()
+                                            selectedRawUri = null
+                                            Toast.makeText(context, "Raw components deleted", Toast.LENGTH_SHORT).show()
+                                        }) {
+                                            Text("Delete", color = Color(0xFFFF5252), fontWeight = FontWeight.Bold)
+                                        }
+                                    },
+                                    dismissButton = {
+                                        androidx.compose.material3.TextButton(onClick = { showDeleteRawConfirm = false }) {
+                                            Text("Cancel", color = Color.White)
+                                        }
+                                    }
+                                )
+                            }
+
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -711,6 +917,22 @@ fun MediaPreviewDialog(
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White, modifier = Modifier.size(20.dp))
                         }
+                    }
+                }
+            }
+            
+            // HDR Reprocessing Overlay
+            if (isReprocessingHdr) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.75f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.compose.material3.CircularProgressIndicator(color = Color.Yellow)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Reprocessing HDR... $reprocessProgress%", color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
