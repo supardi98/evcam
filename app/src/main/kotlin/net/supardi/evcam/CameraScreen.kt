@@ -936,8 +936,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setAeAfLock(uiState.isAeAfLocked)
     }
 
-    LaunchedEffect(uiState.noiseReductionMode, uiState.edgeEnhancementMode, cameraState) {
-        camera2Engine.setIspTuning(uiState.noiseReductionMode, uiState.edgeEnhancementMode)
+    LaunchedEffect(
+        uiState.noiseReductionMode,
+        uiState.edgeEnhancementMode,
+        uiState.antiBandingMode,
+        uiState.toneProfileMode,
+        uiState.enableAberrationCorrection,
+        cameraState
+    ) {
+        camera2Engine.setIspTuning(
+            uiState.noiseReductionMode,
+            uiState.edgeEnhancementMode,
+            uiState.antiBandingMode,
+            uiState.toneProfileMode,
+            uiState.enableAberrationCorrection
+        )
     }
 
     LaunchedEffect(cameraState) {

@@ -129,6 +129,9 @@ class CameraUiState(
     var selectedFilter by mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name))
     var noiseReductionMode by mutableStateOf(NoiseReductionMode.valueOf(prefs.getString("noiseReductionMode", NoiseReductionMode.FAST.name) ?: NoiseReductionMode.FAST.name))
     var edgeEnhancementMode by mutableStateOf(EdgeEnhancementMode.valueOf(prefs.getString("edgeEnhancementMode", EdgeEnhancementMode.HIGH_QUALITY.name) ?: EdgeEnhancementMode.HIGH_QUALITY.name))
+    var antiBandingMode by mutableStateOf(AntiBandingMode.valueOf(prefs.getString("antiBandingMode", AntiBandingMode.HZ_50.name) ?: AntiBandingMode.HZ_50.name))
+    var toneProfileMode by mutableStateOf(ToneProfileMode.valueOf(prefs.getString("toneProfileMode", ToneProfileMode.STANDARD.name) ?: ToneProfileMode.STANDARD.name))
+    var enableAberrationCorrection by mutableStateOf(prefs.getBoolean("enableAberrationCorrection", true))
 
     // Hardware capabilities for the currently active camera
     var isOisSupported by mutableStateOf(true)
@@ -229,6 +232,9 @@ fun rememberCameraUiState(
     LaunchedEffect(state.enableEis) { prefs.edit().putBoolean("enableEis", state.enableEis).apply() }
     LaunchedEffect(state.noiseReductionMode) { prefs.edit().putString("noiseReductionMode", state.noiseReductionMode.name).apply() }
     LaunchedEffect(state.edgeEnhancementMode) { prefs.edit().putString("edgeEnhancementMode", state.edgeEnhancementMode.name).apply() }
+    LaunchedEffect(state.antiBandingMode) { prefs.edit().putString("antiBandingMode", state.antiBandingMode.name).apply() }
+    LaunchedEffect(state.toneProfileMode) { prefs.edit().putString("toneProfileMode", state.toneProfileMode.name).apply() }
+    LaunchedEffect(state.enableAberrationCorrection) { prefs.edit().putBoolean("enableAberrationCorrection", state.enableAberrationCorrection).apply() }
     LaunchedEffect(state.manualKelvin) { prefs.edit().putFloat("manualKelvin", state.manualKelvin).apply() }
     LaunchedEffect(state.whiteBalance) { prefs.edit().putInt("whiteBalance", state.whiteBalance).apply() }
     LaunchedEffect(state.timerBurstCount) { prefs.edit().putInt("timerBurstCount", state.timerBurstCount).apply() }

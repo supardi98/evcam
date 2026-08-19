@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.sp
 
 import net.supardi.evcam.logic.NoiseReductionMode
 import net.supardi.evcam.logic.EdgeEnhancementMode
+import net.supardi.evcam.logic.AntiBandingMode
+import net.supardi.evcam.logic.ToneProfileMode
 
 @Composable
 fun SettingsPanel(
@@ -53,6 +55,12 @@ fun SettingsPanel(
     onNoiseReductionModeChange: (NoiseReductionMode) -> Unit = {},
     edgeEnhancementMode: EdgeEnhancementMode = EdgeEnhancementMode.HIGH_QUALITY,
     onEdgeEnhancementModeChange: (EdgeEnhancementMode) -> Unit = {},
+    antiBandingMode: AntiBandingMode = AntiBandingMode.HZ_50,
+    onAntiBandingModeChange: (AntiBandingMode) -> Unit = {},
+    toneProfileMode: ToneProfileMode = ToneProfileMode.STANDARD,
+    onToneProfileModeChange: (ToneProfileMode) -> Unit = {},
+    enableAberrationCorrection: Boolean = true,
+    onEnableAberrationCorrectionChange: (Boolean) -> Unit = {},
     isOisSupported: Boolean = true,
     enableOis: Boolean = true,
     onEnableOisChange: (Boolean) -> Unit = {},
@@ -296,6 +304,76 @@ fun SettingsPanel(
                         }
                     }
                 }
+            }
+
+            // Anti-Banding (Flicker Prevention) Selector
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text("Anti-Banding (Lampu Berkedip)", color = Color.White, fontSize = 13.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    AntiBandingMode.values().forEach { mode ->
+                        val selected = mode == antiBandingMode
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (selected) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                .clickable { onAntiBandingModeChange(mode) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = mode.label,
+                                color = if (selected) Color.Black else Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Tone Profile (Standard / Flat Log) Selector
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text("Tone Map Profile", color = Color.White, fontSize = 13.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ToneProfileMode.values().forEach { mode ->
+                        val selected = mode == toneProfileMode
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (selected) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                .clickable { onToneProfileModeChange(mode) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = mode.label,
+                                color = if (selected) Color.Black else Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Chromatic Aberration Correction Switch
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Anti Purple Fringing (Aberration)", color = Color.White, fontSize = 13.sp)
+                Switch(checked = enableAberrationCorrection, onCheckedChange = onEnableAberrationCorrectionChange, modifier = Modifier.scale(0.8f))
             }
 
             Spacer(modifier = Modifier.height(4.dp))

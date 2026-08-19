@@ -921,10 +921,24 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
 
-    fun setIspTuning(noiseMode: NoiseReductionMode, edgeMode: EdgeEnhancementMode) {
+    fun setIspTuning(
+        noiseMode: NoiseReductionMode,
+        edgeMode: EdgeEnhancementMode,
+        antiBanding: AntiBandingMode,
+        toneProfile: ToneProfileMode,
+        aberrationCorrection: Boolean
+    ) {
         val builder = previewRequestBuilder ?: return
         builder.set(CaptureRequest.NOISE_REDUCTION_MODE, noiseMode.modeValue)
         builder.set(CaptureRequest.EDGE_MODE, edgeMode.modeValue)
+        builder.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, antiBanding.modeValue)
+        builder.set(CaptureRequest.TONEMAP_MODE, toneProfile.modeValue)
+        val abMode = if (aberrationCorrection) {
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY
+        } else {
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
+        }
+        builder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, abMode)
         updatePreview()
     }
 

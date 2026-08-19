@@ -123,6 +123,19 @@ enum class EdgeEnhancementMode(val label: String, val modeValue: Int) {
     OFF("Off (Soft / Natural)", android.hardware.camera2.CaptureRequest.EDGE_MODE_OFF)
 }
 
+enum class AntiBandingMode(val label: String, val modeValue: Int) {
+    HZ_50("50Hz (Indo PLN)", android.hardware.camera2.CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_50HZ),
+    AUTO("Auto", android.hardware.camera2.CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO),
+    HZ_60("60Hz", android.hardware.camera2.CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_60HZ),
+    OFF("Off", android.hardware.camera2.CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_OFF)
+}
+
+enum class ToneProfileMode(val label: String, val modeValue: Int) {
+    STANDARD("Standard", android.hardware.camera2.CaptureRequest.TONEMAP_MODE_FAST),
+    HIGH_CONTRAST("High Contrast", android.hardware.camera2.CaptureRequest.TONEMAP_MODE_HIGH_QUALITY),
+    FLAT_LOG("Flat / Log", android.hardware.camera2.CaptureRequest.TONEMAP_MODE_CONTRAST_CURVE)
+}
+
 interface VideoRecordController {
     fun stop()
 }
