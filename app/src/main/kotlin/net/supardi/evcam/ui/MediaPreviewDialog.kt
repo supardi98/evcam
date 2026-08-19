@@ -703,11 +703,11 @@ fun MediaPreviewDialog(
                                                             // Apply EXIF rotation from the raw JPEG so the final is never tilted
                                                             if (finalBmp != null) {
                                                                 val exifRotation = try {
-                                                                    val exif = android.media.ExifInterface(bytesList[0].inputStream())
-                                                                    when (exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)) {
-                                                                        android.media.ExifInterface.ORIENTATION_ROTATE_90  -> 90
-                                                                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
-                                                                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                                                                    val exif = androidx.exifinterface.media.ExifInterface(bytesList[0].inputStream())
+                                                                    when (exif.getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL)) {
+                                                                        androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90  -> 90
+                                                                        androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                                                                        androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
                                                                         else -> 0
                                                                     }
                                                                 } catch (e: Exception) { 0 }

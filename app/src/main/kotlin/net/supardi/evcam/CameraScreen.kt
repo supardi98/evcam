@@ -1105,7 +1105,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .size(boxW, boxH)
                             .align(Alignment.Center)
-                            .graphicsLayer { rotationZ = snapAngle }
+                            .graphicsLayer { rotationZ = -snapAngle }
                             .padding(16.dp)
                     ) {
                         WatermarkQuadrant.values().forEach { quadrant ->
@@ -1124,14 +1124,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                             WatermarkElementType.LOCATION -> formatLocationElement(element.content, liveLocation, liveAddress)
                                             WatermarkElementType.DATE -> formatDateElement(element.content)
                                         }
-                                        Text(
-                                            text = text,
-                                            color = Color.White,
-                                            fontSize = element.size.sp,
-                                            textAlign = if (quadrant == WatermarkQuadrant.TOP_RIGHT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT) androidx.compose.ui.text.style.TextAlign.End else androidx.compose.ui.text.style.TextAlign.Start,
-                                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                                            style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black, blurRadius = 4f))
-                                        )
+                                        if (text.isNotEmpty()) {
+                                            Text(
+                                                text = text,
+                                                color = Color.White,
+                                                fontSize = element.size.sp,
+                                                textAlign = if (quadrant == WatermarkQuadrant.TOP_RIGHT || quadrant == WatermarkQuadrant.BOTTOM_RIGHT) androidx.compose.ui.text.style.TextAlign.End else androidx.compose.ui.text.style.TextAlign.Start,
+                                                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                                                style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(color = Color.Black, blurRadius = 4f))
+                                            )
+                                        }
                                     }
                                 }
                             }

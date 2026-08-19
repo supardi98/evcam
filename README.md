@@ -14,9 +14,9 @@ A professional-grade, open-source Android camera app built with **Jetpack Compos
 - **Live Histogram** — real-time RGB/Luminance exposure graph
 - **Burst Mode** — long-press shutter to capture multiple shots continuously
 - **Timer + Burst Count** — countdown timer (3s/5s/10s) with burst count (1x/3x/5x/10x)
-- **Watermark** — customizable text overlay at 4 corners (auto-repositions in landscape)
-- **Geotagging** — embed GPS coordinates & address in saved photos
-- **Auto-Rotation** — saved photos/videos rotate to match device orientation
+- **Watermark** — customizable text overlay at 4 corners (auto-repositions in landscape, hides empty location)
+- **Geotagging** — embed GPS coordinates & address in saved photos (formatted for direct map lookups)
+- **EXIF Metadata Viewer** — built-in dialog to inspect detailed camera parameters and copy location
 - **Resolution Control** — Ultra, Max, High, Medium, Low quality selection
 
 ### 🎥 Video Mode

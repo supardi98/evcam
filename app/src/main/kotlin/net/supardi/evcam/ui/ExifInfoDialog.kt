@@ -1,13 +1,16 @@
 package net.supardi.evcam.ui
 
 import android.content.Context
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -87,8 +90,16 @@ fun ExifInfoDialog(
                         val iso = exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS)
                         if (iso != null) list.add(ExifProperty("ISO", iso))
                         
-                        val exposure = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)
-                        if (exposure != null) list.add(ExifProperty("Shutter Speed", "${exposure}s"))
+                        val exposureStr = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)
+                        if (exposureStr != null) {
+                            val expDouble = exposureStr.toDoubleOrNull()
+                            if (expDouble != null && expDouble > 0 && expDouble < 1.0) {
+                                val denom = kotlin.math.round(1.0 / expDouble).toInt()
+                                list.add(ExifProperty("Shutter Speed", "1/$denom s"))
+                            } else {
+                                list.add(ExifProperty("Shutter Speed", "${exposureStr} s"))
+                            }
+                        }
                         
                         val date = exif.getAttribute(ExifInterface.TAG_DATETIME)
                         if (date != null) list.add(ExifProperty("Date Time", date))
@@ -105,6 +116,11 @@ fun ExifInfoDialog(
                         
                         val software = exif.getAttribute(ExifInterface.TAG_SOFTWARE)
                         if (software != null) list.add(ExifProperty("Software", software))
+                        
+                        val latLong = exif.latLong
+                        if (latLong != null && latLong.size == 2) {
+                            list.add(ExifProperty("Location", String.format(java.util.Locale.US, "%.5f, %.5f", latLong[0], latLong[1])))
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -146,7 +162,46 @@ fun ExifInfoDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(text = prop.label, color = Color.LightGray, fontSize = 14.sp)
-                                Text(text = prop.value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                if (prop.label == "Location") {
+                                    val localContext = androidx.compose.ui.platform.LocalContext.current
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = prop.value,
+                                            color = Color(0xFF64B5F6),
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.clickable {
+                                                try {
+                                                    val parts = prop.value.split(", ")
+                                                    if (parts.size == 2) {
+                                                        val geoUri = Uri.parse("geo:${parts[0]},${parts[1]}?q=${parts[0]},${parts[1]}")
+                                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, geoUri)
+                                                        localContext.startActivity(intent)
+                                                    }
+                                                } catch(e: Exception) { e.printStackTrace() }
+                                            }
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .clickable {
+                                                    val clipboardManager = localContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                    val clip = android.content.ClipData.newPlainText("Location", prop.value)
+                                                    clipboardManager.setPrimaryClip(clip)
+                                                    android.widget.Toast.makeText(localContext, "Location copied", android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                        ) {
+                                            androidx.compose.material3.Icon(
+                                                imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
+                                                contentDescription = "Copy Location",
+                                                tint = Color.LightGray,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Text(text = prop.value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     }
