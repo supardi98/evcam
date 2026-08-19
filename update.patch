@@ -1,0 +1,98 @@
+--- app/src/main/kotlin/net/supardi/evcam/logic/Camera2Engine.kt
++++ app/src/main/kotlin/net/supardi/evcam/logic/Camera2Engine.kt
+@@ -361,7 +361,7 @@
+         }
+     }
+ 
+-    fun setupMediaRecorder(width: Int = 1920, height: Int = 1080, fps: Int = 30, audioEnabled: Boolean = true, outputFile: String) {
++    fun setupMediaRecorder(width: Int = 1920, height: Int = 1080, fps: Int = 30, audioEnabled: Boolean = true, outputFile: String): Pair<Int, Int> {
+         lastRecordedWidth = width
+         lastRecordedHeight = height
+         lastRecordedFps = fps
+@@ -395,6 +395,7 @@
+                 prepare()
+             }
+             Log.d("EVCAM", "MediaRecorder with persistent surface successfully prepared: ${width}x${height} @ ${fps}fps")
++            return Pair(width, height)
+         } catch (e: Exception) {
+             Log.e("EVCAM", "Failed setupMediaRecorder (${width}x${height} @ ${fps}fps), attempting fallback 1080p 30fps", e)
+             try {
+@@ -416,9 +417,14 @@
+                     prepare()
+                 }
+                 Log.d("EVCAM", "Fallback MediaRecorder 1080p 30fps successfully prepared")
++                lastRecordedWidth = 1920
++                lastRecordedHeight = 1080
++                return Pair(1920, 1080)
+             } catch (e2: Exception) {
+                 Log.e("EVCAM", "Fallback MediaRecorder setup failed completely", e2)
++                return Pair(width, height)
+             }
+         }
+     }
+ 
+--- app/src/main/kotlin/net/supardi/evcam/CameraScreen.kt
++++ app/src/main/kotlin/net/supardi/evcam/CameraScreen.kt
+@@ -772,14 +772,15 @@
+                             ).show()
+                         }
+ 
+-                        camera2Engine.setupMediaRecorder(
++                        val (actualW, actualH) = camera2Engine.setupMediaRecorder(
+                             width = vWidth, height = vHeight, fps = vFps,
+                             audioEnabled = false, outputFile = tempVideoFile
+                         )
+-                        textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
+-                        textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
++                        textureView.surfaceTexture?.setDefaultBufferSize(actualW, actualH)
++                        textureView.setSensorAspectRatio(actualH.toFloat() / actualW.toFloat())
+                         val texSurface = android.view.Surface(textureView.surfaceTexture)
+                         val slowTargets = mutableListOf<android.view.Surface>(texSurface)
+                         slowTargets.add(camera2Engine.getOrCreatePersistentSurface())
+@@ -788,8 +789,8 @@
+ 
+                         camera2Engine.createPreviewSession(slowTargets, targetFps = vFps) { _ ->
+                             activeRecording = startVideoRecord(
+                                 context = context,
+                                 camera2Engine = camera2Engine,
+-                                width = vWidth, height = vHeight, fps = vFps,
++                                width = actualW, height = actualH, fps = vFps,
+                                 audioEnabled = false,
+                                 recordSurface = camera2Engine.getOrCreatePersistentSurface(),
+@@ -803,23 +804,23 @@
+                                 }
+                             )
+                         }
+                     } else {
+-                        camera2Engine.setupMediaRecorder(
++                        val (actualW, actualH) = camera2Engine.setupMediaRecorder(
+                             width = vWidth, height = vHeight, fps = vFps,
+                             audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
+                         )
+-                        textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
+-                        textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
++                        textureView.surfaceTexture?.setDefaultBufferSize(actualW, actualH)
++                        textureView.setSensorAspectRatio(actualH.toFloat() / actualW.toFloat())
+                         val texSurface = android.view.Surface(textureView.surfaceTexture)
+                         val newTargets = mutableListOf<android.view.Surface>(texSurface)
+ 
+                         if (isHorizonLock) {
+-                            val crt = net.supardi.evcam.gl.CameraRenderThread(vWidth, vHeight, rotationSensorHelper)
++                            val crt = net.supardi.evcam.gl.CameraRenderThread(actualW, actualH, rotationSensorHelper)
+                             cameraRenderThread = crt
+                             crt.start()
+                             crt.awaitSurfaceReady()
+                             val pSurface = camera2Engine.getOrCreatePersistentSurface()
+-                            crt.setOutputSurface(pSurface, vWidth, vHeight)
++                            crt.setOutputSurface(pSurface, actualW, actualH)
+                             newTargets.add(crt.cameraSurface!!)
+                         } else {
+                             camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
+@@ -829,7 +830,7 @@
+                         camera2Engine.createPreviewSession(newTargets) { _ ->
+                             activeRecording = startVideoRecord(
+                                 context = context,
+                                 camera2Engine = camera2Engine,
+-                                width = vWidth, height = vHeight, fps = vFps,
++                                width = actualW, height = actualH, fps = vFps,
+                                 audioEnabled = videoAudioEnabled,

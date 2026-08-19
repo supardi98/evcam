@@ -772,12 +772,12 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             ).show()
                         }
 
-                        camera2Engine.setupMediaRecorder(
+                        val (actualW, actualH) = camera2Engine.setupMediaRecorder(
                             width = vWidth, height = vHeight, fps = vFps,
                             audioEnabled = false, outputFile = tempVideoFile
                         )
-                        textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
-                        textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
+                        textureView.surfaceTexture?.setDefaultBufferSize(actualW, actualH)
+                        textureView.setSensorAspectRatio(actualH.toFloat() / actualW.toFloat())
                         val texSurface = android.view.Surface(textureView.surfaceTexture)
                         val slowTargets = mutableListOf<android.view.Surface>(texSurface)
                         slowTargets.add(camera2Engine.getOrCreatePersistentSurface())
@@ -788,7 +788,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             activeRecording = startVideoRecord(
                                 context = context,
                                 camera2Engine = camera2Engine,
-                                width = vWidth, height = vHeight, fps = vFps,
+                                width = actualW, height = actualH, fps = vFps,
                                 audioEnabled = false,
                                 recordSurface = camera2Engine.getOrCreatePersistentSurface(),
                                 onMediaSaved = { _, uri ->
@@ -803,22 +803,22 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             )
                         }
                     } else {
-                        camera2Engine.setupMediaRecorder(
+                        val (actualW, actualH) = camera2Engine.setupMediaRecorder(
                             width = vWidth, height = vHeight, fps = vFps,
                             audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
                         )
-                        textureView.surfaceTexture?.setDefaultBufferSize(vWidth, vHeight)
-                        textureView.setSensorAspectRatio(vHeight.toFloat() / vWidth.toFloat())
+                        textureView.surfaceTexture?.setDefaultBufferSize(actualW, actualH)
+                        textureView.setSensorAspectRatio(actualH.toFloat() / actualW.toFloat())
                         val texSurface = android.view.Surface(textureView.surfaceTexture)
                         val newTargets = mutableListOf<android.view.Surface>(texSurface)
 
                         if (isHorizonLock) {
-                            val crt = net.supardi.evcam.gl.CameraRenderThread(vWidth, vHeight, rotationSensorHelper)
+                            val crt = net.supardi.evcam.gl.CameraRenderThread(actualW, actualH, rotationSensorHelper)
                             cameraRenderThread = crt
                             crt.start()
                             crt.awaitSurfaceReady()
                             val pSurface = camera2Engine.getOrCreatePersistentSurface()
-                            crt.setOutputSurface(pSurface, vWidth, vHeight)
+                            crt.setOutputSurface(pSurface, actualW, actualH)
                             newTargets.add(crt.cameraSurface!!)
                         } else {
                             camera2Engine.getOrCreatePersistentSurface().let { newTargets.add(it) }
@@ -830,7 +830,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             activeRecording = startVideoRecord(
                                 context = context,
                                 camera2Engine = camera2Engine,
-                                width = vWidth, height = vHeight, fps = vFps,
+                                width = actualW, height = actualH, fps = vFps,
                                 audioEnabled = videoAudioEnabled,
                                 recordSurface = if (isHorizonLock) cameraRenderThread!!.cameraSurface!! else camera2Engine.getOrCreatePersistentSurface(),
                                 onMediaSaved = { _, uri ->

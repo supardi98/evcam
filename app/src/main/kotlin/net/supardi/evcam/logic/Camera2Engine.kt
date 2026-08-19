@@ -360,7 +360,7 @@ class Camera2Engine(private val context: Context) {
         }
     }
 
-    fun setupMediaRecorder(width: Int = 1920, height: Int = 1080, fps: Int = 30, audioEnabled: Boolean = true, outputFile: String) {
+    fun setupMediaRecorder(width: Int = 1920, height: Int = 1080, fps: Int = 30, audioEnabled: Boolean = true, outputFile: String): Pair<Int, Int> {
         lastRecordedWidth = width
         lastRecordedHeight = height
         lastRecordedFps = fps
@@ -395,6 +395,7 @@ class Camera2Engine(private val context: Context) {
                 prepare()
             }
             Log.d("EVCAM", "MediaRecorder with persistent surface successfully prepared: ${width}x${height} @ ${fps}fps")
+            return Pair(width, height)
         } catch (e: Exception) {
             Log.e("EVCAM", "Failed setupMediaRecorder (${width}x${height} @ ${fps}fps), attempting fallback 1080p 30fps", e)
             try {
@@ -417,8 +418,12 @@ class Camera2Engine(private val context: Context) {
                     prepare()
                 }
                 Log.d("EVCAM", "Fallback MediaRecorder 1080p 30fps successfully prepared")
+                lastRecordedWidth = 1920
+                lastRecordedHeight = 1080
+                return Pair(1920, 1080)
             } catch (e2: Exception) {
                 Log.e("EVCAM", "Fallback MediaRecorder setup failed completely", e2)
+                return Pair(width, height)
             }
         }
     }
