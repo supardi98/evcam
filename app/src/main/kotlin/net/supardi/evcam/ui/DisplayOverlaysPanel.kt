@@ -30,6 +30,8 @@ fun DisplayOverlaysPanel(
     onGridTypeChange: (GridType) -> Unit,
     showVirtualHorizon: Boolean,
     onVirtualHorizonChange: (Boolean) -> Unit,
+    showCinemaGuide: Boolean = false,
+    onCinemaGuideChange: (Boolean) -> Unit = {},
     enableHistogram: Boolean,
     onHistogramChange: (Boolean) -> Unit,
     enableFocusPeaking: Boolean,
@@ -90,6 +92,15 @@ fun DisplayOverlaysPanel(
             Switch(
                 checked = showVirtualHorizon,
                 onCheckedChange = onVirtualHorizonChange,
+                modifier = Modifier.scale(0.8f)
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("21:9 Cinema", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Switch(
+                checked = showCinemaGuide,
+                onCheckedChange = onCinemaGuideChange,
                 modifier = Modifier.scale(0.8f)
             )
         }

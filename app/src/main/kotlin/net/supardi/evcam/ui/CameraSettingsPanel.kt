@@ -105,6 +105,11 @@ fun SettingsPopupPanels(
                         uiState.showVirtualHorizon = it
                         uiState.prefs.edit().putBoolean("showVirtualHorizon", it).apply()
                     },
+                    showCinemaGuide = uiState.showCinemaGuide,
+                    onCinemaGuideChange = {
+                        uiState.showCinemaGuide = it
+                        uiState.prefs.edit().putBoolean("showCinemaGuide", it).apply()
+                    },
                     enableHistogram = uiState.enableHistogram,
                     onHistogramChange = {
                         uiState.enableHistogram = it
@@ -211,7 +216,7 @@ fun ModeSwitchAndProControls(
     uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
-    val isAnyOverlayActive = uiState.gridType != GridType.NONE || uiState.showVirtualHorizon || uiState.enableHistogram || uiState.enableFocusPeaking
+    val isAnyOverlayActive = uiState.gridType != GridType.NONE || uiState.showVirtualHorizon || uiState.showCinemaGuide || uiState.enableHistogram || uiState.enableFocusPeaking
     val photoSelected = uiState.cameraMode == CameraMode.PHOTO
     val targetBias = if (photoSelected) -1f else 1f
     

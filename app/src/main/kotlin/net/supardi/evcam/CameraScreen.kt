@@ -1265,6 +1265,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 VirtualHorizonOverlay(deviceOrientation = orientData, modifier = Modifier.fillMaxSize())
             }
 
+            if (uiState.showCinemaGuide) {
+                CinemaGuideOverlay(modifier = Modifier.fillMaxSize())
+            }
+
 
         }
         

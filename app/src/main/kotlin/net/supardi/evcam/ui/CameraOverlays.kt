@@ -62,6 +62,32 @@ fun GridOverlay(
 }
 
 @Composable
+fun CinemaGuideOverlay(
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val targetH = w * (9f / 21f)
+        if (h > targetH) {
+            val barH = (h - targetH) / 2f
+            drawRect(
+                color = Color.Black.copy(alpha = 0.6f),
+                topLeft = Offset(0f, 0f),
+                size = androidx.compose.ui.geometry.Size(w, barH)
+            )
+            drawRect(
+                color = Color.Black.copy(alpha = 0.6f),
+                topLeft = Offset(0f, h - barH),
+                size = androidx.compose.ui.geometry.Size(w, barH)
+            )
+            drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, barH), Offset(w, barH), 1.dp.toPx())
+            drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, h - barH), Offset(w, h - barH), 1.dp.toPx())
+        }
+    }
+}
+
+@Composable
 fun VirtualHorizonOverlay(
     deviceOrientation: DeviceOrientationData,
     modifier: Modifier = Modifier
