@@ -815,6 +815,20 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
     
+    var isAeAfLocked = false
+
+    fun setAeAfLock(isLocked: Boolean) {
+        this.isAeAfLocked = isLocked
+        val builder = previewRequestBuilder ?: return
+        builder.set(CaptureRequest.CONTROL_AE_LOCK, isLocked)
+        if (isLocked) {
+            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+        } else {
+            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        }
+        updatePreview()
+    }
+
     fun setProSettings(
         isProMode: Boolean,
         isIsoAuto: Boolean, iso: Int,
@@ -830,10 +844,13 @@ class Camera2Engine(private val context: Context) {
             applyCustomSceneModeInternal(activeCustomScene, update = false)
         } else {
             builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-            if (!isTouchFocusActive) {
+            if (!isTouchFocusActive && !isAeAfLocked) {
                 builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            } else if (isAeAfLocked) {
+                builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
             }
             builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            builder.set(CaptureRequest.CONTROL_AE_LOCK, isAeAfLocked)
             builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
             builder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
         }

@@ -932,6 +932,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setAwbLock(uiState.isAwbLocked)
     }
 
+    LaunchedEffect(uiState.isAeAfLocked, cameraState) {
+        camera2Engine.setAeAfLock(uiState.isAeAfLocked)
+    }
+
     LaunchedEffect(cameraState) {
         camera2Engine.onAwbGainsCallback = { liveKelvin ->
             // Update manualKelvin continuously while in AUTO/preset modes so switching to CUS inherits live Kelvin
