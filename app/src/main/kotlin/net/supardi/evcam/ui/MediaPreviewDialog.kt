@@ -25,6 +25,9 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -332,6 +335,28 @@ fun MediaPreviewDialog(
 
     // Shared post-delete navigation — called after item is confirmed deleted
     fun onItemDeleted(item: MediaItem) {
+        // Also delete raw HDR components if applicable
+        try {
+            val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+            context.contentResolver.query(item.uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val name = cursor.getString(0)
+                    if (name != null && name.startsWith("IMG_HDR_")) {
+                        val timestampStr = name.removePrefix("IMG_HDR_").substringBefore(".jpg")
+                        val picsDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+                        if (picsDir != null && timestampStr.isNotEmpty()) {
+                            for (i in 0..4) {
+                                val f = java.io.File(picsDir, "IMG_HDR_${timestampStr}_EV${i}.jpg")
+                                if (f.exists()) f.delete()
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val idx = mediaList.indexOf(item)
         val removeIdx = if (idx >= 0) idx else currentActualIndex
         if (removeIdx < mediaList.size) mediaList.removeAt(removeIdx)
@@ -420,6 +445,29 @@ fun MediaPreviewDialog(
                             }
                         } else MediaInfo()
                     }
+                    
+                    var rawComponents by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<Uri>>(emptyList()) }
+                    var selectedRawUri by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Uri?>(null) }
+                    
+                    androidx.compose.runtime.LaunchedEffect(pageInfo.fileName) {
+                        if (pageInfo.fileName.startsWith("IMG_HDR_")) {
+                            val timestampStr = pageInfo.fileName.removePrefix("IMG_HDR_").substringBefore(".jpg")
+                            val picsDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+                            if (picsDir != null && timestampStr.isNotEmpty()) {
+                                val uris = mutableListOf<Uri>()
+                                for (i in 0..4) {
+                                    val f = java.io.File(picsDir, "IMG_HDR_${timestampStr}_EV${i}.jpg")
+                                    if (f.exists()) {
+                                        uris.add(Uri.fromFile(f))
+                                    }
+                                }
+                                rawComponents = uris
+                            }
+                        } else {
+                            rawComponents = emptyList()
+                            selectedRawUri = null
+                        }
+                    }
 
                     Column(
                         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -459,7 +507,7 @@ fun MediaPreviewDialog(
                                 )
                             } else if (item != null) {
                                 AsyncImage(
-                                    model = item.uri, imageLoader = imageLoader,
+                                    model = selectedRawUri ?: item.uri, imageLoader = imageLoader,
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier
@@ -478,6 +526,31 @@ fun MediaPreviewDialog(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Yellow, modifier = Modifier.size(42.dp))
+                                }
+                            }
+                        }
+
+                        if (rawComponents.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Raw HDR Components (Tap to preview)", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Main thumbnail
+                                Box(modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)).clickable { selectedRawUri = null }.border(1.dp, if (selectedRawUri == null) Color.Yellow else Color.Transparent, RoundedCornerShape(8.dp))) {
+                                    AsyncImage(model = item?.uri, contentDescription = "Final", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    Text("Final", color = Color.White, fontSize = 9.sp, modifier = Modifier.align(Alignment.BottomCenter).background(Color.Black.copy(alpha = 0.6f)).fillMaxWidth(), textAlign = TextAlign.Center)
+                                }
+                                // Components
+                                val evLabels = listOf("-4", "-2", "0", "+2", "+4")
+                                rawComponents.forEachIndexed { idx, uri ->
+                                    val isSelected = selectedRawUri == uri
+                                    Box(modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)).clickable { selectedRawUri = uri }.border(1.dp, if (isSelected) Color.Yellow else Color.Transparent, RoundedCornerShape(8.dp))) {
+                                        AsyncImage(model = uri, contentDescription = "EV", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                        Text(evLabels.getOrNull(idx) ?: "", color = Color.White, fontSize = 9.sp, modifier = Modifier.align(Alignment.BottomCenter).background(Color.Black.copy(alpha = 0.6f)).fillMaxWidth(), textAlign = TextAlign.Center)
+                                    }
                                 }
                             }
                         }

@@ -465,6 +465,23 @@ fun takeComputationalHdrPhoto(
 ) {
     camera2Engine.takeComputationalHdrBurst { bytesList ->
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            val timestamp = System.currentTimeMillis()
+            
+            // Save the 5 raw components to app-specific external storage for viewing later
+            val picsDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+            if (picsDir != null) {
+                bytesList.forEachIndexed { index, bytes ->
+                    val evFile = java.io.File(picsDir, "IMG_HDR_${timestamp}_EV${index}.jpg")
+                    try {
+                        java.io.FileOutputStream(evFile).use { fos ->
+                            fos.write(bytes)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
             val hdrBitmap = HdrProcessor.processHdrBurst(bytesList, onProgress)
             if (hdrBitmap != null) {
                 val rotationDegrees = deviceRotation
@@ -510,7 +527,7 @@ fun takeComputationalHdrPhoto(
                     }
                 }
 
-                val filename = "IMG_HDR_${System.currentTimeMillis()}.jpg"
+                val filename = "IMG_HDR_${timestamp}.jpg"
                 val contentValues = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
                     put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
