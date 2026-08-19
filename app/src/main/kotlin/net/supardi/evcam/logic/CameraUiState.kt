@@ -84,6 +84,7 @@ class CameraUiState(
     var focusState by mutableStateOf(FocusState.TAP_INITIAL)
     var focusTapCount by mutableIntStateOf(0)
     var isAeAfLocked by mutableStateOf(false)
+    var isAwbLocked by mutableStateOf(false)
     var isPendingAfLock by mutableStateOf(false)
     var recordingSeconds by mutableIntStateOf(0)
     var isTransitioningRatio by mutableStateOf(false)

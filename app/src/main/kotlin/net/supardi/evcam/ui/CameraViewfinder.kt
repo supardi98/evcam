@@ -113,6 +113,7 @@ fun CameraViewfinder(
 
                             if (uiState.isAeAfLocked) {
                                 uiState.isAeAfLocked = false
+                                uiState.isAwbLocked = false
                             }
                             uiState.isPendingAfLock = false
                             

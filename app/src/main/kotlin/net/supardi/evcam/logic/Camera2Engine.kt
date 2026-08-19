@@ -887,6 +887,12 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
 
+    fun setAwbLock(locked: Boolean) {
+        val builder = previewRequestBuilder ?: return
+        builder.set(CaptureRequest.CONTROL_AWB_LOCK, locked)
+        updatePreview()
+    }
+
     fun setTorchState(enabled: Boolean) {
         val builder = previewRequestBuilder ?: return
         if (enabled) {

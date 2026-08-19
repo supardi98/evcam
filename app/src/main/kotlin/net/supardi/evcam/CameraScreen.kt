@@ -928,6 +928,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setColorFilter(effectiveFilter)
     }
 
+    LaunchedEffect(uiState.isAwbLocked, cameraState) {
+        camera2Engine.setAwbLock(uiState.isAwbLocked)
+    }
+
     LaunchedEffect(cameraState) {
         camera2Engine.onAwbGainsCallback = { liveKelvin ->
             // Update manualKelvin continuously while in AUTO/preset modes so switching to CUS inherits live Kelvin
@@ -1430,13 +1434,17 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         .clip(CircleShape)
                         .background(Color.Yellow)
                         .clickable { 
-                            isAeAfLocked = false
-                            // cameraControl?.cancelFocusAndMetering()
+                            if (!uiState.isAwbLocked) {
+                                uiState.isAwbLocked = true
+                            } else {
+                                isAeAfLocked = false
+                                uiState.isAwbLocked = false
+                            }
                         }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = "AE/AF LOCK",
+                        text = if (uiState.isAwbLocked) "AE/AF/AWB LOCK" else "AE/AF LOCK",
                         color = Color.Black,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
