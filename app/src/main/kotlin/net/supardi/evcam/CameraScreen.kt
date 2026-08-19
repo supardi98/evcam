@@ -1314,6 +1314,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                         onValueChange = {
                             val newIdx = it.toInt()
                             exposureIndex = newIdx
+                            uiState.isAeAfLocked = false
+                            uiState.isAwbLocked = false
                         },
                         valueRange = minExposureIndex.toFloat()..maxExposureIndex.toFloat(),
                         modifier = Modifier
