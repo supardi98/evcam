@@ -2,6 +2,7 @@ package net.supardi.evcam.logic
 
 
 import android.content.ContentValues
+import android.media.ExifInterface
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -462,11 +463,23 @@ fun takeComputationalHdrPhoto(
 
             val hdrBitmap = HdrProcessor.processHdrBurst(bytesList, hdrParams, null, onProgress)
             if (hdrBitmap != null) {
-                val rotationDegrees = deviceRotation
+                // Read EXIF orientation from the first raw JPEG — this is the correct 0/90/180/270
+                // rotation set by the camera driver, not the live tilt angle from the sensor.
+                val exifRotation = try {
+                    val exif = ExifInterface(bytesList[0].inputStream())
+                    when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                        ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                        ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                        ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                        else -> 0
+                    }
+                } catch (e: Exception) {
+                    deviceRotation  // fallback
+                }
                 var bitmap = hdrBitmap
-                if (rotationDegrees != 0) {
+                if (exifRotation != 0) {
                     val matrix = android.graphics.Matrix()
-                    matrix.postRotate(rotationDegrees.toFloat())
+                    matrix.postRotate(exifRotation.toFloat())
                     bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
                 }
 

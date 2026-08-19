@@ -696,8 +696,26 @@ fun MediaPreviewDialog(
                                                                 normalBias = prefs.getFloat("hdr_normal_bias", 1.5f),
                                                                 contrastIntensity = prefs.getFloat("hdr_contrast_intensity", 1.0f)
                                                             )
-                                                            val finalBmp = net.supardi.evcam.logic.HdrProcessor.processHdrBurst(bytesList, params, null) { progress ->
+                                                            var finalBmp = net.supardi.evcam.logic.HdrProcessor.processHdrBurst(bytesList, params, null) { progress ->
                                                                 reprocessProgress = progress
+                                                            }
+                                                            
+                                                            // Apply EXIF rotation from the raw JPEG so the final is never tilted
+                                                            if (finalBmp != null) {
+                                                                val exifRotation = try {
+                                                                    val exif = android.media.ExifInterface(bytesList[0].inputStream())
+                                                                    when (exif.getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)) {
+                                                                        android.media.ExifInterface.ORIENTATION_ROTATE_90  -> 90
+                                                                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                                                                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                                                                        else -> 0
+                                                                    }
+                                                                } catch (e: Exception) { 0 }
+                                                                if (exifRotation != 0) {
+                                                                    val m = android.graphics.Matrix()
+                                                                    m.postRotate(exifRotation.toFloat())
+                                                                    finalBmp = Bitmap.createBitmap(finalBmp, 0, 0, finalBmp.width, finalBmp.height, m, true)
+                                                                }
                                                             }
                                                             
                                                             context.contentResolver.openOutputStream(item.uri, "wt")?.use { out ->
