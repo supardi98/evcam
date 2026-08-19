@@ -87,6 +87,7 @@ fun ExifInfoDialog(
                             }
                         }
                         
+                        @Suppress("DEPRECATION")
                         val iso = exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS)
                         if (iso != null) list.add(ExifProperty("ISO", iso))
                         

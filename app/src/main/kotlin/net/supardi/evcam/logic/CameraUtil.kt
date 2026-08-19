@@ -180,9 +180,8 @@ fun writeExifTags(
 
             // ── Exposure info ────────────────────────────────────────────────
             if (iso != null && iso > 0) {
+                @Suppress("DEPRECATION")
                 exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ISO_SPEED_RATINGS, iso.toString())
-            } else if (rawExif != null && rawExif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_ISO_SPEED_RATINGS) != null) {
-                exif.setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ISO_SPEED_RATINGS, rawExif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_ISO_SPEED_RATINGS))
             }
 
             if (shutterSpeedNs != null && shutterSpeedNs > 0) {
@@ -236,9 +235,7 @@ fun takePhoto(
     liveLocation: Location?,
     liveAddress: Address?,
     enableGeotagging: Boolean,
-    enableRawCapture: Boolean,
     aspectRatioMode: AspectRatioMode,
-    deviceRotation: Int,
     isFrontCamera: Boolean = false,
     mirrorSelfie: Boolean = true,
     customSceneMode: CustomSceneMode = CustomSceneMode.AUTO,
@@ -435,14 +432,13 @@ fun takePhoto(
     }
 }
 
-@android.annotation.SuppressLint("MissingPermission")
+@android.annotation.SuppressLint("MissingPermission", "Unused")
 fun startVideoRecord(
     context: Context,
     camera2Engine: Camera2Engine,
     width: Int = 1920,
     height: Int = 1080,
     fps: Int = 30,
-    audioEnabled: Boolean,
     recordSurface: android.view.Surface,
     useHighSpeed: Boolean = false,
     onMediaSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit,
@@ -558,14 +554,8 @@ fun fetchLatestMediaUri(context: android.content.Context): android.net.Uri? {
 fun takeComputationalHdrPhoto(
     context: Context,
     camera2Engine: Camera2Engine,
-    flashMode: FlashMode,
-    selectedFilter: ColorFilterMode,
-    showWatermark: Boolean,
-    watermarkElements: List<WatermarkElement>,
     liveLocation: Location?,
-    liveAddress: Address?,
     enableGeotagging: Boolean,
-    enableRawCapture: Boolean,
     aspectRatioMode: AspectRatioMode,
     deviceRotation: Int,
     isFrontCamera: Boolean = false,
@@ -574,6 +564,7 @@ fun takeComputationalHdrPhoto(
     onPhotoSaved: (Bitmap, Uri) -> Unit
 ) {
     camera2Engine.takeComputationalHdrBurst { bytesList ->
+        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             val timestamp = System.currentTimeMillis()
             

@@ -158,8 +158,8 @@ private fun fetchMediaInfo(context: Context, uri: Uri, isVideo: Boolean): MediaI
                                 extractor.setDataSource(context, uri, null)
                                 for (i in 0 until extractor.trackCount) {
                                     val format = extractor.getTrackFormat(i)
-                                    val mime = format.getString(android.media.MediaFormat.KEY_MIME) ?: ""
-                                    if (mime.startsWith("video/")) {
+                                    val fileMime = format.getString(android.media.MediaFormat.KEY_MIME) ?: ""
+                                    if (fileMime.startsWith("video/")) {
                                         if (format.containsKey(android.media.MediaFormat.KEY_FRAME_RATE)) {
                                             val fr = format.getInteger(android.media.MediaFormat.KEY_FRAME_RATE)
                                             if (fr > 0) fps = "$fr"
@@ -408,13 +408,6 @@ fun MediaPreviewDialog(
 
     // Fetch info for current page
     val currentItem = mediaList.getOrNull(currentActualIndex)
-    val currentInfo by produceState(initialValue = MediaInfo(), currentActualIndex, currentItem) {
-        value = if (currentItem != null) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                fetchMediaInfo(context, currentItem.uri, currentItem.isVideo)
-            }
-        } else MediaInfo()
-    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1175,7 +1168,6 @@ fun MediaPreviewDialog(
                         val totalItems = flatRows.size.coerceAtLeast(1)
                         val layoutInfo = gridState.layoutInfo
                         val visibleCount = layoutInfo.visibleItemsInfo.size.coerceAtLeast(1)
-                        val firstIdx = gridState.firstVisibleItemScrollOffset
                         
                         var scrollbarDragY by remember { mutableFloatStateOf(-1f) }
                         

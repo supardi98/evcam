@@ -130,19 +130,16 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     // var cameraControl by uiState::cameraControl
     // var camera2Control by uiState::camera2Control
     var iso by uiState::iso
-    var minIso by uiState::minIso
-    var maxIso by uiState::maxIso
     var shutterSpeed by uiState::shutterSpeed
     var focusDistance by uiState::focusDistance
     var whiteBalance by uiState::whiteBalance
-    
+
     var isIsoAuto by uiState::isIsoAuto
     var isShutterAuto by uiState::isShutterAuto
     var isFocusAuto by uiState::isFocusAuto
     var enableHistogram by uiState::enableHistogram
 
     var enableFocusPeaking by uiState::enableFocusPeaking
-    var enableRawCapture by uiState::enableRawCapture
     var manualKelvin by uiState::manualKelvin
     var timerBurstCount by uiState::timerBurstCount
     
@@ -198,21 +195,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var aspectRatio by uiState::aspectRatio
     var videoQuality by uiState::videoQuality
     var photoQuality by uiState::photoQuality
-    var videoFps by uiState::videoFps
-    var videoAudioEnabled by uiState::videoAudioEnabled
-    var isNightModeEnabled by uiState::isNightModeEnabled
-    var isHdrEnabled by uiState::isHdrEnabled
     var selectedFilter by uiState::selectedFilter
 
-
-    
-    var cameraFlipRotation by remember { mutableStateOf(0f) }
     val flipRotationAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     var isFlippingCamera by remember { mutableStateOf(false) }
-
-    var imageCaptureUseCase by uiState::imageCaptureUseCase
-
-    var videoCaptureUseCase by uiState::videoCaptureUseCase
 
     val triggerVibe = {
         try {
@@ -566,8 +552,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 android.util.Log.e("EVCAM", "Failed to query hardware characteristics", e)
             }
 
-            val device = (cameraState as Camera2Engine.CameraState.Opened).device
-
             // Encapsulate preview session creation so it can be re-called with different
             // video dimensions when the user starts recording at a different quality.
             fun startPreviewSession(recW: Int = 1440, recH: Int = 1080, recFps: Int = 30) {
@@ -707,8 +691,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 isProcessingHdr = true
                 hdrProgress = 0
                 takeComputationalHdrPhoto(
-                    context, camera2Engine, flashMode, uiState.selectedCustomScene.lockColorFilter ?: selectedFilter, showWatermark, watermarkElements,
-                    liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
+                    context, camera2Engine,
+                    liveLocation, enableGeotagging, aspectRatio, deviceRotation.toInt(),
                     isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
                     onProgress = { progress -> 
                         if (progress == -1) {
@@ -730,7 +714,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             } else {
                 takePhoto(
                     context, camera2Engine, flashMode, uiState.selectedCustomScene.lockColorFilter ?: selectedFilter, showWatermark, watermarkElements,
-                    liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
+                    liveLocation, liveAddress, enableGeotagging, aspectRatio,
                     isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
                     customSceneMode = uiState.selectedCustomScene,
                     isUltraMode = camera2Engine.isUltraMode,
@@ -808,7 +792,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                 context = context,
                                 camera2Engine = camera2Engine,
                                 width = actualW, height = actualH, fps = vFps,
-                                audioEnabled = false,
                                 recordSurface = camera2Engine.getOrCreatePersistentSurface(),
                                 onMediaSaved = { _, uri ->
                                     lastCapturedBitmap = null
@@ -824,7 +807,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     } else {
                         val (actualW, actualH) = camera2Engine.setupMediaRecorder(
                             width = vWidth, height = vHeight, fps = vFps,
-                            audioEnabled = videoAudioEnabled, outputFile = tempVideoFile
+                             outputFile = tempVideoFile
                         )
                         textureView.surfaceTexture?.setDefaultBufferSize(actualW, actualH)
                         textureView.setSensorAspectRatio(actualH.toFloat() / actualW.toFloat())
@@ -850,7 +833,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                                 context = context,
                                 camera2Engine = camera2Engine,
                                 width = actualW, height = actualH, fps = vFps,
-                                audioEnabled = videoAudioEnabled,
                                 recordSurface = if (isHorizonLock) cameraRenderThread!!.cameraSurface!! else camera2Engine.getOrCreatePersistentSurface(),
                                 onMediaSaved = { _, uri ->
                                     lastCapturedBitmap = null
@@ -1010,6 +992,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             if (isHorizonLock) {
                 val horizonState by rotationSensorHelper.horizonState.collectAsState()
                 
+                @Suppress("DEPRECATION")
                 val displayRotation = (androidx.compose.ui.platform.LocalContext.current.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay.rotation
                 val uiRollOffset = when (displayRotation) {
                     android.view.Surface.ROTATION_90 -> 90f
