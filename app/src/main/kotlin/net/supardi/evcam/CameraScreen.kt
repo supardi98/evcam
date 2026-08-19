@@ -1433,22 +1433,38 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(Color.Yellow)
-                        .clickable { 
-                            if (!uiState.isAwbLocked) {
-                                uiState.isAwbLocked = true
-                            } else {
-                                isAeAfLocked = false
-                                uiState.isAwbLocked = false
-                            }
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(start = 12.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)
                 ) {
                     Text(
                         text = if (uiState.isAwbLocked) "AE/AF/AWB LOCK" else "AE/AF LOCK",
                         color = Color.Black,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            uiState.isAwbLocked = !uiState.isAwbLocked
+                        }
                     )
+                    
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.15f))
+                            .clickable {
+                                isAeAfLocked = false
+                                uiState.isAwbLocked = false
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Unlock",
+                            tint = Color.Black,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
                 }
             }
         }
