@@ -44,5 +44,9 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.evcam" />
+        <activity
+            android:name=".ui.HdrTuningActivity"
+            android:exported="false"
+            android:theme="@style/Theme.evcam" />
     </application>
 </manifest>

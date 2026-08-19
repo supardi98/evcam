@@ -452,7 +452,15 @@ fun takeComputationalHdrPhoto(
                 }
             }
 
-            val hdrBitmap = HdrProcessor.processHdrBurst(bytesList, onProgress)
+            val prefs = context.getSharedPreferences("evcam_prefs", Context.MODE_PRIVATE)
+            val hdrParams = HdrParams(
+                exposednessSigma = prefs.getFloat("hdr_exposedness_sigma", 0.4f).toDouble(),
+                saturationBoost = prefs.getFloat("hdr_saturation_boost", 1.0f),
+                normalBias = prefs.getFloat("hdr_normal_bias", 1.5f),
+                contrastIntensity = prefs.getFloat("hdr_contrast_intensity", 1.0f)
+            )
+
+            val hdrBitmap = HdrProcessor.processHdrBurst(bytesList, hdrParams, null, onProgress)
             if (hdrBitmap != null) {
                 val rotationDegrees = deviceRotation
                 var bitmap = hdrBitmap

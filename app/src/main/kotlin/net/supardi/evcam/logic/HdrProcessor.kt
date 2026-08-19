@@ -8,10 +8,19 @@ import kotlinx.coroutines.withContext
 import kotlin.math.exp
 import kotlin.math.pow
 
+data class HdrParams(
+    val exposednessSigma: Double = 0.4,
+    val saturationBoost: Float = 1.0f,
+    val normalBias: Float = 1.5f,
+    val contrastIntensity: Float = 1.0f
+)
+
 object HdrProcessor {
 
     suspend fun processHdrBurst(
         images: List<ByteArray>,
+        params: HdrParams = HdrParams(),
+        downscaleWidth: Int? = null,
         onProgress: (Int) -> Unit
     ): Bitmap? = withContext(Dispatchers.Default) {
         if (images.size < 5) {
@@ -21,10 +30,16 @@ object HdrProcessor {
 
         try {
             onProgress(10)
-            
+
             val options = BitmapFactory.Options().apply {
                 inMutable = false
                 inPreferredConfig = Bitmap.Config.ARGB_8888
+                if (downscaleWidth != null) {
+                    inJustDecodeBounds = true
+                    BitmapFactory.decodeByteArray(images[0], 0, images[0].size, this)
+                    inSampleSize = (outWidth / downscaleWidth).coerceAtLeast(1)
+                    inJustDecodeBounds = false
+                }
             }
             
             val bitmaps = images.map { bytes ->
@@ -66,11 +81,10 @@ object HdrProcessor {
             val rowB2 = IntArray(width)
             val rowResult = IntArray(width)
 
-            val sigma = 50.0
-            val twoSigmaSq = 2.0 * sigma * sigma
-            val weightTable = FloatArray(256)
+            val exposednessTable = FloatArray(256)
             for (i in 0..255) {
-                weightTable[i] = exp(-((i - 128.0).pow(2)) / twoSigmaSq).toFloat()
+                val v = (i / 255.0) - 0.5
+                exposednessTable[i] = exp(-(v * v) / (2.0 * params.exposednessSigma * params.exposednessSigma)).toFloat()
             }
 
             val finalBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -88,7 +102,13 @@ object HdrProcessor {
                 bmpB2.getPixels(rowB2, 0, width, 0, y, width, 1)
 
                 for (x in 0 until width) {
-                    val pN = rowN[x]
+                    val frames = arrayOf(rowD2[x], rowD1[x], rowN[x], rowB1[x], rowB2[x])
+                    
+                    // Base weights for -4, -2, 0, +2, +4
+                    val baseWeights = arrayOf(0.7f, 1.0f, params.normalBias, 1.0f, 0.7f)
+                    
+                    // Reference luma from the normal frame
+                    val pN = frames[2]
                     val rN = (pN shr 16) and 0xFF
                     val gN = (pN shr 8) and 0xFF
                     val bN = pN and 0xFF
@@ -99,57 +119,45 @@ object HdrProcessor {
                     var sumB = 0f
                     var sumW = 0f
 
-                    // Process each frame
-                    val frames = arrayOf(rowD2[x], rowD1[x], rowN[x], rowB1[x], rowB2[x])
-                    val baseWeights = arrayOf(0.8f, 1.2f, 2.0f, 1.2f, 0.8f) // Favor normal
-                    
                     for (f in 0 until 5) {
                         val pF = frames[f]
-                        val rF = (pF shr 16) and 0xFF
-                        val gF = (pF shr 8) and 0xFF
-                        val bF = pF and 0xFF
-                        val lumaF = (rF * 0.299f + gF * 0.587f + bF * 0.114f).toInt()
-                        
-                        var wF = weightTable[lumaF] * baseWeights[f]
-                        
-                        // Ghosting reduction: if color difference from Normal is extreme, kill weight
-                        if (f != 2) {
-                            val colorDiff = kotlin.math.abs(rF - rN) + kotlin.math.abs(gF - gN) + kotlin.math.abs(bF - bN)
-                            if (colorDiff > 120) {
-                                wF *= 0.05f // heavy penalty for ghosts
-                            }
-                        }
-                        
-                        // Local contrast trick: boost midtones based on reference
-                        if (f == 2) {
-                            wF *= 1.5f
-                        } else if (f < 2 && lumaN > 180) { // Recovery from darks
-                            wF *= 4f
-                        } else if (f > 2 && lumaN < 70) { // Recovery from brights
-                            wF *= 4f
-                        }
+                        val r = (pF shr 16) and 0xFF
+                        val g = (pF shr 8) and 0xFF
+                        val b = pF and 0xFF
+                        val luma = (r * 0.299f + g * 0.587f + b * 0.114f).toInt().coerceIn(0, 255)
 
+                        var wF = exposednessTable[luma]
+                        if (f == 2) wF *= params.normalBias
                         wF += 1e-5f
-                        sumR += rF * wF
-                        sumG += gF * wF
-                        sumB += bF * wF
+
+                        sumR += r * wF
+                        sumG += g * wF
+                        sumB += b * wF
                         sumW += wF
                     }
 
-                    // Clarity injection (boost contrast slightly)
                     var finalR = sumR / sumW
                     var finalG = sumG / sumW
                     var finalB = sumB / sumW
-                    
-                    val contrast = 1.15f
-                    finalR = (((finalR / 255f) - 0.5f) * contrast + 0.5f) * 255f
-                    finalG = (((finalG / 255f) - 0.5f) * contrast + 0.5f) * 255f
-                    finalB = (((finalB / 255f) - 0.5f) * contrast + 0.5f) * 255f
 
-                    val outR = finalR.toInt().coerceIn(0, 255)
-                    val outG = finalG.toInt().coerceIn(0, 255)
-                    val outB = finalB.toInt().coerceIn(0, 255)
-                    
+                    // Color Saturation
+                    val lumaF = finalR * 0.299f + finalG * 0.587f + finalB * 0.114f
+                    finalR = lumaF + (finalR - lumaF) * params.saturationBoost
+                    finalG = lumaF + (finalG - lumaF) * params.saturationBoost
+                    finalB = lumaF + (finalB - lumaF) * params.saturationBoost
+
+                    // Smooth S-Curve Contrast
+                    fun applyContrast(v: Float): Float {
+                        val norm = (v / 255f).coerceIn(0f, 1f)
+                        val curve = if (norm < 0.5f) 2f * norm * norm else 1f - 2f * (1f - norm) * (1f - norm)
+                        val interpolated = norm + (curve - norm) * params.contrastIntensity
+                        return interpolated * 255f
+                    }
+
+                    val outR = applyContrast(finalR).toInt().coerceIn(0, 255)
+                    val outG = applyContrast(finalG).toInt().coerceIn(0, 255)
+                    val outB = applyContrast(finalB).toInt().coerceIn(0, 255)
+
                     rowResult[x] = (0xFF shl 24) or (outR shl 16) or (outG shl 8) or outB
                 }
                 finalBitmap.setPixels(rowResult, 0, width, 0, y, width, 1)

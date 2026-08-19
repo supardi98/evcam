@@ -167,6 +167,11 @@ fun SettingsPopupPanels(
                     onOpenWatermarkSettings = onOpenWatermarkSettings,
                     onOpenPluginManager = onOpenPluginManager,
                     onOpenCameraInfo = { uiState.showCameraInfoDialog = true },
+                    onOpenHdrTuning = {
+                        uiState.showSettings = false
+                        val intent = android.content.Intent(context, net.supardi.evcam.ui.HdrTuningActivity::class.java)
+                        context.startActivity(intent)
+                    },
                     onOpenWebcamSettings = {
                         uiState.showSettings = false
                         val intent = Intent(context, net.supardi.evcam.WebcamActivity::class.java)

@@ -495,7 +495,17 @@ fun MediaPreviewDialog(
                                 .clip(RoundedCornerShape(14.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (page == 0 && lastCapturedBitmap != null) {
+                            if (selectedRawUri != null) {
+                                AsyncImage(
+                                    model = selectedRawUri, imageLoader = imageLoader,
+                                    contentDescription = "Preview Raw EV",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .pointerInput(item) { detectTapGestures(onTap = { openActiveMedia() }) }
+                                )
+                            } else if (page == 0 && lastCapturedBitmap != null) {
                                 Image(
                                     bitmap = lastCapturedBitmap.asImageBitmap(),
                                     contentDescription = "Preview $page",
@@ -507,7 +517,7 @@ fun MediaPreviewDialog(
                                 )
                             } else if (item != null) {
                                 AsyncImage(
-                                    model = selectedRawUri ?: item.uri, imageLoader = imageLoader,
+                                    model = item.uri, imageLoader = imageLoader,
                                     contentDescription = "Preview $page",
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier

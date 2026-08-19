@@ -65,6 +65,7 @@ fun SettingsPanel(
     onOpenWatermarkSettings: () -> Unit,
     onOpenPluginManager: () -> Unit,
     onOpenCameraInfo: () -> Unit,
+    onOpenHdrTuning: () -> Unit = {},
     onOpenWebcamSettings: () -> Unit = {},
     onClose: () -> Unit
 ) {
@@ -247,6 +248,14 @@ fun SettingsPanel(
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
             ) {
                 Text("Open Plugin Manager", color = Color.White, fontSize = 12.sp)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Button(
+                onClick = onOpenHdrTuning,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color.Yellow)
+            ) {
+                Text("HDR+ Tuning Studio", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
             Spacer(modifier = Modifier.height(4.dp))
             Button(
