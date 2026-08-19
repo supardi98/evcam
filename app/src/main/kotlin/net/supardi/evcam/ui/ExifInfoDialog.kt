@@ -102,6 +102,9 @@ fun ExifInfoDialog(
                         
                         val wb = exif.getAttribute(ExifInterface.TAG_WHITE_BALANCE)
                         if (wb != null) list.add(ExifProperty("White Balance", wb))
+                        
+                        val software = exif.getAttribute(ExifInterface.TAG_SOFTWARE)
+                        if (software != null) list.add(ExifProperty("Software", software))
                     }
                 }
             } catch (e: Exception) {

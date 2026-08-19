@@ -102,6 +102,144 @@ fun formatDateElement(format: String): String {
     }
 }
 
+/**
+ * Writes a comprehensive set of EXIF tags to a saved image URI.
+ * Should be called immediately after the bitmap has been flushed to the URI.
+ */
+fun writeExifTags(
+    context: Context,
+    uri: android.net.Uri,
+    camera2Engine: Camera2Engine,
+    timestamp: Long,
+    location: android.location.Location?,
+    enableGeotagging: Boolean,
+    iso: Int?,
+    shutterSpeedNs: Long?,
+    isHdr: Boolean = false,
+    rawExif: android.media.ExifInterface? = null
+) {
+    try {
+        val pfd = context.contentResolver.openFileDescriptor(uri, "rw") ?: return
+        pfd.use {
+            val exif = android.media.ExifInterface(it.fileDescriptor)
+
+            // ── Date / Time ──────────────────────────────────────────────────
+            val sdf = java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US)
+            val dateStr = sdf.format(java.util.Date(timestamp))
+            exif.setAttribute(android.media.ExifInterface.TAG_DATETIME, dateStr)
+            exif.setAttribute(android.media.ExifInterface.TAG_DATETIME_ORIGINAL, dateStr)
+            exif.setAttribute(android.media.ExifInterface.TAG_DATETIME_DIGITIZED, dateStr)
+
+            // ── Device / Software credit ──────────────────────────────────────
+            exif.setAttribute(android.media.ExifInterface.TAG_MAKE, android.os.Build.MANUFACTURER)
+            exif.setAttribute(android.media.ExifInterface.TAG_MODEL, android.os.Build.MODEL)
+            exif.setAttribute(android.media.ExifInterface.TAG_SOFTWARE,
+                if (isHdr) "EVCam HDR" else "EVCam")
+
+            // ── Orientation (always normal — we already rotated the bitmap) ──
+            exif.setAttribute(android.media.ExifInterface.TAG_ORIENTATION,
+                android.media.ExifInterface.ORIENTATION_NORMAL.toString())
+
+            // ── Color space ──────────────────────────────────────────────────
+            exif.setAttribute(android.media.ExifInterface.TAG_COLOR_SPACE, "1") // sRGB
+
+            // ── Lens / sensor info from CameraCharacteristics ────────────────
+            try {
+                val cameraId = camera2Engine.cameraDevice?.id
+                if (cameraId != null) {
+                    val chars = camera2Engine.cameraManager.getCameraCharacteristics(cameraId)
+
+                    // Focal length
+                    val focalLengths = chars.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                    if (focalLengths != null && focalLengths.isNotEmpty()) {
+                        exif.setAttribute(android.media.ExifInterface.TAG_FOCAL_LENGTH,
+                            focalLengths[0].toString())
+                    }
+
+                    // Aperture
+                    val apertures = chars.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
+                    if (apertures != null && apertures.isNotEmpty()) {
+                        val fNumber = apertures[0]
+                        val apexAperture = 2.0 * kotlin.math.log2(fNumber.toDouble())
+                        exif.setAttribute(android.media.ExifInterface.TAG_APERTURE_VALUE, apexAperture.toString())
+                        exif.setAttribute(android.media.ExifInterface.TAG_F_NUMBER, fNumber.toString())
+                    }
+
+                    // Sensor physical size (for 35mm equivalent)
+                    val sensorSize = chars.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                    if (sensorSize != null && focalLengths != null && focalLengths.isNotEmpty()) {
+                        val sensorDiag = kotlin.math.sqrt(
+                            (sensorSize.width * sensorSize.width + sensorSize.height * sensorSize.height).toDouble()
+                        )
+                        val cropFactor = 43.27 / sensorDiag
+                        val equiv35mm = (focalLengths[0] * cropFactor).toInt()
+                        exif.setAttribute(android.media.ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM, equiv35mm.toString())
+                    }
+                }
+            } catch (_: Exception) {}
+
+            // ── Exposure info ────────────────────────────────────────────────
+            if (iso != null && iso > 0) {
+                exif.setAttribute(android.media.ExifInterface.TAG_ISO_SPEED_RATINGS, iso.toString())
+            } else if (rawExif != null && rawExif.getAttribute(android.media.ExifInterface.TAG_ISO_SPEED_RATINGS) != null) {
+                exif.setAttribute(android.media.ExifInterface.TAG_ISO_SPEED_RATINGS, rawExif.getAttribute(android.media.ExifInterface.TAG_ISO_SPEED_RATINGS))
+            }
+
+            if (shutterSpeedNs != null && shutterSpeedNs > 0) {
+                val shutterSec = shutterSpeedNs / 1_000_000_000.0
+                val denom = (1.0 / shutterSec).toInt().coerceAtLeast(1)
+                exif.setAttribute(android.media.ExifInterface.TAG_EXPOSURE_TIME, "1/$denom")
+            } else if (rawExif != null && rawExif.getAttribute(android.media.ExifInterface.TAG_EXPOSURE_TIME) != null) {
+                exif.setAttribute(android.media.ExifInterface.TAG_EXPOSURE_TIME, rawExif.getAttribute(android.media.ExifInterface.TAG_EXPOSURE_TIME))
+            }
+            if (rawExif != null && rawExif.getAttribute(android.media.ExifInterface.TAG_WHITE_BALANCE) != null) {
+                exif.setAttribute(android.media.ExifInterface.TAG_WHITE_BALANCE, rawExif.getAttribute(android.media.ExifInterface.TAG_WHITE_BALANCE))
+            } else {
+                exif.setAttribute(android.media.ExifInterface.TAG_WHITE_BALANCE, "0") // Fallback to Auto
+            }
+
+            if (rawExif != null && rawExif.getAttribute(android.media.ExifInterface.TAG_FLASH) != null) {
+                exif.setAttribute(android.media.ExifInterface.TAG_FLASH, rawExif.getAttribute(android.media.ExifInterface.TAG_FLASH))
+            }
+
+            exif.setAttribute(android.media.ExifInterface.TAG_METERING_MODE, "2")  // Center-weighted
+
+            // ── GPS (only if geotagging is enabled) ──────────────────────────
+            if (enableGeotagging && location != null) {
+                fun toDms(deg: Double): String {
+                    val d = deg.toInt()
+                    val mFull = (deg - d) * 60
+                    val m = mFull.toInt()
+                    val s = ((mFull - m) * 60 * 1000).toInt()
+                    return "$d/1,$m/1,$s/1000"
+                }
+                val lat = location.latitude
+                val lon = location.longitude
+                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE_REF, if (lat >= 0) "N" else "S")
+                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE, toDms(kotlin.math.abs(lat)))
+                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE_REF, if (lon >= 0) "E" else "W")
+                exif.setAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE, toDms(kotlin.math.abs(lon)))
+                if (location.hasAltitude()) {
+                    val alt = location.altitude
+                    exif.setAttribute(android.media.ExifInterface.TAG_GPS_ALTITUDE_REF, if (alt < 0) "1" else "0")
+                    exif.setAttribute(android.media.ExifInterface.TAG_GPS_ALTITUDE, "${(kotlin.math.abs(alt) * 100).toInt()}/100")
+                }
+                val gpsSdf = java.text.SimpleDateFormat("yyyy:MM:dd", java.util.Locale.US)
+                val gpsTSdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+                gpsSdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                gpsTSdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                val d = java.util.Date(location.time.takeIf { it > 0 } ?: System.currentTimeMillis())
+                exif.setAttribute(android.media.ExifInterface.TAG_GPS_DATESTAMP, gpsSdf.format(d))
+                exif.setAttribute(android.media.ExifInterface.TAG_GPS_TIMESTAMP, gpsTSdf.format(d))
+            }
+
+            exif.saveAttributes()
+        }
+    } catch (e: Exception) {
+        Log.e("EVCAM", "Failed to write EXIF", e)
+    }
+}
+
 fun takePhoto(
     context: Context,
     camera2Engine: Camera2Engine,
@@ -286,6 +424,19 @@ fun takePhoto(
                 val compressed = bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
                 Log.d("EVCAM", "Compressed bitmap write result=$compressed")
             }
+            // Write complete EXIF metadata
+            val captureIso = if (!isIsoAuto) iso else null
+            val captureShutter = if (!isShutterAuto) shutterSpeed else null
+            writeExifTags(
+                context, uri, camera2Engine,
+                timestamp = System.currentTimeMillis(),
+                location = liveLocation,
+                enableGeotagging = enableGeotagging,
+                iso = captureIso,
+                shutterSpeedNs = captureShutter,
+                isHdr = false,
+                rawExif = exifInterface
+            )
             Handler(Looper.getMainLooper()).post {
                 Log.d("EVCAM", "Calling onPhotoSaved with uri=$uri")
                 onPhotoSaved(bitmap, uri)
@@ -462,12 +613,18 @@ fun takeComputationalHdrPhoto(
             )
 
             val hdrBitmap = HdrProcessor.processHdrBurst(bytesList, hdrParams, null, onProgress)
+            val rawExif = try {
+                android.media.ExifInterface(bytesList[0].inputStream())
+            } catch (e: Exception) { null }
             if (hdrBitmap != null) {
                 // Read EXIF orientation from the first raw JPEG — this is the correct 0/90/180/270
                 // rotation set by the camera driver, not the live tilt angle from the sensor.
                 val exifRotation = try {
-                    val exif = ExifInterface(bytesList[0].inputStream())
-                    when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                    val exifOrientation = rawExif?.getAttributeInt(
+                        android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL
+                    ) ?: android.media.ExifInterface.ORIENTATION_NORMAL
+                    when (exifOrientation) {
                         ExifInterface.ORIENTATION_ROTATE_90 -> 90
                         ExifInterface.ORIENTATION_ROTATE_180 -> 180
                         ExifInterface.ORIENTATION_ROTATE_270 -> 270
@@ -531,6 +688,17 @@ fun takeComputationalHdrPhoto(
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
                     }
+                    // Write complete EXIF metadata for HDR photo
+                    writeExifTags(
+                        context, uri, camera2Engine,
+                        timestamp = timestamp,
+                        location = liveLocation,
+                        enableGeotagging = enableGeotagging,
+                        iso = null,
+                        shutterSpeedNs = null,
+                        isHdr = true,
+                        rawExif = rawExif
+                    )
                     android.os.Handler(android.os.Looper.getMainLooper()).post {
                         onPhotoSaved(bitmap, uri)
                     }
