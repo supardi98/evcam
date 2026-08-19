@@ -58,6 +58,11 @@ class Camera2Engine(private val context: Context) {
     var persistentSurface: Surface? = null
         private set
 
+    // Face Detection
+    var onFacesDetectedCallback: ((Array<android.hardware.camera2.params.Face>, android.graphics.Rect?) -> Unit)? = null
+    var sensorActiveArraySize: android.graphics.Rect? = null
+    var supportedFaceDetectMode: Int = CaptureRequest.STATISTICS_FACE_DETECT_MODE_OFF
+
     fun getOrCreatePersistentSurface(): Surface {
         if (persistentSurface == null) {
             persistentSurface = android.media.MediaCodec.createPersistentInputSurface()
@@ -95,8 +100,17 @@ class Camera2Engine(private val context: Context) {
     fun openCamera(cameraId: String) {
         _cameraState.value = CameraState.Opening
         try {
+            val chars = cameraManager.getCameraCharacteristics(cameraId)
+            sensorActiveArraySize = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+            val fdModes = chars.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES) ?: IntArray(0)
+            supportedFaceDetectMode = when {
+                fdModes.contains(CaptureRequest.STATISTICS_FACE_DETECT_MODE_FULL) -> CaptureRequest.STATISTICS_FACE_DETECT_MODE_FULL
+                fdModes.contains(CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE) -> CaptureRequest.STATISTICS_FACE_DETECT_MODE_SIMPLE
+                else -> CaptureRequest.STATISTICS_FACE_DETECT_MODE_OFF
+            }
+
             cameraManager.openCamera(cameraId, stateCallback, backgroundHandler)
-        } catch (e: CameraAccessException) {
+        } catch (e: Exception) {
             e.printStackTrace()
         }
     }
@@ -649,9 +663,10 @@ class Camera2Engine(private val context: Context) {
                 onAwbGainsCallback?.invoke(estimatedKelvin)
             }
 
-
-
-
+            // Face Detection
+            val faces = result.get(CaptureResult.STATISTICS_FACES) ?: emptyArray()
+            val cropRegion = result.get(CaptureResult.SCALER_CROP_REGION)
+            android.util.Log.d("EVCAM_FD", "Faces detected: ${faces.size}"); onFacesDetectedCallback?.invoke(faces, cropRegion)
         }
     }
 
@@ -659,6 +674,10 @@ class Camera2Engine(private val context: Context) {
     fun updatePreview() {
         val session = captureSession ?: return
         val builder = previewRequestBuilder ?: return
+        
+        // Enable Face Detection
+        builder.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, supportedFaceDetectMode)
+        
         try {
             session.setRepeatingRequest(builder.build(), repeatingCaptureCallback, backgroundHandler)
         } catch (e: CameraAccessException) {

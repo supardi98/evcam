@@ -920,6 +920,13 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 uiState.manualKelvin = liveKelvin
             }
         }
+        camera2Engine.onFacesDetectedCallback = { faces, cropRegion ->
+            uiState.detectedFaces = faces.toList()
+            if (uiState.sensorActiveArraySize == null) {
+                uiState.sensorActiveArraySize = camera2Engine.sensorActiveArraySize
+            }
+            uiState.sensorCropRegion = cropRegion
+        }
         camera2Engine.onAfStateCallback = { afState ->
             android.util.Log.d("EVCAM_AF", "afState changed: $afState focusState: ${uiState.focusState}")
             if (showFocusBox) {
@@ -1060,13 +1067,44 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 }
             }
 
+            if (uiState.isFaceDetectionEnabled && uiState.detectedFaces.isNotEmpty() && uiState.sensorCropRegion != null) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
+                    val sensorRotation = if (isFront) 270f else 90f
+                    val nativeSensorH = size.width * (4f / 3f)
+                    
+                    withTransform({
+                        rotate(sensorRotation, pivot = center)
+                        if (isFront) {
+                            scale(scaleX = 1f, scaleY = -1f, pivot = center)
+                        }
+                    }) {
+                        val cropRegion = uiState.sensorCropRegion!!
+                        val drawW = size.width
+                        val drawH = nativeSensorH
 
-
-
-
-
-
-
+                        for (face in uiState.detectedFaces) {
+                            val bounds = face.bounds
+                            val normLeft = (bounds.left - cropRegion.left).toFloat() / cropRegion.width()
+                            val normTop = (bounds.top - cropRegion.top).toFloat() / cropRegion.height()
+                            val normRight = (bounds.right - cropRegion.left).toFloat() / cropRegion.width()
+                            val normBottom = (bounds.bottom - cropRegion.top).toFloat() / cropRegion.height()
+                            
+                            val x1 = (center.x - drawH / 2f) + normLeft * drawH
+                            val y1 = (center.y - drawW / 2f) + normTop * drawW
+                            val x2 = (center.x - drawH / 2f) + normRight * drawH
+                            val y2 = (center.y - drawW / 2f) + normBottom * drawW
+                            
+                            drawRect(
+                                color = Color.Yellow,
+                                topLeft = androidx.compose.ui.geometry.Offset(x1, y1),
+                                size = androidx.compose.ui.geometry.Size(x2 - x1, y2 - y1),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f)
+                            )
+                        }
+                    }
+                }
+            }
 
 
             

@@ -115,6 +115,11 @@ fun SettingsPopupPanels(
                         uiState.enableFocusPeaking = it
                         uiState.prefs.edit().putBoolean("enableFocusPeaking", it).apply()
                     },
+                    isFaceDetectionEnabled = uiState.isFaceDetectionEnabled,
+                    onFaceDetectionEnabledChange = {
+                        uiState.isFaceDetectionEnabled = it
+                        uiState.prefs.edit().putBoolean("isFaceDetectionEnabled", it).apply()
+                    },
                     onClose = { uiState.showLayerPanel = false }
                 )
                 Spacer(modifier = Modifier.height(16.dp))

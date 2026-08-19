@@ -169,6 +169,12 @@ class CameraUiState(
     
     var imageCaptureUseCase by mutableStateOf<Any?>(null)
     var videoCaptureUseCase by mutableStateOf<Any?>(null)
+
+    // Face Detection Data
+    var isFaceDetectionEnabled by mutableStateOf(prefs.getBoolean("isFaceDetectionEnabled", true))
+    var detectedFaces by mutableStateOf<List<android.hardware.camera2.params.Face>>(emptyList())
+    var sensorActiveArraySize by mutableStateOf<android.graphics.Rect?>(null)
+    var sensorCropRegion by mutableStateOf<android.graphics.Rect?>(null)
 }
 
 @Composable

@@ -34,6 +34,8 @@ fun DisplayOverlaysPanel(
     onHistogramChange: (Boolean) -> Unit,
     enableFocusPeaking: Boolean,
     onFocusPeakingChange: (Boolean) -> Unit,
+    isFaceDetectionEnabled: Boolean,
+    onFaceDetectionEnabledChange: (Boolean) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -106,6 +108,15 @@ fun DisplayOverlaysPanel(
             Switch(
                 checked = enableFocusPeaking,
                 onCheckedChange = onFocusPeakingChange,
+                modifier = Modifier.scale(0.8f)
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Face Detection", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Switch(
+                checked = isFaceDetectionEnabled,
+                onCheckedChange = onFaceDetectionEnabledChange,
                 modifier = Modifier.scale(0.8f)
             )
         }
