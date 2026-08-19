@@ -32,6 +32,12 @@ A professional-grade, open-source Android camera app built with **Jetpack Compos
 - **Dedicated Resolution & Ratio:** Independent controls for aspect ratio (1:1, 4:3, 16:9) and video output resolution
 - **Auto Save:** Progress and settings are persisted seamlessly across app sessions
 
+### ⏳ Timelapse Mode
+- **Automated Capture:** Capture sequences of photos at precise custom intervals to compress time
+- **Duration & Frame Limits:** Stop capturing automatically after a set time or frame count
+- **Video Rendering:** Render the captured frames directly into a high-quality video (24fps, 30fps, 60fps)
+- **Background Support:** Safe lifecycle handling prevents frame drops when the screen dims
+
 ### 🌐 IP Webcam (Web Server)
 - **Live Stream:** Turn your phone into a wireless webcam over local Wi-Fi
 - **Web Interface:** Access the camera feed directly from any web browser
@@ -39,6 +45,7 @@ A professional-grade, open-source Android camera app built with **Jetpack Compos
 
 ### 🎨 UI & UX
 - Dark, premium UI with Jetpack Compose
+- **Built-in Media Gallery:** Seamless media preview dialogue with robust Scoped Storage synchronization
 - Live virtual horizon / level indicator
 - Grid overlays (Rule of Thirds, Square, Golden Ratio)
 - Zoom controls (1x / 2x / 5x + pinch-to-zoom)
