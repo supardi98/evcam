@@ -127,6 +127,8 @@ class CameraUiState(
     var isNightModeEnabled by mutableStateOf(prefs.getBoolean("isNightModeEnabled", false))
     var isHdrEnabled by mutableStateOf(prefs.getBoolean("isHdrEnabled", false))
     var selectedFilter by mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name))
+    var noiseReductionMode by mutableStateOf(NoiseReductionMode.valueOf(prefs.getString("noiseReductionMode", NoiseReductionMode.FAST.name) ?: NoiseReductionMode.FAST.name))
+    var edgeEnhancementMode by mutableStateOf(EdgeEnhancementMode.valueOf(prefs.getString("edgeEnhancementMode", EdgeEnhancementMode.HIGH_QUALITY.name) ?: EdgeEnhancementMode.HIGH_QUALITY.name))
 
     // Hardware capabilities for the currently active camera
     var isOisSupported by mutableStateOf(true)
@@ -225,6 +227,8 @@ fun rememberCameraUiState(
     LaunchedEffect(state.enableRawCapture) { prefs.edit().putBoolean("enableRawCapture", state.enableRawCapture).apply() }
     LaunchedEffect(state.enableOis) { prefs.edit().putBoolean("enableOis", state.enableOis).apply() }
     LaunchedEffect(state.enableEis) { prefs.edit().putBoolean("enableEis", state.enableEis).apply() }
+    LaunchedEffect(state.noiseReductionMode) { prefs.edit().putString("noiseReductionMode", state.noiseReductionMode.name).apply() }
+    LaunchedEffect(state.edgeEnhancementMode) { prefs.edit().putString("edgeEnhancementMode", state.edgeEnhancementMode.name).apply() }
     LaunchedEffect(state.manualKelvin) { prefs.edit().putFloat("manualKelvin", state.manualKelvin).apply() }
     LaunchedEffect(state.whiteBalance) { prefs.edit().putInt("whiteBalance", state.whiteBalance).apply() }
     LaunchedEffect(state.timerBurstCount) { prefs.edit().putInt("timerBurstCount", state.timerBurstCount).apply() }

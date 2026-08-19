@@ -936,6 +936,10 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setAeAfLock(uiState.isAeAfLocked)
     }
 
+    LaunchedEffect(uiState.noiseReductionMode, uiState.edgeEnhancementMode, cameraState) {
+        camera2Engine.setIspTuning(uiState.noiseReductionMode, uiState.edgeEnhancementMode)
+    }
+
     LaunchedEffect(cameraState) {
         camera2Engine.onAwbGainsCallback = { liveKelvin ->
             // Update manualKelvin continuously while in AUTO/preset modes so switching to CUS inherits live Kelvin

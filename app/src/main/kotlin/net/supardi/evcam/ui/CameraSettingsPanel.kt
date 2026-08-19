@@ -153,6 +153,10 @@ fun SettingsPopupPanels(
                 SettingsPanel(
                     enableRawCapture = uiState.enableRawCapture,
                     onEnableRawCaptureChange = { uiState.enableRawCapture = it },
+                    noiseReductionMode = uiState.noiseReductionMode,
+                    onNoiseReductionModeChange = { uiState.noiseReductionMode = it },
+                    edgeEnhancementMode = uiState.edgeEnhancementMode,
+                    onEdgeEnhancementModeChange = { uiState.edgeEnhancementMode = it },
                     isOisSupported = uiState.isOisSupported,
                     enableOis = uiState.enableOis,
                     onEnableOisChange = { uiState.enableOis = it },

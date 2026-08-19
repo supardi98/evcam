@@ -42,10 +42,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 
+import net.supardi.evcam.logic.NoiseReductionMode
+import net.supardi.evcam.logic.EdgeEnhancementMode
+
 @Composable
 fun SettingsPanel(
     enableRawCapture: Boolean,
     onEnableRawCaptureChange: (Boolean) -> Unit,
+    noiseReductionMode: NoiseReductionMode = NoiseReductionMode.FAST,
+    onNoiseReductionModeChange: (NoiseReductionMode) -> Unit = {},
+    edgeEnhancementMode: EdgeEnhancementMode = EdgeEnhancementMode.HIGH_QUALITY,
+    onEdgeEnhancementModeChange: (EdgeEnhancementMode) -> Unit = {},
     isOisSupported: Boolean = true,
     enableOis: Boolean = true,
     onEnableOisChange: (Boolean) -> Unit = {},
@@ -228,6 +235,70 @@ fun SettingsPanel(
                     Switch(checked = enableEis, onCheckedChange = onEnableEisChange, modifier = Modifier.scale(0.8f))
                 }
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Noise Reduction Mode Selector
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text("Noise Reduction (ISP)", color = Color.White, fontSize = 13.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    NoiseReductionMode.values().forEach { mode ->
+                        val selected = mode == noiseReductionMode
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (selected) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                .clickable { onNoiseReductionModeChange(mode) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = mode.label,
+                                color = if (selected) Color.Black else Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Edge Enhancement / Sharpness Selector
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text("Image Sharpness (Edge)", color = Color.White, fontSize = 13.sp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    EdgeEnhancementMode.values().forEach { mode ->
+                        val selected = mode == edgeEnhancementMode
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (selected) Color.Yellow else Color.White.copy(alpha = 0.15f))
+                                .clickable { onEdgeEnhancementModeChange(mode) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = mode.label,
+                                color = if (selected) Color.Black else Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

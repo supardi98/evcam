@@ -921,6 +921,13 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
 
+    fun setIspTuning(noiseMode: NoiseReductionMode, edgeMode: EdgeEnhancementMode) {
+        val builder = previewRequestBuilder ?: return
+        builder.set(CaptureRequest.NOISE_REDUCTION_MODE, noiseMode.modeValue)
+        builder.set(CaptureRequest.EDGE_MODE, edgeMode.modeValue)
+        updatePreview()
+    }
+
     fun setColorFilter(filterMode: ColorFilterMode) {
         val builder = previewRequestBuilder ?: return
         val effect = filterMode.nativeEffect ?: CaptureRequest.CONTROL_EFFECT_MODE_OFF

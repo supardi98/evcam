@@ -111,6 +111,18 @@ enum class LocationFormat(val label: String) { CITY("City Only"), CITY_COUNTRY("
 enum class WatermarkElementType { TEXT, LOCATION, DATE }
 enum class WatermarkQuadrant { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
 
+enum class NoiseReductionMode(val label: String, val modeValue: Int) {
+    FAST("Fast (Standard)", android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_FAST),
+    HIGH_QUALITY("High Quality (Max)", android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY),
+    OFF("Off (Grainy / Retro)", android.hardware.camera2.CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+}
+
+enum class EdgeEnhancementMode(val label: String, val modeValue: Int) {
+    HIGH_QUALITY("High Quality (Sharp)", android.hardware.camera2.CaptureRequest.EDGE_MODE_HIGH_QUALITY),
+    FAST("Fast (Standard)", android.hardware.camera2.CaptureRequest.EDGE_MODE_FAST),
+    OFF("Off (Soft / Natural)", android.hardware.camera2.CaptureRequest.EDGE_MODE_OFF)
+}
+
 interface VideoRecordController {
     fun stop()
 }
