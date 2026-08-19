@@ -469,9 +469,13 @@ class Camera2Engine(private val context: Context) {
         try {
             val chars = cameraManager.getCameraCharacteristics(cameraId)
             val oisModes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
-            return oisModes?.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON) == true
+            if (oisModes != null && oisModes.any { it != CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF }) {
+                return true
+            }
+            val facing = chars.get(CameraCharacteristics.LENS_FACING)
+            return facing == CameraCharacteristics.LENS_FACING_BACK
         } catch (e: Exception) {
-            return false
+            return true
         }
     }
 
@@ -481,11 +485,8 @@ class Camera2Engine(private val context: Context) {
             val chars = cameraManager.getCameraCharacteristics(deviceId)
             
             // Hardware OIS Optical Image Stabilization
-            val oisModes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
-            if (oisModes?.contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON) == true) {
-                val oisTarget = if (oisEnabled) CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON else CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF
-                builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, oisTarget)
-            }
+            val oisTarget = if (oisEnabled) CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON else CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF
+            builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, oisTarget)
             
             // EIS Video Stabilization is toggled by user preference
             val videoStabModes = chars.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)
