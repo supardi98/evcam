@@ -465,11 +465,21 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 uiState.isFocusAuto = true
             }
 
+            uiState.isOisSupported = camera2Engine.isOisSupported(camId)
+
             camera2Engine.closeCamera()
             camera2Engine.openCamera(camId)
         }
     }
 }
+
+    LaunchedEffect(uiState.enableOis, uiState.enableEis) {
+        val builder = camera2Engine.previewRequestBuilder
+        if (builder != null) {
+            camera2Engine.enableStabilization(builder, oisEnabled = uiState.enableOis, eisEnabled = uiState.enableEis)
+            camera2Engine.updatePreview()
+        }
+    }
     
     LaunchedEffect(cameraMode) {
         // Automatically turn off continuous Torch & close Pro panel when switching between Photo & Video modes

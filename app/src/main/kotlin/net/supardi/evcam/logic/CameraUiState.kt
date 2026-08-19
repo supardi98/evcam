@@ -116,6 +116,7 @@ class CameraUiState(
     var liveLocation by mutableStateOf<android.location.Location?>(null)
     var liveAddress by mutableStateOf<android.location.Address?>(null)
     
+    var enableOis by mutableStateOf(prefs.getBoolean("enableOis", true))
     var enableEis by mutableStateOf(prefs.getBoolean("enableEis", false))
     var aspectRatio by mutableStateOf(AspectRatioMode.valueOf(prefs.getString("aspectRatio", AspectRatioMode.RATIO_16_9.name) ?: AspectRatioMode.RATIO_16_9.name))
     var videoQuality by mutableStateOf(VideoQualityMode.valueOf(prefs.getString("videoQuality", VideoQualityMode.HD.name) ?: VideoQualityMode.HD.name))
@@ -127,6 +128,7 @@ class CameraUiState(
     var selectedFilter by mutableStateOf(ColorFilterMode.valueOf(prefs.getString("selectedFilter", ColorFilterMode.NORMAL.name) ?: ColorFilterMode.NORMAL.name))
 
     // Hardware capabilities for the currently active camera
+    var isOisSupported by mutableStateOf(true)
     var hasFlashSupport by mutableStateOf(true)
     var hasHdrExtension by mutableStateOf(true)
     var hasNightExtension by mutableStateOf(true)
@@ -220,6 +222,7 @@ fun rememberCameraUiState(
     LaunchedEffect(state.enableHistogram) { prefs.edit().putBoolean("enableHistogram", state.enableHistogram).apply() }
     LaunchedEffect(state.enableFocusPeaking) { prefs.edit().putBoolean("enableFocusPeaking", state.enableFocusPeaking).apply() }
     LaunchedEffect(state.enableRawCapture) { prefs.edit().putBoolean("enableRawCapture", state.enableRawCapture).apply() }
+    LaunchedEffect(state.enableOis) { prefs.edit().putBoolean("enableOis", state.enableOis).apply() }
     LaunchedEffect(state.enableEis) { prefs.edit().putBoolean("enableEis", state.enableEis).apply() }
     LaunchedEffect(state.manualKelvin) { prefs.edit().putFloat("manualKelvin", state.manualKelvin).apply() }
     LaunchedEffect(state.whiteBalance) { prefs.edit().putInt("whiteBalance", state.whiteBalance).apply() }

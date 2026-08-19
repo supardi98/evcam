@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.sp
 fun SettingsPanel(
     enableRawCapture: Boolean,
     onEnableRawCaptureChange: (Boolean) -> Unit,
+    isOisSupported: Boolean = true,
+    enableOis: Boolean = true,
+    onEnableOisChange: (Boolean) -> Unit = {},
     isEisSupported: Boolean = true,
     enableEis: Boolean,
     onEnableEisChange: (Boolean) -> Unit,
@@ -202,6 +205,17 @@ fun SettingsPanel(
             ) {
                 Text("Shutter Sound", color = Color.White, fontSize = 13.sp)
                 Switch(checked = isShutterSoundEnabled, onCheckedChange = onIsShutterSoundEnabledChange, modifier = Modifier.scale(0.8f))
+            }
+
+            if (isOisSupported) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Optical Stabilization (OIS)", color = Color.White, fontSize = 13.sp)
+                    Switch(checked = enableOis, onCheckedChange = onEnableOisChange, modifier = Modifier.scale(0.8f))
+                }
             }
 
             if (isEisSupported) {

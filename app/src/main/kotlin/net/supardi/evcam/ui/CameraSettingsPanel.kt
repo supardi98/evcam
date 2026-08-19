@@ -153,6 +153,9 @@ fun SettingsPopupPanels(
                 SettingsPanel(
                     enableRawCapture = uiState.enableRawCapture,
                     onEnableRawCaptureChange = { uiState.enableRawCapture = it },
+                    isOisSupported = uiState.isOisSupported,
+                    enableOis = uiState.enableOis,
+                    onEnableOisChange = { uiState.enableOis = it },
                     isEisSupported = isEisSupported,
                     enableEis = uiState.enableEis,
                     onEnableEisChange = { uiState.enableEis = it },
