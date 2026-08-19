@@ -913,6 +913,11 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         )
     }
 
+    LaunchedEffect(selectedFilter, uiState.selectedCustomScene, cameraState) {
+        val effectiveFilter = uiState.selectedCustomScene.lockColorFilter ?: selectedFilter
+        camera2Engine.setColorFilter(effectiveFilter)
+    }
+
     LaunchedEffect(cameraState) {
         camera2Engine.onAwbGainsCallback = { liveKelvin ->
             // Update manualKelvin continuously while in AUTO/preset modes so switching to CUS inherits live Kelvin

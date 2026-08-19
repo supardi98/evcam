@@ -886,6 +886,13 @@ class Camera2Engine(private val context: Context) {
         updatePreview()
     }
 
+    fun setColorFilter(filterMode: ColorFilterMode) {
+        val builder = previewRequestBuilder ?: return
+        val effect = filterMode.nativeEffect ?: CaptureRequest.CONTROL_EFFECT_MODE_OFF
+        builder.set(CaptureRequest.CONTROL_EFFECT_MODE, effect)
+        updatePreview()
+    }
+
     fun applyCustomSceneMode(sceneMode: CustomSceneMode) {
         applyCustomSceneModeInternal(sceneMode, update = true)
     }

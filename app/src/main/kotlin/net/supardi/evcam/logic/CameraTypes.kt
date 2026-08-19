@@ -44,19 +44,49 @@ enum class CustomSceneMode(
     WATERFALL("Silky Waterfall", "Slow shutter (1/4s) for smooth water", lockIso = true, lockShutter = true, lockEv = true, supportVideo = false)
 }
 
-enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
+enum class ColorFilterMode(val label: String, val matrixValues: FloatArray, val nativeEffect: Int? = null) {
     NORMAL("Normal", floatArrayOf(
         1f, 0f, 0f, 0f, 0f,
         0f, 1f, 0f, 0f, 0f,
         0f, 0f, 1f, 0f, 0f,
         0f, 0f, 0f, 1f, 0f
-    )),
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_OFF),
     MONO("B&W", floatArrayOf(
         0.33f, 0.33f, 0.33f, 0f, 0f,
         0.33f, 0.33f, 0.33f, 0f, 0f,
         0.33f, 0.33f, 0.33f, 0f, 0f,
         0f,    0f,    0f,    1f, 0f
-    )),
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_MONO),
+    SEPIA("Sepia", floatArrayOf(
+        0.393f, 0.769f, 0.189f, 0f, 0f,
+        0.349f, 0.686f, 0.168f, 0f, 0f,
+        0.272f, 0.534f, 0.131f, 0f, 0f,
+        0f,     0f,     0f,     1f, 0f
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_SEPIA),
+    NEGATIVE("Negative", floatArrayOf(
+        -1f,  0f,  0f, 0f, 255f,
+         0f, -1f,  0f, 0f, 255f,
+         0f,  0f, -1f, 0f, 255f,
+         0f,  0f,  0f, 1f,   0f
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_NEGATIVE),
+    SOLARIZE("Solarize", floatArrayOf(
+        1.5f, 0f, 0f, 0f, -128f,
+        0f, 1.5f, 0f, 0f, -128f,
+        0f, 0f, 1.5f, 0f, -128f,
+        0f, 0f, 0f, 1f, 0f
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_SOLARIZE),
+    POSTERIZE("Posterize", floatArrayOf(
+        1.2f, 0f, 0f, 0f, 0f,
+        0f, 1.2f, 0f, 0f, 0f,
+        0f, 0f, 1.2f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_POSTERIZE),
+    AQUA("Aqua", floatArrayOf(
+        0.8f, 0f, 0f, 0f, 0f,
+        0f, 1.2f, 0f, 0f, 0f,
+        0f, 0f, 1.4f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    ), android.hardware.camera2.CaptureRequest.CONTROL_EFFECT_MODE_AQUA),
     WARM("Warm", floatArrayOf(
         1.1f, 0f,   0f,   0f, 0f,
         0f,   0.9f, 0f,   0f, 0f,
