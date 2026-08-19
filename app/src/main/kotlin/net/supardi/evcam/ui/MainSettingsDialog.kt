@@ -61,6 +61,8 @@ fun SettingsPanel(
     onToneProfileModeChange: (ToneProfileMode) -> Unit = {},
     enableAberrationCorrection: Boolean = true,
     onEnableAberrationCorrectionChange: (Boolean) -> Unit = {},
+    enableDistortionCorrection: Boolean = true,
+    onEnableDistortionCorrectionChange: (Boolean) -> Unit = {},
     isOisSupported: Boolean = true,
     enableOis: Boolean = true,
     onEnableOisChange: (Boolean) -> Unit = {},
@@ -374,6 +376,16 @@ fun SettingsPanel(
             ) {
                 Text("Anti Purple Fringing (Aberration)", color = Color.White, fontSize = 13.sp)
                 Switch(checked = enableAberrationCorrection, onCheckedChange = onEnableAberrationCorrectionChange, modifier = Modifier.scale(0.8f))
+            }
+
+            // Lens Distortion Correction Switch
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Lens Distortion Correction (Ultrawide)", color = Color.White, fontSize = 13.sp)
+                Switch(checked = enableDistortionCorrection, onCheckedChange = onEnableDistortionCorrectionChange, modifier = Modifier.scale(0.8f))
             }
 
             Spacer(modifier = Modifier.height(4.dp))

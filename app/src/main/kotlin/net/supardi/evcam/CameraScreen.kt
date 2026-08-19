@@ -942,6 +942,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         uiState.antiBandingMode,
         uiState.toneProfileMode,
         uiState.enableAberrationCorrection,
+        uiState.enableDistortionCorrection,
         cameraState
     ) {
         camera2Engine.setIspTuning(
@@ -949,7 +950,8 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             uiState.edgeEnhancementMode,
             uiState.antiBandingMode,
             uiState.toneProfileMode,
-            uiState.enableAberrationCorrection
+            uiState.enableAberrationCorrection,
+            uiState.enableDistortionCorrection
         )
     }
 

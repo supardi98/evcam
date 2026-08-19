@@ -132,6 +132,7 @@ class CameraUiState(
     var antiBandingMode by mutableStateOf(AntiBandingMode.valueOf(prefs.getString("antiBandingMode", AntiBandingMode.HZ_50.name) ?: AntiBandingMode.HZ_50.name))
     var toneProfileMode by mutableStateOf(ToneProfileMode.valueOf(prefs.getString("toneProfileMode", ToneProfileMode.STANDARD.name) ?: ToneProfileMode.STANDARD.name))
     var enableAberrationCorrection by mutableStateOf(prefs.getBoolean("enableAberrationCorrection", true))
+    var enableDistortionCorrection by mutableStateOf(prefs.getBoolean("enableDistortionCorrection", true))
 
     // Hardware capabilities for the currently active camera
     var isOisSupported by mutableStateOf(true)
@@ -235,6 +236,7 @@ fun rememberCameraUiState(
     LaunchedEffect(state.antiBandingMode) { prefs.edit().putString("antiBandingMode", state.antiBandingMode.name).apply() }
     LaunchedEffect(state.toneProfileMode) { prefs.edit().putString("toneProfileMode", state.toneProfileMode.name).apply() }
     LaunchedEffect(state.enableAberrationCorrection) { prefs.edit().putBoolean("enableAberrationCorrection", state.enableAberrationCorrection).apply() }
+    LaunchedEffect(state.enableDistortionCorrection) { prefs.edit().putBoolean("enableDistortionCorrection", state.enableDistortionCorrection).apply() }
     LaunchedEffect(state.manualKelvin) { prefs.edit().putFloat("manualKelvin", state.manualKelvin).apply() }
     LaunchedEffect(state.whiteBalance) { prefs.edit().putInt("whiteBalance", state.whiteBalance).apply() }
     LaunchedEffect(state.timerBurstCount) { prefs.edit().putInt("timerBurstCount", state.timerBurstCount).apply() }

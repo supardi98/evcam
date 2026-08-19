@@ -926,7 +926,8 @@ class Camera2Engine(private val context: Context) {
         edgeMode: EdgeEnhancementMode,
         antiBanding: AntiBandingMode,
         toneProfile: ToneProfileMode,
-        aberrationCorrection: Boolean
+        aberrationCorrection: Boolean,
+        distortionCorrection: Boolean
     ) {
         val builder = previewRequestBuilder ?: return
         builder.set(CaptureRequest.NOISE_REDUCTION_MODE, noiseMode.modeValue)
@@ -939,6 +940,14 @@ class Camera2Engine(private val context: Context) {
             CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_OFF
         }
         builder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, abMode)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            val distMode = if (distortionCorrection) {
+                CaptureRequest.DISTORTION_CORRECTION_MODE_HIGH_QUALITY
+            } else {
+                CaptureRequest.DISTORTION_CORRECTION_MODE_OFF
+            }
+            builder.set(CaptureRequest.DISTORTION_CORRECTION_MODE, distMode)
+        }
         updatePreview()
     }
 

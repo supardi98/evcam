@@ -163,6 +163,8 @@ fun SettingsPopupPanels(
                     onToneProfileModeChange = { uiState.toneProfileMode = it },
                     enableAberrationCorrection = uiState.enableAberrationCorrection,
                     onEnableAberrationCorrectionChange = { uiState.enableAberrationCorrection = it },
+                    enableDistortionCorrection = uiState.enableDistortionCorrection,
+                    onEnableDistortionCorrectionChange = { uiState.enableDistortionCorrection = it },
                     isOisSupported = uiState.isOisSupported,
                     enableOis = uiState.enableOis,
                     onEnableOisChange = { uiState.enableOis = it },
