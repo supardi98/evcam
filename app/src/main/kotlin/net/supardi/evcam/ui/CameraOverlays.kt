@@ -81,8 +81,6 @@ fun CinemaGuideOverlay(
                 topLeft = Offset(0f, h - barH),
                 size = androidx.compose.ui.geometry.Size(w, barH)
             )
-            drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, barH), Offset(w, barH), 1.dp.toPx())
-            drawLine(Color.White.copy(alpha = 0.4f), Offset(0f, h - barH), Offset(w, h - barH), 1.dp.toPx())
         }
     }
 }
