@@ -378,6 +378,25 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var previewSessionTrigger by remember { mutableStateOf(0) }
     var cameraRenderThread by remember { mutableStateOf<net.supardi.evcam.gl.CameraRenderThread?>(null) }
     val rotationSensorHelper = remember { net.supardi.evcam.logic.RotationSensorHelper(context) }
+
+    LaunchedEffect(isAppInForeground) {
+        Log.d("EVCAM", "isAppInForeground: $isAppInForeground, lastCapturedUri: ${uiState.lastCapturedUri}")
+        if (isAppInForeground && uiState.lastCapturedUri != null) {
+            if (!net.supardi.evcam.logic.isUriValid(context, uiState.lastCapturedUri!!)) {
+                Log.d("EVCAM", "URI is no longer valid, fetching latest available media")
+                val latestUri = net.supardi.evcam.logic.fetchLatestMediaUri(context)
+                uiState.lastCapturedUri = latestUri
+                uiState.lastCapturedBitmap = null
+                if (latestUri != null) {
+                    uiState.prefs.edit().putString("lastCapturedUri", latestUri.toString()).apply()
+                } else {
+                    uiState.prefs.edit().remove("lastCapturedUri").apply()
+                }
+            } else {
+                Log.d("EVCAM", "URI is still valid")
+            }
+        }
+    }
     
     DisposableEffect(uiState.selectedCustomScene) {
         val isHorizonLock = uiState.selectedCustomScene == CustomSceneMode.HORIZON_LOCK

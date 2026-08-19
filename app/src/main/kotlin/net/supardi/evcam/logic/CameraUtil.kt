@@ -31,6 +31,38 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executor
 
+fun isUriValid(context: Context, uri: Uri): Boolean {
+    Log.d("EVCAM", "Checking validity of URI via AFD: $uri")
+    
+    // Check IS_TRASHED for Android 11+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        try {
+            context.contentResolver.query(uri, arrayOf(android.provider.MediaStore.MediaColumns.IS_TRASHED), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.IS_TRASHED)
+                    if (idx != -1) {
+                        val isTrashed = cursor.getInt(idx)
+                        Log.d("EVCAM", "IS_TRASHED = $isTrashed")
+                        if (isTrashed == 1) return false
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("EVCAM", "Error checking IS_TRASHED: ${e.message}")
+        }
+    }
+
+    return try {
+        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+            Log.d("EVCAM", "AFD length: ${afd.length}")
+            afd.length > 0
+        } ?: false
+    } catch (e: Exception) {
+        Log.e("EVCAM", "Failed to open AFD: ${e.message}")
+        false
+    }
+}
+
 fun formatLocationElement(format: String, location: Location?, address: Address?): String {
     if (location == null) return "[Location]"
     val fmt = if (format.isEmpty() || format == "LOCATION") "CITY" else format

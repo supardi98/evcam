@@ -18,6 +18,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -290,21 +293,39 @@ fun MediaPreviewDialog(
         ImageLoader.Builder(context).components { add(VideoFrameDecoder.Factory()) }.build()
     }
 
-    val mediaList = remember(lastCapturedUri, lastCapturedBitmap) {
-        val fetched = fetchRecentMediaList(context, limit = 500).toMutableList()
-        if (lastCapturedUri != null && fetched.none { it.uri == lastCapturedUri }) {
-            fetched.add(0, MediaItem(uri = lastCapturedUri, isVideo = (cameraMode == CameraMode.VIDEO)))
+    val mediaList = remember { androidx.compose.runtime.mutableStateListOf<MediaItem>() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, lastCapturedUri, lastCapturedBitmap) {
+        val refresh = {
+            val fetched = fetchRecentMediaList(context, limit = 500).toMutableList()
+            if (lastCapturedUri != null && fetched.none { it.uri == lastCapturedUri }) {
+                if (net.supardi.evcam.logic.isUriValid(context, lastCapturedUri)) {
+                    fetched.add(0, MediaItem(uri = lastCapturedUri, isVideo = (cameraMode == CameraMode.VIDEO)))
+                }
+            }
+            mediaList.clear()
+            mediaList.addAll(fetched)
         }
-        androidx.compose.runtime.mutableStateListOf(*fetched.toTypedArray())
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        refresh() // initial load
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     val actualCount = if (mediaList.isNotEmpty()) mediaList.size else if (lastCapturedBitmap != null) 1 else 0
-    val pageCount = if (actualCount > 1) Int.MAX_VALUE else actualCount
-    val initialPage = if (actualCount > 1) (Int.MAX_VALUE / 2) - ((Int.MAX_VALUE / 2) % actualCount) else 0
+    val pageCount = actualCount
+    val initialPage = 0
     val pagerState = rememberPagerState(initialPage = initialPage) { pageCount }
     val scope = rememberCoroutineScope()
 
-    val currentActualIndex = if (actualCount > 0) pagerState.currentPage % actualCount else 0
+    val currentActualIndex = if (actualCount > 0) pagerState.currentPage else 0
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteItem by remember { mutableStateOf<MediaItem?>(null) }
@@ -319,8 +340,7 @@ fun MediaPreviewDialog(
             onDismiss()
         } else {
             val next = removeIdx.coerceAtMost(mediaList.size - 1)
-            val basePage = if (mediaList.size > 0) (pagerState.currentPage / mediaList.size) * mediaList.size else 0
-            scope.launch { pagerState.scrollToPage(basePage + next) }
+            scope.launch { pagerState.scrollToPage(next) }
         }
     }
 
@@ -389,7 +409,7 @@ fun MediaPreviewDialog(
                     userScrollEnabled = true,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
-                    val itemIndex = if (actualCount > 0) page % actualCount else 0
+                    val itemIndex = page
                     val item = mediaList.getOrNull(itemIndex)
                     val isCurrentVideo = item?.isVideo == true || (page == 0 && cameraMode == CameraMode.VIDEO)
 
@@ -435,7 +455,7 @@ fun MediaPreviewDialog(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(14.dp))
-                                        .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) }
+                                        .pointerInput(item) { detectTapGestures(onTap = { openActiveMedia() }) }
                                 )
                             } else if (item != null) {
                                 AsyncImage(
@@ -445,7 +465,7 @@ fun MediaPreviewDialog(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(14.dp))
-                                        .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) }
+                                        .pointerInput(item) { detectTapGestures(onTap = { openActiveMedia() }) }
                                 )
                             }
                             if (isCurrentVideo) {
@@ -454,7 +474,7 @@ fun MediaPreviewDialog(
                                         .size(64.dp)
                                         .clip(CircleShape)
                                         .background(Color.Black.copy(alpha = 0.65f))
-                                        .pointerInput(Unit) { detectTapGestures(onTap = { openActiveMedia() }) },
+                                        .pointerInput(item) { detectTapGestures(onTap = { openActiveMedia() }) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Yellow, modifier = Modifier.size(42.dp))
@@ -795,8 +815,7 @@ fun MediaPreviewDialog(
                                                 )
                                                 .clickable {
                                                     showGalleryGrid = false
-                                                    val basePage = if (actualCount > 0) (pagerState.currentPage / actualCount) * actualCount else 0
-                                                    scope.launch { pagerState.scrollToPage(basePage + originalIdx) }
+                                                    scope.launch { pagerState.scrollToPage(originalIdx) }
                                                 },
                                             contentAlignment = Alignment.Center
                                         ) {
