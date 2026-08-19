@@ -623,6 +623,7 @@ class Camera2Engine(private val context: Context) {
     var onAwbGainsCallback: ((Float) -> Unit)? = null
     var lastLiveGains: android.hardware.camera2.params.RggbChannelVector? = null
 
+    var lastTotalCaptureResult: TotalCaptureResult? = null
 
     private val repeatingCaptureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(
@@ -630,6 +631,7 @@ class Camera2Engine(private val context: Context) {
             request: CaptureRequest,
             result: TotalCaptureResult
         ) {
+            lastTotalCaptureResult = result
             super.onCaptureCompleted(session, request, result)
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             if (afState != null) {
@@ -871,13 +873,18 @@ class Camera2Engine(private val context: Context) {
 
     private fun applyCustomSceneModeInternal(sceneMode: CustomSceneMode, update: Boolean) {
         val builder = previewRequestBuilder ?: return
+        
+        // Reset effects and modes by default to prevent leakage between scenes
+        builder.set(CaptureRequest.CONTROL_EFFECT_MODE, CaptureRequest.CONTROL_EFFECT_MODE_OFF)
+        builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+        builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+        builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
+        
         when (sceneMode) {
             CustomSceneMode.AUTO -> {
                 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
-                builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
-                builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
             }
             CustomSceneMode.NIGHT -> {
                 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
@@ -910,6 +917,7 @@ class Camera2Engine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 1)
+                builder.set(CaptureRequest.CONTROL_EFFECT_MODE, CaptureRequest.CONTROL_EFFECT_MODE_MONO)
             }
             CustomSceneMode.MACRO -> {
                 builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
@@ -1202,20 +1210,45 @@ class Camera2Engine(private val context: Context) {
 
         try {
             val requests = mutableListOf<CaptureRequest>()
-            val evOffsets = listOf(-12, -6, 0, 6, 12) // -4.0, -2.0, 0, +2.0, +4.0 EV (assuming 1/3 step)
-            for (evOffset in evOffsets) {
+            
+            val baseIso = lastTotalCaptureResult?.get(CaptureResult.SENSOR_SENSITIVITY) ?: 400
+            val baseShutter = lastTotalCaptureResult?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 30_000_000L // default 30ms
+
+            // EV multipliers: -4 EV, -2 EV, 0 EV, +2 EV, +4 EV (approximate stops)
+            val multipliers = listOf(1.0/16.0, 1.0/4.0, 1.0, 4.0, 16.0)
+
+            for (multiplier in multipliers) {
                 val captureBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 captureBuilder.addTarget(reader.surface)
                 captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientationHint())
                 captureBuilder.set(CaptureRequest.JPEG_QUALITY, 100.toByte())
-                
+
                 val cropRegion = previewRequestBuilder?.get(CaptureRequest.SCALER_CROP_REGION)
                 if (cropRegion != null) captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, cropRegion)
-                
+
                 captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, previewRequestBuilder?.get(CaptureRequest.CONTROL_AF_MODE) ?: CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, evOffset)
                 
+                // FORCE MANUAL EXPOSURE
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                
+                var targetShutter = (baseShutter * multiplier).toLong()
+                var targetIso = baseIso
+                
+                // If shutter exceeds 1/5th second (200,000,000 ns), clamp it and increase ISO instead
+                if (targetShutter > 200_000_000L) {
+                    val excess = targetShutter.toDouble() / 200_000_000L
+                    targetShutter = 200_000_000L
+                    targetIso = (targetIso * excess).toInt().coerceAtMost(3200) // clamp max ISO to 3200
+                }
+                
+                // If shutter goes below 1/10000th second (100,000 ns), clamp it
+                if (targetShutter < 100_000L) {
+                    targetShutter = 100_000L
+                }
+
+                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, targetShutter)
+                captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, targetIso)
+
                 enableStabilization(captureBuilder)
                 requests.add(captureBuilder.build())
             }

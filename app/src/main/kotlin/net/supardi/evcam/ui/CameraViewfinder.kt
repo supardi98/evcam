@@ -50,12 +50,10 @@ fun CameraViewfinder(
             update = { view ->
                 view.configureTransform(mode = uiState.aspectRatio)
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                    val filter = uiState.selectedFilter
                     val customScene = uiState.selectedCustomScene
+                    val filter = customScene.lockColorFilter ?: uiState.selectedFilter
                     val activeMatrix = when {
                         filter != ColorFilterMode.NORMAL -> filter.matrixValues
-                        customScene == CustomSceneMode.DOCUMENT -> ColorFilterMode.MONO.matrixValues
-                        customScene == CustomSceneMode.SUNSET -> ColorFilterMode.WARM.matrixValues
                         customScene == CustomSceneMode.FOOD -> floatArrayOf(
                             1.10f, 0f,    0f,    0f, 0f, // Boost Red slightly
                             0f,    1.05f, 0f,    0f, 0f, // Boost Green slightly for yellow warmth

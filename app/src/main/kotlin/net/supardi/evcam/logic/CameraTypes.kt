@@ -19,6 +19,7 @@ enum class CustomSceneMode(
     val lockFocus: Boolean = false,
     val lockWhiteBalance: Boolean = false,
     val lockEv: Boolean = false,
+    val lockColorFilter: ColorFilterMode? = null,
     val supportPhoto: Boolean = true,
     val supportVideo: Boolean = true
 ) {
@@ -32,8 +33,8 @@ enum class CustomSceneMode(
     LANDSCAPE("Vibrant Landscape", "Vibrant color boost with -0.3 EV", lockEv = true, supportVideo = false),
     ACTION("Action / Sports", "Fast shutter speed (1/500s) to freeze objects", lockShutter = true),
     BACKLIGHT("HDR Backlight", "Balances exposure against strong light", lockIso = true, lockShutter = true, lockEv = true),
-    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true, lockEv = true, supportVideo = false),
-    DOCUMENT("Document B&W", "High contrast black and white for documents", lockEv = true, supportVideo = false),
+    SUNSET("Golden Sunset", "Warm sunset tone with +0.7 EV gain boost", lockWhiteBalance = true, lockEv = true, lockColorFilter = ColorFilterMode.WARM, supportVideo = false),
+    DOCUMENT("Document B&W", "High contrast black and white for documents", lockEv = true, lockColorFilter = ColorFilterMode.MONO, supportVideo = false),
     CANDLELIGHT("Warm Candlelight", "Ultra-warm 2700K Kelvin color tone", lockWhiteBalance = true, supportVideo = false),
     SNOW_BEACH("Snow / Beach", "+1.0 EV compensation for bright scenes", lockEv = true),
     ASTRO_LONG_EXP("Astro / Long Exposure", "Extended shutter exposure (10s - 30s)", lockIso = true, lockShutter = true, lockFocus = true, lockEv = true, supportVideo = false),

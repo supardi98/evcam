@@ -707,7 +707,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 isProcessingHdr = true
                 hdrProgress = 0
                 takeComputationalHdrPhoto(
-                    context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
+                    context, camera2Engine, flashMode, uiState.selectedCustomScene.lockColorFilter ?: selectedFilter, showWatermark, watermarkElements,
                     liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
                     isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
                     onProgress = { progress -> 
@@ -729,7 +729,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                 )
             } else {
                 takePhoto(
-                    context, camera2Engine, flashMode, selectedFilter, showWatermark, watermarkElements,
+                    context, camera2Engine, flashMode, uiState.selectedCustomScene.lockColorFilter ?: selectedFilter, showWatermark, watermarkElements,
                     liveLocation, liveAddress, enableGeotagging, enableRawCapture, aspectRatio, deviceRotation.toInt(),
                     isFrontCamera = isFront, mirrorSelfie = uiState.mirrorSelfie,
                     customSceneMode = uiState.selectedCustomScene,

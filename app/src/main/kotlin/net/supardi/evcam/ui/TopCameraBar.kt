@@ -121,7 +121,7 @@ fun TopCameraBar(
                     }
                 }
 
-                if (uiState.cameraMode == CameraMode.PHOTO) {
+                if (uiState.cameraMode == CameraMode.PHOTO && uiState.selectedCustomScene.lockColorFilter == null) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Box(
                         modifier = Modifier

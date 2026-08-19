@@ -197,37 +197,7 @@ fun takePhoto(
         }
 
         if (selectedFilter != ColorFilterMode.NORMAL) {
-            val filterMatrix = android.graphics.ColorMatrix()
-            when (selectedFilter) {
-                ColorFilterMode.MONO -> filterMatrix.setSaturation(0f)
-                ColorFilterMode.WARM -> {
-                    filterMatrix.set(floatArrayOf(
-                        1.1f, 0f,   0f,   0f, 0f,
-                        0f,   0.9f, 0f,   0f, 0f,
-                        0f,   0f,   0.8f, 0f, 0f,
-                        0f,   0f,   0f,   1f, 0f
-                    ))
-                }
-                ColorFilterMode.COLD -> {
-                    filterMatrix.set(floatArrayOf(
-                        0.8f, 0f,   0f,   0f, 0f,
-                        0f,   0.9f, 0f,   0f, 0f,
-                        0f,   0f,   1.2f, 0f, 0f,
-                        0f,   0f,   0f,   1f, 0f
-                    ))
-                }
-                ColorFilterMode.VINTAGE -> {
-                    filterMatrix.setSaturation(0.5f)
-                    val contrast = android.graphics.ColorMatrix(floatArrayOf(
-                        1.2f, 0f, 0f, 0f, 0f,
-                        0f, 1.2f, 0f, 0f, 0f,
-                        0f, 0f, 1.2f, 0f, 0f,
-                        0f, 0f, 0f, 1f, 0f
-                    ))
-                    filterMatrix.postConcat(contrast)
-                }
-                else -> {}
-            }
+            val filterMatrix = android.graphics.ColorMatrix(selectedFilter.matrixValues)
             val filteredBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
             val canvas = Canvas(filteredBitmap)
             val paint = Paint().apply {
