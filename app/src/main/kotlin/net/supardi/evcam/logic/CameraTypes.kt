@@ -79,3 +79,7 @@ enum class ColorFilterMode(val label: String, val matrixValues: FloatArray) {
 enum class LocationFormat(val label: String) { CITY("City Only"), CITY_COUNTRY("City, Country"), FULL_ADDRESS("Full Address"), COORDINATES("Lat/Lng") }
 enum class WatermarkElementType { TEXT, LOCATION, DATE }
 enum class WatermarkQuadrant { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
+
+interface VideoRecordController {
+    fun stop()
+}

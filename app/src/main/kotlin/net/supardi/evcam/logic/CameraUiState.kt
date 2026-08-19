@@ -24,7 +24,7 @@ class CameraUiState(
     var isProMode by mutableStateOf(false)
     var lensFacing by mutableStateOf(CameraCharacteristics.LENS_FACING_BACK)
     var isRecording by mutableStateOf(false)
-    var activeRecording by mutableStateOf<Any?>(null)
+    var activeRecording by mutableStateOf<VideoRecordController?>(null)
     
     var lastCapturedUri by mutableStateOf<Uri?>(null)
     var lastCapturedBitmap by mutableStateOf<android.graphics.Bitmap?>(null)

@@ -731,8 +731,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         } else {
             triggerVibe() // Vibrate both at the start and end of video recording
                 if (isRecording) {
-                    val stopMethod = activeRecording?.javaClass?.getMethod("stop")
-                    stopMethod?.invoke(activeRecording)
+                    activeRecording?.stop()
                     isRecording = false
                     cameraRenderThread?.stopRecording()
                     cameraRenderThread = null

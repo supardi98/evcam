@@ -305,7 +305,7 @@ fun startVideoRecord(
     useHighSpeed: Boolean = false,
     onMediaSaved: (android.graphics.Bitmap, android.net.Uri) -> Unit,
     onEvent: (Any) -> Unit
-): Any? {
+): VideoRecordController {
     // Use the output file already configured by CameraScreen's setupMediaRecorder call.
     val tempFile = camera2Engine.lastOutputFile
         ?: File(context.cacheDir, "temp_vid_${System.currentTimeMillis()}.mp4").absolutePath
@@ -324,8 +324,8 @@ fun startVideoRecord(
         }
     }
 
-    return object {
-        fun stop() {
+    return object : VideoRecordController {
+        override fun stop() {
             camera2Engine.stopRecording {
                 val fileObj = File(tempFile)
                 Log.d("EVCAM", "stopRecording callback executed, tempFile exists=${fileObj.exists()}, size=${fileObj.length()}")
