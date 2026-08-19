@@ -63,24 +63,47 @@ fun GridOverlay(
 
 @Composable
 fun CinemaGuideOverlay(
+    rotationDegrees: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val targetH = w * (9f / 21f)
-        if (h > targetH) {
-            val barH = (h - targetH) / 2f
-            drawRect(
-                color = Color.Black.copy(alpha = 0.6f),
-                topLeft = Offset(0f, 0f),
-                size = androidx.compose.ui.geometry.Size(w, barH)
-            )
-            drawRect(
-                color = Color.Black.copy(alpha = 0.6f),
-                topLeft = Offset(0f, h - barH),
-                size = androidx.compose.ui.geometry.Size(w, barH)
-            )
+        val normRot = (rotationDegrees % 360f + 360f) % 360f
+        val isLandscape = (normRot in 45f..135f) || (normRot in 225f..315f)
+
+        if (isLandscape) {
+            // Held horizontally: Physical width = h, Physical height = w
+            val targetPhysicalH = h * (9f / 21f)
+            if (w > targetPhysicalH) {
+                val barW = (w - targetPhysicalH) / 2f
+                drawRect(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    topLeft = Offset(0f, 0f),
+                    size = androidx.compose.ui.geometry.Size(barW, h)
+                )
+                drawRect(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    topLeft = Offset(w - barW, 0f),
+                    size = androidx.compose.ui.geometry.Size(barW, h)
+                )
+            }
+        } else {
+            // Held vertically (Portrait)
+            val targetH = w * (9f / 21f)
+            if (h > targetH) {
+                val barH = (h - targetH) / 2f
+                drawRect(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    topLeft = Offset(0f, 0f),
+                    size = androidx.compose.ui.geometry.Size(w, barH)
+                )
+                drawRect(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    topLeft = Offset(0f, h - barH),
+                    size = androidx.compose.ui.geometry.Size(w, barH)
+                )
+            }
         }
     }
 }

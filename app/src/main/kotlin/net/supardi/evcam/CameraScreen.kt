@@ -1266,7 +1266,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
 
             if (uiState.showCinemaGuide) {
-                CinemaGuideOverlay(modifier = Modifier.fillMaxSize())
+                CinemaGuideOverlay(rotationDegrees = deviceRotation, modifier = Modifier.fillMaxSize())
             }
 
 
