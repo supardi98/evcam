@@ -94,6 +94,10 @@ class CameraUiState(
     var timerMode by mutableStateOf(TimerMode.valueOf(prefs.getString("timerMode", TimerMode.OFF.name) ?: TimerMode.OFF.name))
     var showVirtualHorizon by mutableStateOf(prefs.getBoolean("showVirtualHorizon", true))
     var showCinemaGuide by mutableStateOf(prefs.getBoolean("showCinemaGuide", false))
+    var enableZebraStripes by mutableStateOf(prefs.getBoolean("enableZebraStripes", false))
+    var zebraBitmap by mutableStateOf<android.graphics.Bitmap?>(null)
+    var zebraUpdateCount by mutableIntStateOf(0)
+    var audioLevel by mutableFloatStateOf(0f)
     var showZoomSlider by mutableStateOf(false)
     var showBrightnessSlider by mutableStateOf(false)
     var minExposureIndex by mutableIntStateOf(-6)
@@ -213,6 +217,7 @@ fun rememberCameraUiState(
     LaunchedEffect(state.timerMode) { prefs.edit().putString("timerMode", state.timerMode.name).apply() }
     LaunchedEffect(state.showVirtualHorizon) { prefs.edit().putBoolean("showVirtualHorizon", state.showVirtualHorizon).apply() }
     LaunchedEffect(state.showCinemaGuide) { prefs.edit().putBoolean("showCinemaGuide", state.showCinemaGuide).apply() }
+    LaunchedEffect(state.enableZebraStripes) { prefs.edit().putBoolean("enableZebraStripes", state.enableZebraStripes).apply() }
     LaunchedEffect(state.volumeShutterEnabled) { prefs.edit().putBoolean("volumeShutterEnabled", state.volumeShutterEnabled).apply() }
     LaunchedEffect(state.isShutterSoundEnabled) { prefs.edit().putBoolean("isShutterSoundEnabled", state.isShutterSoundEnabled).apply() }
     LaunchedEffect(state.isHandTrackingInstalled) { prefs.edit().putBoolean("isHandTrackingInstalled", state.isHandTrackingInstalled).apply() }

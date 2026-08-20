@@ -110,6 +110,11 @@ fun SettingsPopupPanels(
                         uiState.showCinemaGuide = it
                         uiState.prefs.edit().putBoolean("showCinemaGuide", it).apply()
                     },
+                    enableZebraStripes = uiState.enableZebraStripes,
+                    onZebraStripesChange = {
+                        uiState.enableZebraStripes = it
+                        uiState.prefs.edit().putBoolean("enableZebraStripes", it).apply()
+                    },
                     enableHistogram = uiState.enableHistogram,
                     onHistogramChange = {
                         uiState.enableHistogram = it
@@ -216,7 +221,7 @@ fun ModeSwitchAndProControls(
     uiState: CameraUiState,
     modifier: Modifier = Modifier
 ) {
-    val isAnyOverlayActive = uiState.gridType != GridType.NONE || uiState.showVirtualHorizon || uiState.showCinemaGuide || uiState.enableHistogram || uiState.enableFocusPeaking
+    val isAnyOverlayActive = uiState.gridType != GridType.NONE || uiState.showVirtualHorizon || uiState.showCinemaGuide || uiState.enableZebraStripes || uiState.enableHistogram || uiState.enableFocusPeaking
     val photoSelected = uiState.cameraMode == CameraMode.PHOTO
     val targetBias = if (photoSelected) -1f else 1f
     

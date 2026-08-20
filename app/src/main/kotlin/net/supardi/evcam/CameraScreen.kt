@@ -147,6 +147,9 @@ fun CameraScreen(modifier: Modifier = Modifier) {
     var histogramUpdateCount by uiState::histogramUpdateCount
     var peakingBitmap by uiState::peakingBitmap
     var peakingUpdateCount by uiState::peakingUpdateCount
+    var enableZebraStripes by uiState::enableZebraStripes
+    var zebraBitmap by uiState::zebraBitmap
+    var zebraUpdateCount by uiState::zebraUpdateCount
     
     var isBursting by uiState::isBursting
     var burstCount by uiState::burstCount
@@ -224,6 +227,7 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         ProAnalyzer(
             enableHistogram = enableHistogram,
             enableFocusPeaking = enableFocusPeaking,
+            enableZebra = enableZebraStripes,
             onHistogramUpdate = { 
                 histogramData = it 
                 histogramUpdateCount++
@@ -231,13 +235,18 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             onPeakingUpdate = { 
                 peakingBitmap = it 
                 peakingUpdateCount++
+            },
+            onZebraUpdate = {
+                zebraBitmap = it
+                zebraUpdateCount++
             }
         )
     }
     
-    LaunchedEffect(enableHistogram, enableFocusPeaking) {
+    LaunchedEffect(enableHistogram, enableFocusPeaking, enableZebraStripes) {
         proAnalyzer.enableHistogram = enableHistogram
         proAnalyzer.enableFocusPeaking = enableFocusPeaking
+        proAnalyzer.enableZebra = enableZebraStripes
     }
 
     val targetRatio = if (cameraMode == CameraMode.VIDEO) {
@@ -936,6 +945,19 @@ fun CameraScreen(modifier: Modifier = Modifier) {
         camera2Engine.setAeAfLock(uiState.isAeAfLocked)
     }
 
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            while (isRecording) {
+                val maxAmp = camera2Engine.getMaxAmplitude()
+                val normLevel = (maxAmp / 32767f).coerceIn(0f, 1f)
+                uiState.audioLevel = normLevel
+                delay(100)
+            }
+        } else {
+            uiState.audioLevel = 0f
+        }
+    }
+
     LaunchedEffect(
         uiState.noiseReductionMode,
         uiState.edgeEnhancementMode,
@@ -1079,8 +1101,6 @@ fun CameraScreen(modifier: Modifier = Modifier) {
             }
 
             if (enableFocusPeaking && peakingBitmap != null && cameraMode == CameraMode.PHOTO && lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK && !isFlippingCamera && flipRotationAnim.value == 0f) {
-
-
                 @Suppress("UNUSED_VARIABLE")
                 val count = peakingUpdateCount // trigger recomposition
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1094,11 +1114,38 @@ fun CameraScreen(modifier: Modifier = Modifier) {
                             scale(scaleX = 1f, scaleY = -1f, pivot = center)
                         }
                     }) {
-
                         val drawW = size.width.toInt()
                         val drawH = nativeSensorH.toInt()
                         drawImage(
                             image = peakingBitmap!!.asImageBitmap(),
+                            dstOffset = androidx.compose.ui.unit.IntOffset(
+                                x = (center.x - drawH / 2f).toInt(),
+                                y = (center.y - drawW / 2f).toInt()
+                            ),
+                            dstSize = androidx.compose.ui.unit.IntSize(drawH, drawW)
+                        )
+                    }
+                }
+            }
+
+            if (enableZebraStripes && zebraBitmap != null && !isFlippingCamera && flipRotationAnim.value == 0f) {
+                @Suppress("UNUSED_VARIABLE")
+                val count = zebraUpdateCount // trigger recomposition
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val isFront = lensFacing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
+                    val sensorRotation = if (isFront) 270f else 90f
+                    val nativeSensorH = size.width * (4f / 3f)
+                    
+                    withTransform({
+                        rotate(sensorRotation, pivot = center)
+                        if (isFront) {
+                            scale(scaleX = 1f, scaleY = -1f, pivot = center)
+                        }
+                    }) {
+                        val drawW = size.width.toInt()
+                        val drawH = nativeSensorH.toInt()
+                        drawImage(
+                            image = zebraBitmap!!.asImageBitmap(),
                             dstOffset = androidx.compose.ui.unit.IntOffset(
                                 x = (center.x - drawH / 2f).toInt(),
                                 y = (center.y - drawW / 2f).toInt()
@@ -1267,6 +1314,15 @@ fun CameraScreen(modifier: Modifier = Modifier) {
 
             if (uiState.showCinemaGuide) {
                 CinemaGuideOverlay(rotationDegrees = deviceRotation, modifier = Modifier.fillMaxSize())
+            }
+
+            if (cameraMode == CameraMode.VIDEO && isRecording) {
+                AudioMeterOverlay(
+                    audioLevel = uiState.audioLevel,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 12.dp)
+                )
             }
 
 

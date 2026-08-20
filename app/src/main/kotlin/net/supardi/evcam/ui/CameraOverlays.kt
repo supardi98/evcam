@@ -15,6 +15,10 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import net.supardi.evcam.logic.*
 import kotlin.math.abs
 
@@ -183,6 +187,41 @@ fun VirtualHorizonOverlay(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.offset(y = (-30).dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun AudioMeterOverlay(
+    audioLevel: Float,
+    modifier: Modifier = Modifier
+) {
+    val numSegments = 10
+    val activeSegments = (audioLevel * numSegments).toInt().coerceIn(0, numSegments)
+
+    androidx.compose.foundation.layout.Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.5f))
+            .padding(vertical = 8.dp, horizontal = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("MIC", color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        for (i in (numSegments - 1) downTo 0) {
+            val isActive = i < activeSegments
+            val segColor = when {
+                i >= 8 -> Color.Red
+                i >= 6 -> Color.Yellow
+                else -> Color.Green
+            }
+            val displayColor = if (isActive) segColor else segColor.copy(alpha = 0.2f)
+            Box(
+                modifier = Modifier
+                    .size(width = 16.dp, height = 4.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(displayColor)
             )
         }
     }

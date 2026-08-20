@@ -32,6 +32,8 @@ fun DisplayOverlaysPanel(
     onVirtualHorizonChange: (Boolean) -> Unit,
     showCinemaGuide: Boolean = false,
     onCinemaGuideChange: (Boolean) -> Unit = {},
+    enableZebraStripes: Boolean = false,
+    onZebraStripesChange: (Boolean) -> Unit = {},
     enableHistogram: Boolean,
     onHistogramChange: (Boolean) -> Unit,
     enableFocusPeaking: Boolean,
@@ -101,6 +103,15 @@ fun DisplayOverlaysPanel(
             Switch(
                 checked = showCinemaGuide,
                 onCheckedChange = onCinemaGuideChange,
+                modifier = Modifier.scale(0.8f)
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Zebra (Silau)", color = Color.Gray, modifier = Modifier.width(100.dp), fontSize = 12.sp)
+            Switch(
+                checked = enableZebraStripes,
+                onCheckedChange = onZebraStripesChange,
                 modifier = Modifier.scale(0.8f)
             )
         }

@@ -1407,6 +1407,14 @@ class Camera2Engine(private val context: Context) {
         }
     }
 
+    fun getMaxAmplitude(): Int {
+        return try {
+            if (isRecordingVideo) mediaRecorder?.maxAmplitude ?: 0 else 0
+        } catch (e: Exception) {
+            0
+        }
+    }
+
     fun stopRecording(onStopped: () -> Unit) {
         if (!isRecordingVideo) return
         try {
